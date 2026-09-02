@@ -1,0 +1,126 @@
+name: Sydaria
+version: ${project.version}
+main: fr.sydaria.Sydaria
+author: Sydaria
+description: Plugin tout-en-un Factions (AntiCleanUp, Atouts, Events, Items, Tokens...)
+softdepend: [Vault, PlaceholderAPI, Votifier, NuVotifier, LuckPerms]
+
+commands:
+  sydaria:
+    description: Commande admin du plugin
+    aliases: [syd]
+  atouts:
+    description: Menu des atouts
+    aliases: [atout]
+  classement:
+    description: Classements joueurs
+    aliases: [top, leaderboard]
+  enclume:
+    description: Enclume portable
+  bottlexp:
+    description: Convertit l'XP en bouteille
+    aliases: [xpbottle, bottle]
+  enchantement:
+    description: Table d'enchantement portable
+    aliases: [enchant, enchanting]
+  furnace:
+    description: Four portable
+    aliases: [four, smelt]
+  randomkey:
+    description: Donne une clé aléatoire
+    aliases: [rkey]
+  repair:
+    description: Répare l'item en main
+    aliases: [fix]
+  title:
+    description: Envoie un title
+  actionbar:
+    description: Envoie une actionbar
+    aliases: [ab]
+  poubelle:
+    description: Poubelle
+    aliases: [trash, bin]
+  vision:
+    description: Vision nocturne
+    aliases: [nv, nightvision]
+  b:
+    description: Souhaite la bienvenue
+    aliases: [bienvenue, welcome]
+  randomtp:
+    description: Téléportation aléatoire
+    aliases: [rtp, wild]
+  staff:
+    description: Mode staff
+  sc:
+    description: Chat staff
+    aliases: [staffchat]
+  cps:
+    description: Voir les CPS d'un joueur
+  freeze:
+    description: Gèle/dégèle un joueur (immobilisation totale)
+    aliases: [gel]
+  tags:
+    description: Tags
+    aliases: [tag]
+  tokens:
+    description: Tokens - utilisés uniquement dans /boutique
+    aliases: [token]
+  money:
+    description: Argent - utilisé uniquement dans /shop
+    aliases: [argent]
+  event:
+    description: Gestion des events
+    aliases: [events]
+  f:
+    description: Commandes faction Sydaria
+  voteparty:
+    description: VoteParty
+    aliases: [vp]
+  portal:
+    description: Portails custom
+    aliases: [portails]
+  itemsyd:
+    description: Donne un item Sydaria
+    aliases: [sitem, giveitem]
+  boutique:
+    description: Boutique Sydaria - achats avec des tokens
+  shop:
+    description: Shop Sydaria - achats avec l'argent
+    aliases: [magasin]
+  rankup:
+    description: Monte de grade avec ton argent
+    aliases: [grade, grades]
+
+permissions:
+  sydaria.admin:
+    default: op
+  sydaria.staff:
+    default: op
+  sydaria.staff.freeze:
+    default: op
+  sydaria.bypass.commands:
+    default: op
+  sydaria.doublexp:
+    default: false
+  sydaria.repair:
+    default: true
+  sydaria.repair.bypass:
+    default: op
+  sydaria.fly:
+    default: false
+  sydaria.faction.bypass:
+    default: op
+  sydaria.event.admin:
+    default: op
+  sydaria.tokens.give:
+    default: op
+  sydaria.money.give:
+    default: op
+  sydaria.items.give:
+    default: op
+  sydaria.welcome:
+    default: true
+  sydaria.rtp:
+    default: true
+  sydaria.randomkey:
+    default: op

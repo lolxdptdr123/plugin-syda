@@ -1,0 +1,27 @@
+# Build Maven
+target/
+*.jar
+*.war
+*.ear
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.classpath
+*.project
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs / temporaires
+*.log
+*.tmp
+*.bak
+
+# Données serveur (ne pas versionner)
+plugins/
+*.db

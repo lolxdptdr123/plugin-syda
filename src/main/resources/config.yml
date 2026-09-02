@@ -1,0 +1,967 @@
+# Sydaria - configuration principale (Spigot 1.8.9)
+
+prefix: "&8[&6Sydaria&8] &7"
+
+anti-cleanup:
+  enabled: true
+  duration-seconds: 30
+  protect-killer-drops: true
+
+anti-command:
+  enabled: true
+  blocked:
+    - "plugins"
+    - "pl"
+    - "ver"
+    - "version"
+    - "about"
+    - "bukkit:plugins"
+    - "bukkit:pl"
+    - "bukkit:ver"
+    - "bukkit:about"
+    - "icanhasbukkit"
+    - "?"
+    - "me"
+    - "tell"
+    - "bukkit:tell"
+  message: "&cCette commande est désactivée."
+
+atouts:
+  # /atouts sert uniquement à activer/désactiver les atouts déjà débloqués.
+  # Les achats d'atouts se font dans /boutique.
+  effects:
+    SPEED: { amplifier: 1, display: "&bSpeed" }
+    INCREASE_DAMAGE: { amplifier: 0, display: "&cForce" }
+    FIRE_RESISTANCE: { amplifier: 0, display: "&6FireResistance" }
+    FAST_DIGGING: { amplifier: 1, display: "&eHaste" }
+  flags:
+    ANTI_CHUTE: "&aAntiChute"
+    NO_HUNGER: "&eNoHunger"
+    NO_DEBUFF: "&dNoDebuff"
+    KEEP_XP: "&bKeepXP"
+
+# Système de rankup : progression de grades achetable.
+# /rankup = menu + achat avec l'argent (ou tokens selon config).
+# Les grades sont aussi disponibles dans /shop (catégorie "grades").
+# Nécessite LuckPerms pour appliquer les groupes.
+rankup:
+  enabled: true
+  gui:
+    enabled: true
+    title: "&8&lRankup &7» &aGrades"
+    slots:
+      - 10
+      - 12
+      - 14
+      - 16
+      - 21
+      - 23
+      - 25
+    rank-material:
+      chevalier: GOLD_HELMET
+      marquis: DIAMOND_HELMET
+      seigneur: GOLD_CHESTPLATE
+      empereur: DIAMOND_CHESTPLATE
+      supreme: NETHER_STAR
+      star: BEACON
+  ladder:
+    - default
+    - chevalier
+    - marquis
+    - seigneur
+    - empereur
+    - supreme
+    - star
+  ranks:
+    chevalier:
+      cost: 50000
+      currency: money
+    marquis:
+      cost: 150000
+      currency: money
+    seigneur:
+      cost: 500000
+      currency: money
+    empereur:
+      cost: 1500000
+      currency: money
+    supreme:
+      cost: 5000000
+      currency: money
+    star:
+      cost: 15000000
+      currency: money
+
+# GUIs d'achat
+# /boutique = tokens ; /shop = argent via Vault.
+# Le fonctionnement est : menu principal -> catégorie -> article.
+#
+# Pour ajouter une catégorie :
+#   1. Ajoute-la sous categories.
+#   2. Ajoute les IDs des articles dans items.
+# Pour ajouter un article : ajoute son ID sous items.
+
+boutique:
+  enabled: true
+  title: "&8&lBoutique &7» &6Tokens"
+  size: 54
+
+  # Slots des catégories dans le menu principal
+  category-slots:
+    - 10
+    - 12
+    - 14
+    - 16
+    - 28
+    - 30
+    - 32
+    - 34
+
+  # Slots des articles dans une catégorie
+  item-slots:
+    - 10
+    - 11
+    - 12
+    - 13
+    - 14
+    - 15
+    - 16
+    - 19
+    - 20
+    - 21
+    - 22
+    - 23
+    - 24
+    - 25
+    - 28
+    - 29
+    - 30
+    - 31
+    - 32
+    - 33
+    - 34
+    - 37
+    - 38
+    - 39
+    - 40
+    - 41
+    - 42
+    - 43
+
+  buttons:
+    back:
+      enabled: true
+      slot: 45
+      material: ARROW
+      name: "&c&lRetour"
+      lore:
+        - "&7Retour aux catégories."
+
+    previous:
+      enabled: true
+      slot: 47
+      material: ARROW
+      name: "&e&lPage précédente"
+      lore:
+        - "&7Retourner à la page précédente."
+
+    balance:
+      enabled: true
+      slot: 48
+      material: GOLD_INGOT
+      name: "&6&lTes Tokens"
+      lore:
+        - "&7Solde : &6%tokens% tokens"
+
+    close:
+      enabled: true
+      slot: 49
+      material: BARRIER
+      name: "&c&lFermer"
+      lore:
+        - "&7Fermer le menu."
+
+    next:
+      enabled: true
+      slot: 53
+      material: ARROW
+      name: "&a&lPage suivante"
+      lore:
+        - "&7Aller à la page suivante."
+
+  information:
+    slot: 4
+    material: BOOK
+    name: "&6&lBoutique Sydaria"
+    lore:
+      - "&7Achète tes atouts avec tes tokens."
+      - "&7Une fois acheté, utilise &e/atouts&7."
+
+  categories:
+    atouts_combat:
+      name: "&c&lAtouts Combat"
+      material: DIAMOND_SWORD
+      lore:
+        - "&7Atouts pour améliorer tes combats."
+        - "&7Paiement en tokens."
+      items:
+        - INCREASE_DAMAGE
+        - FIRE_RESISTANCE
+
+    atouts_utilitaires:
+      name: "&b&lAtouts Utilitaires"
+      material: FEATHER
+      lore:
+        - "&7Atouts pour améliorer ton confort."
+        - "&7Paiement en tokens."
+      items:
+        - SPEED
+        - FAST_DIGGING
+        - ANTI_CHUTE
+        - NO_HUNGER
+        - NO_DEBUFF
+        - KEEP_XP
+
+    grades:
+      name: "&2&lGrades"
+      material: GOLD_HELMET
+      lore:
+        - "&7Achète ton prochain grade."
+        - "&7Paiement en tokens."
+        - "&7Tu peux aussi utiliser &e/rankup &7(argent)."
+      items:
+        - RANKUP_CHEVALIER
+        - RANKUP_MARQUIS
+        - RANKUP_SEIGNEUR
+        - RANKUP_EMPEREUR
+        - RANKUP_SUPREME
+        - RANKUP_STAR
+
+  # Les définitions peuvent rester ici.
+  # Le code accepte aussi les définitions directement sous categories.<id>.items.<id>.
+  items:
+    SPEED:
+      type: ATOUT
+      atout: SPEED
+      name: "&b&lAtout Speed"
+      material: SUGAR
+      lore:
+        - "&7Obtiens un bonus de vitesse."
+        - "&7Utilise /atouts pour l'activer."
+      price: 500
+
+    INCREASE_DAMAGE:
+      type: ATOUT
+      atout: INCREASE_DAMAGE
+      name: "&c&lAtout Force"
+      material: BLAZE_POWDER
+      lore:
+        - "&7Augmente ta puissance en combat."
+        - "&7Utilise /atouts pour l'activer."
+      price: 750
+
+    FIRE_RESISTANCE:
+      type: ATOUT
+      atout: FIRE_RESISTANCE
+      name: "&6&lAtout Fire Resistance"
+      material: MAGMA_CREAM
+      lore:
+        - "&7Protège contre le feu et la lave."
+        - "&7Utilise /atouts pour l'activer."
+      price: 600
+
+    FAST_DIGGING:
+      type: ATOUT
+      atout: FAST_DIGGING
+      name: "&e&lAtout Haste"
+      material: GOLD_PICKAXE
+      lore:
+        - "&7Mine plus rapidement."
+        - "&7Utilise /atouts pour l'activer."
+      price: 650
+
+    ANTI_CHUTE:
+      type: ATOUT
+      atout: ANTI_CHUTE
+      name: "&a&lAtout Anti-Chute"
+      material: FEATHER
+      lore:
+        - "&7Annule les dégâts de chute."
+        - "&7Utilise /atouts pour l'activer."
+      price: 400
+
+    NO_HUNGER:
+      type: ATOUT
+      atout: NO_HUNGER
+      name: "&e&lAtout No-Hunger"
+      material: COOKED_BEEF
+      lore:
+        - "&7Empêche la faim de diminuer."
+        - "&7Utilise /atouts pour l'activer."
+      price: 500
+
+    NO_DEBUFF:
+      type: ATOUT
+      atout: NO_DEBUFF
+      name: "&d&lAtout No-Debuff"
+      material: MILK_BUCKET
+      lore:
+        - "&7Supprime les effets négatifs."
+        - "&7Utilise /atouts pour l'activer."
+      price: 900
+
+    KEEP_XP:
+      type: ATOUT
+      atout: KEEP_XP
+      name: "&b&lAtout Keep-XP"
+      material: EXP_BOTTLE
+      lore:
+        - "&7Conserve ton expérience à ta mort."
+        - "&7Utilise /atouts pour l'activer."
+      price: 1000
+
+    RANKUP_CHEVALIER:
+      type: RANKUP
+      rank: chevalier
+      name: "&2&lGrade Chevalier"
+      material: GOLD_HELMET
+      lore:
+        - "&7Passe au grade Chevalier."
+      price: 5000
+
+    RANKUP_MARQUIS:
+      type: RANKUP
+      rank: marquis
+      name: "&3&lGrade Marquis"
+      material: DIAMOND_HELMET
+      lore:
+        - "&7Passe au grade Marquis."
+      price: 15000
+
+    RANKUP_SEIGNEUR:
+      type: RANKUP
+      rank: seigneur
+      name: "&e&lGrade Seigneur"
+      material: GOLD_CHESTPLATE
+      lore:
+        - "&7Passe au grade Seigneur."
+      price: 50000
+
+    RANKUP_EMPEREUR:
+      type: RANKUP
+      rank: empereur
+      name: "&6&lGrade Empereur"
+      material: DIAMOND_CHESTPLATE
+      lore:
+        - "&7Passe au grade Empereur."
+      price: 150000
+
+    RANKUP_SUPREME:
+      type: RANKUP
+      rank: supreme
+      name: "&5&lGrade Supreme"
+      material: NETHER_STAR
+      lore:
+        - "&7Passe au grade Supreme."
+      price: 500000
+
+    RANKUP_STAR:
+      type: RANKUP
+      rank: star
+      name: "&d&lGrade Star"
+      material: BEACON
+      lore:
+        - "&7Passe au grade Star."
+      price: 1500000
+
+shop:
+  enabled: true
+  title: "&8&lShop &7» &aMoney"
+  size: 54
+
+  category-slots:
+    - 10
+    - 12
+    - 14
+    - 16
+    - 28
+    - 30
+    - 32
+    - 34
+
+  item-slots:
+    - 10
+    - 11
+    - 12
+    - 13
+    - 14
+    - 15
+    - 16
+    - 19
+    - 20
+    - 21
+    - 22
+    - 23
+    - 24
+    - 25
+    - 28
+    - 29
+    - 30
+    - 31
+    - 32
+    - 33
+    - 34
+    - 37
+    - 38
+    - 39
+    - 40
+    - 41
+    - 42
+    - 43
+
+  buttons:
+    back:
+      enabled: true
+      slot: 45
+      material: ARROW
+      name: "&c&lRetour"
+      lore:
+        - "&7Retour aux catégories."
+
+    previous:
+      enabled: true
+      slot: 47
+      material: ARROW
+      name: "&e&lPage précédente"
+      lore:
+        - "&7Retourner à la page précédente."
+
+    balance:
+      enabled: true
+      slot: 48
+      material: EMERALD
+      name: "&a&lTon Argent"
+      lore:
+        - "&7Solde : &a%money%"
+
+    close:
+      enabled: true
+      slot: 49
+      material: BARRIER
+      name: "&c&lFermer"
+      lore:
+        - "&7Fermer le menu."
+
+    next:
+      enabled: true
+      slot: 53
+      material: ARROW
+      name: "&a&lPage suivante"
+      lore:
+        - "&7Aller à la page suivante."
+
+  information:
+    slot: 4
+    material: BOOK
+    name: "&6&lShop Sydaria"
+    lore:
+      - "&7Achète tes objets avec ton argent."
+      - "&7Paiement via Vault."
+
+  categories:
+    cles:
+      name: "&6&lClés"
+      material: TRIPWIRE_HOOK
+      lore:
+        - "&7Achète tes clés de caisses."
+        - "&7Paiement avec ton argent."
+      items:
+        - KEY_VOTE
+        - KEY_COMMON
+        - KEY_RARE
+        - KEY_LEGENDARY
+
+    orbes:
+      name: "&d&lOrbes d'Effet"
+      material: NETHER_STAR
+      lore:
+        - "&7Objets réutilisables à cooldown."
+        - "&7Contrairement aux atouts, l'effet est temporaire."
+        - "&7Paiement en tokens."
+      items:
+        - ORB_SPEED
+        - ORB_FORCE
+        - ORB_FIRE_RESISTANCE
+        - ORB_HASTE
+
+    objets_utilitaires:
+      name: "&a&lObjets Utilitaires"
+      material: CHEST
+      lore:
+        - "&7Objets utiles pour ton aventure."
+        - "&7Paiement avec ton argent."
+      items:
+        - RECALL_POTION
+        - FALL_CHARM
+        - PORTABLE_CHEST
+        - INFINITE_WATER
+        - INFINITE_LAVA
+
+    combat:
+      name: "&c&lCombat"
+      material: DIAMOND_SWORD
+      lore:
+        - "&7Objets spéciaux pour le PvP."
+        - "&7Paiement avec ton argent."
+      items:
+        - STRENGTH_ORB
+        - FIREBALL_CHARGE
+        - VAMPIRE_SWORD
+        - LIGHTNING_SWORD
+        - WITHER_SWORD
+        - SHADOW_SWORD
+        - ANTITANK_SWORD
+        - BACKSTAB_KNIFE
+        - KNOCK_HAMMER
+
+    arcs:
+      name: "&b&lArcs"
+      material: BOW
+      lore:
+        - "&7Arcs spéciaux et puissants."
+        - "&7Paiement avec ton argent."
+      items:
+        - TELEPORT_BOW
+        - EXPLOSIVE_BOW
+        - POISON_BOW
+
+    outils:
+      name: "&e&lOutils"
+      material: DIAMOND_PICKAXE
+      lore:
+        - "&7Outils avec des capacités spéciales."
+        - "&7Paiement avec ton argent."
+      items:
+        - TRIPLE_PICK
+        - SHOVEL_3X3
+        - LUMBER_AXE
+        - DOUBLE_AXE
+
+    grades:
+      name: "&2&lGrades"
+      material: GOLD_HELMET
+      lore:
+        - "&7Achète ton prochain grade."
+        - "&7Paiement avec ton argent."
+        - "&7Tu peux aussi utiliser &e/rankup&7."
+      items:
+        - RANKUP_CHEVALIER
+        - RANKUP_MARQUIS
+        - RANKUP_SEIGNEUR
+        - RANKUP_EMPEREUR
+        - RANKUP_SUPREME
+        - RANKUP_STAR
+
+  items:
+    KEY_VOTE:
+      type: ITEM
+      item: KEY_VOTE
+      amount: 1
+      price: 500.0
+      lore:
+        - "&7Une clé obtenue grâce aux votes."
+
+    KEY_COMMON:
+      type: ITEM
+      item: KEY_COMMON
+      amount: 1
+      price: 1500.0
+
+    KEY_RARE:
+      type: ITEM
+      item: KEY_RARE
+      amount: 1
+      price: 5000.0
+
+    KEY_LEGENDARY:
+      type: ITEM
+      item: KEY_LEGENDARY
+      amount: 1
+      price: 15000.0
+
+    RECALL_POTION:
+      type: ITEM
+      item: RECALL_POTION
+      amount: 1
+      price: 2500.0
+
+    FALL_CHARM:
+      type: ITEM
+      item: FALL_CHARM
+      amount: 1
+      price: 2000.0
+
+    PORTABLE_CHEST:
+      type: ITEM
+      item: PORTABLE_CHEST
+      amount: 1
+      price: 7500.0
+
+    INFINITE_WATER:
+      type: ITEM
+      item: INFINITE_WATER
+      amount: 1
+      price: 5000.0
+
+    INFINITE_LAVA:
+      type: ITEM
+      item: INFINITE_LAVA
+      amount: 1
+      price: 7500.0
+
+    STRENGTH_ORB:
+      type: ITEM
+      item: STRENGTH_ORB
+      amount: 1
+      price: 4000.0
+
+    FIREBALL_CHARGE:
+      type: ITEM
+      item: FIREBALL_CHARGE
+      amount: 1
+      price: 3500.0
+
+    VAMPIRE_SWORD:
+      type: ITEM
+      item: VAMPIRE_SWORD
+      amount: 1
+      price: 10000.0
+
+    LIGHTNING_SWORD:
+      type: ITEM
+      item: LIGHTNING_SWORD
+      amount: 1
+      price: 12000.0
+
+    WITHER_SWORD:
+      type: ITEM
+      item: WITHER_SWORD
+      amount: 1
+      price: 15000.0
+
+    SHADOW_SWORD:
+      type: ITEM
+      item: SHADOW_SWORD
+      amount: 1
+      price: 12500.0
+
+    ANTITANK_SWORD:
+      type: ITEM
+      item: ANTITANK_SWORD
+      amount: 14000
+      price: 14000.0
+
+    BACKSTAB_KNIFE:
+      type: ITEM
+      item: BACKSTAB_KNIFE
+      amount: 1
+      price: 11000.0
+
+    KNOCK_HAMMER:
+      type: ITEM
+      item: KNOCK_HAMMER
+      amount: 1
+      price: 9000.0
+
+    TELEPORT_BOW:
+      type: ITEM
+      item: TELEPORT_BOW
+      amount: 1
+      price: 13000.0
+
+    EXPLOSIVE_BOW:
+      type: ITEM
+      item: EXPLOSIVE_BOW
+      amount: 1
+      price: 11000.0
+
+    POISON_BOW:
+      type: ITEM
+      item: POISON_BOW
+      amount: 1
+      price: 9500.0
+
+    TRIPLE_PICK:
+      type: ITEM
+      item: TRIPLE_PICK
+      amount: 1
+      price: 8000.0
+
+    SHOVEL_3X3:
+      type: ITEM
+      item: SHOVEL_3X3
+      amount: 1
+      price: 7000.0
+
+    LUMBER_AXE:
+      type: ITEM
+      item: LUMBER_AXE
+      amount: 1
+      price: 8500.0
+
+    DOUBLE_AXE:
+      type: ITEM
+      item: DOUBLE_AXE
+      amount: 1
+      price: 6000.0
+
+    ORB_FORCE:
+      item: ORB_FORCE
+      price: 300
+
+    ORB_SPEED:
+      item: ORB_SPEED
+      price: 300
+
+    ORB_FIRE_RESISTANCE:
+      item: ORB_FIRE_RESISTANCE
+      price: 300
+
+    ORB_HASTE:
+      item: ORB_HASTE
+      price: 300
+
+    RANKUP_CHEVALIER:
+      type: RANKUP
+      rank: chevalier
+      name: "&2&lGrade Chevalier"
+      material: GOLD_HELMET
+      lore:
+        - "&7Passe au grade Chevalier."
+        - "&7Disponible depuis le grade Joueur."
+      price: 50000.0
+
+    RANKUP_MARQUIS:
+      type: RANKUP
+      rank: marquis
+      name: "&3&lGrade Marquis"
+      material: DIAMOND_HELMET
+      lore:
+        - "&7Passe au grade Marquis."
+        - "&7Requis: Chevalier."
+      price: 150000.0
+
+    RANKUP_SEIGNEUR:
+      type: RANKUP
+      rank: seigneur
+      name: "&e&lGrade Seigneur"
+      material: GOLD_CHESTPLATE
+      lore:
+        - "&7Passe au grade Seigneur."
+        - "&7Requis: Marquis."
+      price: 500000.0
+
+    RANKUP_EMPEREUR:
+      type: RANKUP
+      rank: empereur
+      name: "&6&lGrade Empereur"
+      material: DIAMOND_CHESTPLATE
+      lore:
+        - "&7Passe au grade Empereur."
+        - "&7Requis: Seigneur."
+      price: 1500000.0
+
+    RANKUP_SUPREME:
+      type: RANKUP
+      rank: supreme
+      name: "&5&lGrade Supreme"
+      material: NETHER_STAR
+      lore:
+        - "&7Passe au grade Supreme."
+        - "&7Requis: Empereur."
+      price: 5000000.0
+
+    RANKUP_STAR:
+      type: RANKUP
+      rank: star
+      name: "&d&lGrade Star"
+      material: BEACON
+      lore:
+        - "&7Passe au grade Star."
+        - "&7Requis: Supreme."
+      price: 15000000.0
+
+classement:
+  tracked:
+    - blocks_mined
+    - quests
+    - playtime
+    - crops_broken
+    - mobs_killed
+    - players_killed
+    - deaths
+    - event_hits
+    - totem_blocks
+
+core:
+  death-inventory-preview: true
+  nametag-health: true
+  nametag-health-suffix: "&c❤"
+  double-xp-multiplier: 2.0
+  repair:
+    cooldown-seconds: 120
+    max-per-item: 3
+  bottle-xp:
+    xp-per-bottle: 20
+  welcome:
+    reward: 50.0
+    cooldown-seconds: 60
+    use-vault: true
+  explosion-durability:
+    enabled: true
+    default-hits: 1
+    blocks:
+      OBSIDIAN: 8
+      ENDER_STONE: 4
+      WATER: 999
+  noheal-blocks:
+    - STAINED_GLASS
+    - STAINED_CLAY
+  randomkey-keys:
+    - VOTE
+    - COMMON
+    - RARE
+    - LEGENDARY
+
+scoreboard:
+  enabled: true
+  title: "&c✺ &6Sydaria.fr &c✺"
+  refresh-ticks: 20
+  # Nom du grade par défaut affiché (%grade%) quand le joueur n'a pas de groupe
+  # de permission particulier / n'est associé à aucune entrée ci-dessous.
+  grade-default: "Joueur"
+  # Nom du grade affiché dans le scoreboard (%grade%), par groupe de permission
+  # (LuckPerms/PermissionsEx). La clé est le nom du groupe en minuscule.
+  grades:
+    star: "Star"
+    supreme: "&5Supreme"
+    empereur: "&6Empereur"
+    seigneur: "&eSeigneur"
+    marquis: "&3Marquis"
+    chevalier: "&2Chevalier"
+    vip: "VIP"
+    mvp: "MVP"
+    default: "Joueur"
+  # Couleur du grade appliquée au nom du grade ET au pseudo dans le chat public,
+  # le tab-list et au-dessus de la tête, par groupe de permission (ex: &d = violet
+  # clair -> "Star Pseudo" tout en violet). Un groupe absent d'ici (ou "" comme
+  # couleur) n'affiche rien devant le pseudo, même s'il a un nom dans "grades" ci-
+  # dessus. Rappel : le grade donne des permissions/commandes en plus (LuckPerms),
+  # contrairement au tag (/tags) qui est purement décoratif.
+  grade-colors:
+    star: "&d"
+    supreme: "&5"
+    empereur: "&6"
+    seigneur: "&e"
+    marquis: "&3"
+    chevalier: "&2"
+    vip: "&a"
+    mvp: "&b"
+  lines:
+    - "&f&m--------------------"
+    - "&6%player%"
+    - "&fGrade: &d%grade%"
+    - "&fFaction: &c%faction%"
+    - "&fArgent: &e%money% &6❂"
+    - "&fCendres: &d%cendres% &d❂"
+    - "&fTokens: &b%tokens% &b❂"
+    - " "
+    - "&6Infos"
+    - "&fPower: &e%power%"
+    - "&fFly Claim: &a%flyclaim%"
+    - "  "
+    - "&fVotes: &b%votes%"
+    - "&f&m--------------------"
+
+voteparty:
+  goal: 500
+  reward-commands:
+    - "randomkey %player%"
+  broadcast: "&6VoteParty &7! Merci pour vos votes. Récompenses distribuées."
+
+randomtp:
+  world: world
+  min-x: -2000
+  max-x: 2000
+  min-z: -2000
+  max-z: 2000
+  max-tries: 30
+  cooldown-seconds: 60
+
+staff:
+  vanish-on-enable: true
+  cps-window-seconds: 2
+
+tokens:
+  starting: 0
+  pay-min: 1
+
+tags:
+  default: ""
+
+portals:
+  wand-name: "&6Sélecteur de portail"
+
+factions:
+  min-name-length: 3
+  max-name-length: 16
+  max-description-length: 80
+  default-description: "Aucune description."
+  chest-size: 27
+  friendly-fire: false
+  public-prefix: true
+  public-format: "&8[&6{faction}&8] "
+  chat-format: "&8[&6{faction}&8] &e{player}&7: &f{message}"
+  ally-chat-format: "&8[&aA&8][&6{faction}&8] &e{player}&7: &f{message}"
+  fly-upgrade-cost: 2500
+  chest-upgrade-cost: 1500
+  power:
+    max: 10
+    start: 10
+    per-death: 2
+    regen-per-minute: 0.2
+  claim:
+    enabled: true
+    worlds:
+      - world
+    deny-message: "&cCe chunk appartient à &e{faction}&c."
+  upgrades:
+    chest:
+      sizes: [27, 36, 45, 54]
+      costs: [0, 1000, 2000, 3500]
+    fly:
+      cost: 2500
+    members:
+      amounts: [10, 15, 20, 30]
+      costs: [0, 800, 1600, 3000]
+    power:
+      amounts: [0, 10, 20, 40]
+      costs: [0, 1200, 2500, 5000]
+
+discord:
+  enabled: true
+  webhook-url: "https://discord.com/api/webhooks/1543608101461033041/rLijWaaIQuOQ8ipI8eoIq_yzqymPxehSUQD7bOWH1Mkm4-WJRIeGi6FQHmdcY2hpFCmL"
+  event-results: true
+
+events:
+  announce: "&6Event &e%event% &7démarre !"
+  win: "&6%player% &7remporte &e%event%&7 !"
+  duration-seconds: 300
+  totem-health: 50
+  giant-totem-health: 150
+  koth-capture-seconds: 60
+  giant-koth-radius: 8
+  koth-radius: 4
+  dtc-block: OBSIDIAN
+  nexus-health: 100
+  br-shrink-seconds: 180
