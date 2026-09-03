@@ -25,7 +25,6 @@ public class AdminCommand implements CommandExecutor {
             plugin.msg(sender, "&e/sydaria reload");
             plugin.msg(sender, "&e/sydaria questadd <joueur>");
             plugin.msg(sender, "&e/itemsyd <id> [joueur]");
-            plugin.msg(sender, "&e/event start <type>");
             return true;
         }
         if (args[0].equalsIgnoreCase("reload")) {

@@ -158,7 +158,6 @@ public class ScoreboardManager {
                 .replace("%power%", powerValue(player))
                 .replace("%flyclaim%", flyClaim(player))
                 .replace("%votes%", voteValue())
-                .replace("%event%", plugin.events().currentName())
                 .replace("%money%", compact(plugin.economy().getMoney(player)))
                 .replace("%online%", String.valueOf(Bukkit.getOnlinePlayers().size()));
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {

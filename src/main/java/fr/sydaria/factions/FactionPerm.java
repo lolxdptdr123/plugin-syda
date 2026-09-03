@@ -23,7 +23,8 @@ public enum FactionPerm {
     DESC("Description", Material.BOOK, false, false, false, true),
     MOTD("MOTD", Material.PAPER, false, false, true, true),
     OPEN("Ouverture", Material.IRON_DOOR, false, false, false, true),
-    PERM("Permissions", Material.REDSTONE_TORCH_ON, false, false, false, true);
+    PERM("Permissions", Material.REDSTONE_TORCH_ON, false, false, false, true),
+    RALLY("Rally", Material.BEACON, false, false, true, true);
 
     private final String display;
     private final Material icon;

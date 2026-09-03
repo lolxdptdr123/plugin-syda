@@ -1,163 +1,11 @@
 # Identifiant interne = SID dans le lore. Ne pas traduire les clés.
 items:
-  VAMPIRE_SWORD:
-    name: "&cÉpée Vampire"
-    material: DIAMOND_SWORD
-    lore:
-      - "&7Vole &c2❤ &7par coup."
-    ability: VAMPIRE
-  LIGHTNING_SWORD:
-    name: "&eÉpée Foudroyante"
-    material: DIAMOND_SWORD
-    lore:
-      - "&7Chance d'invoquer la foudre."
-    ability: LIGHTNING
-  WITHER_SWORD:
-    name: "&8Épée Wither"
-    material: DIAMOND_SWORD
-    lore:
-      - "&7Applique Wither II."
-    ability: WITHER
-  SHADOW_SWORD:
-    name: "&5Épée de l'Ombre"
-    material: IRON_SWORD
-    lore:
-      - "&7Invisibilité courte au coup."
-    ability: SHADOW
-  ANTITANK_SWORD:
-    name: "&3Épée Anti-Tank"
-    material: DIAMOND_SWORD
-    lore:
-      - "&7+30% dégâts si la cible a plus de 15❤."
-    ability: ANTITANK
-  BACKSTAB_KNIFE:
-    name: "&7Couteau de Backstab"
-    material: IRON_SWORD
-    lore:
-      - "&7Dégâts x2 dans le dos."
-    ability: BACKSTAB
-  KNOCK_HAMMER:
-    name: "&6Marteau de Recul"
-    material: GOLD_AXE
-    lore:
-      - "&7Knockback massif."
-    ability: KNOCKBACK
-  TELEPORT_BOW:
-    name: "&bArc Téléporteur"
-    material: BOW
-    lore:
-      - "&7Téléporte sur la flèche."
-    ability: TP_ARROW
-  EXPLOSIVE_BOW:
-    name: "&cArc Explosif"
-    material: BOW
-    lore:
-      - "&7Petite explosion à l'impact."
-    ability: EXPLODE_ARROW
-  POISON_BOW:
-    name: "&aArc Empoisonné"
-    material: BOW
-    lore:
-      - "&7Poison II à l'impact."
-    ability: POISON_ARROW
-  TRIPLE_PICK:
-    name: "&ePioche Triple"
-    material: DIAMOND_PICKAXE
-    lore:
-      - "&7Mine en 1x3 vertical."
-    ability: TRIPLE_MINE
-  SHOVEL_3X3:
-    name: "&ePelle 3x3"
-    material: DIAMOND_SPADE
-    lore:
-      - "&7Creuse une zone 3x3."
-    ability: MINE_3X3
-  LUMBER_AXE:
-    name: "&2Hache du Bûcheron"
-    material: DIAMOND_AXE
-    lore:
-      - "&7Abat l'arbre entier."
-    ability: TIMBER
-  DOUBLE_AXE:
-    name: "&6Hache Double"
-    material: IRON_AXE
-    lore:
-      - "&7Casse 2 blocs d'affilée."
-    ability: DOUBLE_BREAK
-  FREEZE_STICK:
-    name: "&bBâton de Freeze"
-    material: STICK
-    lore:
-      - "&7Gèle le joueur 3s."
-    ability: FREEZE
-  HEAL_STICK:
-    name: "&dBâton de Soin"
-    material: BLAZE_ROD
-    lore:
-      - "&7Soigne 4❤ (cooldown)."
-    ability: HEAL
-  GRAPPLING_HOOK:
-    name: "&fGrappin"
-    material: FISHING_ROD
-    lore:
-      - "&7Vous propulse vers le crochet."
-    ability: GRAPPLE
-  EXPLOSIVE_ROD:
-    name: "&cCanne Explosive"
-    material: FISHING_ROD
-    lore:
-      - "&7Explosion à l'accroche."
-    ability: EXPLODE_HOOK
-  STICKY_BOMB:
-    name: "&6Bombe Collante"
-    material: SNOW_BALL
-    lore:
-      - "&7Colle et explose."
-    ability: STICKY
-  SMOKE_BOMB:
-    name: "&8Bombe de Fumée"
-    material: SNOW_BALL
-    lore:
-      - "&7Aveugle la zone."
-    ability: SMOKE
-  WEB_BOMB:
-    name: "&fBombe de Toiles"
-    material: SNOW_BALL
-    lore:
-      - "&7Place des toiles d'araignée."
-    ability: WEB
-  WAR_PEARL:
-    name: "&4Perle de Guerre"
-    material: ENDER_PEARL
-    lore:
-      - "&7Aucun dégât de perle."
-    ability: WAR_PEARL
-  RECALL_POTION:
-    name: "&5Potion de Recall"
-    material: POTION
-    data: 8261
-    lore:
-      - "&7Retour au dernier lit / spawn."
-    ability: RECALL
   DASH_FEATHER:
     name: "&bPlume de Dash"
     material: FEATHER
     lore:
       - "&7Dash vers l'avant."
     ability: DASH
-  GOLEM_EGG:
-    name: "&7Œuf de Golem"
-    material: MONSTER_EGG
-    data: 99
-    lore:
-      - "&7Invoque un golem allié 30s."
-    ability: GOLEM
-  KILLER_EGG:
-    name: "&4Œuf Tueur"
-    material: EGG
-    lore:
-      - "&7Tue le mob touché."
-    ability: KILL_EGG
   SPEED_BOOTS:
     name: "&bBottes de Vitesse"
     material: DIAMOND_BOOTS
@@ -170,24 +18,6 @@ items:
     lore:
       - "&7Night Vision."
     ability: NV_HELMET
-  REGEN_AMULET:
-    name: "&cAmulette de Régén"
-    material: GOLD_NUGGET
-    lore:
-      - "&7Régénération I (inventaire)."
-    ability: REGEN_ITEM
-  EXTRA_HEART:
-    name: "&4Cœur Supplémentaire"
-    material: APPLE
-    lore:
-      - "&7+2❤ max (une fois)."
-    ability: EXTRA_HEART
-  PORTABLE_CHEST:
-    name: "&6Coffre Portable"
-    material: CHEST
-    lore:
-      - "&7Ouvre un enderchest."
-    ability: ENDER_CHEST
   INFINITE_WATER:
     name: "&9Seau d'Eau Infini"
     material: WATER_BUCKET
@@ -202,30 +32,6 @@ items:
       - "&7Ne se vide jamais."
     ability: INF_LAVA
     no-drop: true
-  FACTION_RELIC:
-    name: "&6Relique de Faction"
-    material: NETHER_STAR
-    lore:
-      - "&7Force I aux alliés proches."
-    ability: RELIC
-  TIME_CLOCK:
-    name: "&eHorloge de Gel"
-    material: WATCH
-    lore:
-      - "&7Slowness zone 5s."
-    ability: TIME_FREEZE
-  TP_BOOK:
-    name: "&dLivre de Téléport"
-    material: BOOK
-    lore:
-      - "&7Téléporte à un joueur (clic)."
-    ability: TP_BOOK
-  SPEED_TOTEM:
-    name: "&bTotem de Vitesse"
-    material: BLAZE_POWDER
-    lore:
-      - "&7Speed III pendant 10s (team)."
-    ability: TEAM_SPEED
   KEY_VOTE:
     name: "&aClé Vote"
     material: TRIPWIRE_HOOK
@@ -250,27 +56,3 @@ items:
     lore:
       - "&7Clé légendaire."
     ability: KEY
-  FALL_CHARM:
-    name: "&aCharme Anti-Chute"
-    material: FEATHER
-    lore:
-      - "&7Annule la prochaine chute."
-    ability: FALL_CHARM
-  STRENGTH_ORB:
-    name: "&cOrbe de Force"
-    material: REDSTONE
-    lore:
-      - "&7Force II pendant 15s."
-    ability: STRENGTH_ORB
-  FIREBALL_CHARGE:
-    name: "&6Charge de Fireball"
-    material: FIREBALL
-    lore:
-      - "&7Lance une boule de feu."
-    ability: FIREBALL
-  HOMING_PEARL:
-    name: "&dPerle Guidée"
-    material: ENDER_PEARL
-    lore:
-      - "&7Cooldown réduit."
-    ability: FAST_PEARL

@@ -103,14 +103,6 @@ public class ClassementManager implements Listener, CommandExecutor {
         plugin.data().addInt(player.getUniqueId(), "quests", 1);
     }
 
-    public void addEventHit(Player player) {
-        plugin.data().addInt(player.getUniqueId(), "event_hits", 1);
-    }
-
-    public void addTotemBlock(Player player) {
-        plugin.data().addInt(player.getUniqueId(), "totem_blocks", 1);
-    }
-
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
@@ -129,8 +121,6 @@ public class ClassementManager implements Listener, CommandExecutor {
         inv.setItem(14, icon(Material.ROTTEN_FLESH, "&6Mobs tués", "mobs_killed"));
         inv.setItem(15, icon(Material.DIAMOND_SWORD, "&cJoueurs tués", "players_killed"));
         inv.setItem(16, icon(Material.SKULL_ITEM, "&8Morts", "deaths"));
-        inv.setItem(21, icon(Material.IRON_SWORD, "&dHits events", "event_hits"));
-        inv.setItem(23, icon(Material.BEACON, "&6Blocs totem", "totem_blocks"));
         player.openInventory(inv);
     }
 

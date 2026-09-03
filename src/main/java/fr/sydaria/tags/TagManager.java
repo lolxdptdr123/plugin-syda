@@ -30,11 +30,9 @@ public class TagManager implements CommandExecutor, Listener {
             new Tag("assassin", "&4Assassin", 50, "players_killed"),
             new Tag("farmer", "&aFarmer", 100, "crops_broken"),
             new Tag("mineur", "&bMineur", 1000, "blocks_mined"),
-            new Tag("champion", "&6Champion", 25, "totem_blocks"),
             new Tag("veteran", "&eVétéran", 36000, "playtime"),
             new Tag("chasseur", "&2Chasseur", 100, "mobs_killed"),
             new Tag("survivant", "&8Survivant", 20, "deaths"),
-            new Tag("eventeur", "&dEventeur", 100, "event_hits"),
             new Tag("vip", "&aVIP", 0, "perm:sydaria.tag.vip"),
             new Tag("booster", "&dBooster", 0, "perm:sydaria.tag.booster")
     );

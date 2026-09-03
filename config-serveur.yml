@@ -114,25 +114,16 @@ grade-commands:
       title: "&8Coffre privé #%number%"
     ec:
       enabled: true
-      min-grade: seigneur
+      min-grade: marquis
       cooldown-seconds: 0
     refill:
       enabled: true
       min-grade: marquis
-      cooldown-seconds: 120
+      cooldown-seconds: 10
       potions:
         - type: INSTANT_HEAL
-          level: 2
-          splash: false
-        - type: SPEED
-          level: 2
-          splash: false
-        - type: FIRE_RESISTANCE
-          level: 1
-          splash: false
-        - type: STRENGTH
-          level: 2
-          splash: false
+          level: 3
+          splash: true
     craft:
       enabled: true
       min-grade: chevalier
@@ -387,7 +378,7 @@ boutique:
       type: RANKUP
       rank: chevalier
       name: "&2&lGrade Chevalier"
-      material: GOLD_HELMET
+      material: LEATHER_HELMET
       lore:
         - "&7Passe au grade Chevalier."
       price: 5000
@@ -396,7 +387,7 @@ boutique:
       type: RANKUP
       rank: marquis
       name: "&3&lGrade Marquis"
-      material: DIAMOND_HELMET
+      material: CHAIN_HELMET
       lore:
         - "&7Passe au grade Marquis."
       price: 15000
@@ -405,7 +396,7 @@ boutique:
       type: RANKUP
       rank: seigneur
       name: "&e&lGrade Seigneur"
-      material: GOLD_CHESTPLATE
+      material: IRON_CHESTPLATE
       lore:
         - "&7Passe au grade Seigneur."
       price: 50000
@@ -414,7 +405,7 @@ boutique:
       type: RANKUP
       rank: empereur
       name: "&6&lGrade Empereur"
-      material: DIAMOND_CHESTPLATE
+      material: GOLD_CHESTPLATE
       lore:
         - "&7Passe au grade Empereur."
       price: 150000
@@ -423,7 +414,7 @@ boutique:
       type: RANKUP
       rank: supreme
       name: "&5&lGrade Supreme"
-      material: NETHER_STAR
+      material: DIAMOND_CHESTPLATE
       lore:
         - "&7Passe au grade Supreme."
       price: 500000
@@ -432,7 +423,7 @@ boutique:
       type: RANKUP
       rank: star
       name: "&d&lGrade Star"
-      material: BEACON
+      material: NETHER_STAR
       lore:
         - "&7Passe au grade Star."
       price: 1500000
@@ -444,7 +435,6 @@ boutique:
       material: DIAMOND_SWORD
       lore:
         - "&7Débloque le kit PvP permanent."
-        - "&7Récupère-le avec &e/kit&7."
       price: 2500
 
     KIT_MINER:
@@ -734,6 +724,8 @@ classement:
     - mobs_killed
     - players_killed
     - deaths
+    - event_hits
+    - totem_blocks
 
 core:
   death-inventory-preview: true
@@ -793,8 +785,10 @@ scoreboard:
     default: "Joueur"
   # Couleur du grade appliquée au nom du grade ET au pseudo dans le chat public,
   # le tab-list et au-dessus de la tête, par groupe de permission (ex: &d = violet
-  # clair -> "Star Pseudo" tout en violet). Le groupe "default" affiche le grade
-  # Joueur dans le chat et le tab.
+  # clair -> "Star Pseudo" tout en violet). Un groupe absent d'ici (ou "" comme
+  # couleur) n'affiche rien devant le pseudo, même s'il a un nom dans "grades" ci-
+  # dessus. Rappel : le grade donne des permissions/commandes en plus (LuckPerms),
+  # contrairement au tag (/tags) qui est purement décoratif.
   grade-colors:
     default: "&7"
     star: "&d"
@@ -868,22 +862,6 @@ factions:
     start: 10
     per-death: 2
     regen-per-minute: 0.2
-  rally:
-    enabled: true
-    expire-minutes: 30
-    update-ticks: 20
-    compass: true
-    particles: false
-    particle-effect: ENDER_SIGNAL
-    particle-height: 6
-    actionbar-distance: true
-    lunar-waypoints: true
-    lunar-debug: false
-    messages:
-      set: "&aWaypoint &eRally &adéfini par &e%player%&a."
-      removed: "&eWaypoint Rally supprimé par &f%player%&e."
-      coords: "&7Rally » &f%x%&7, &f%y%&7, &f%z% &7(&f%world%&7)"
-      actionbar: "&6Rally &7» &e%distance%m &7(%direction%)"
   claim:
     enabled: true
     worlds:
@@ -905,3 +883,4 @@ factions:
 discord:
   enabled: true
   webhook-url: "https://discord.com/api/webhooks/1543608101461033041/rLijWaaIQuOQ8ipI8eoIq_yzqymPxehSUQD7bOWH1Mkm4-WJRIeGi6FQHmdcY2hpFCmL"
+  event-results: true

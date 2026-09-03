@@ -1,0 +1,176 @@
+# ============================================================
+# KITS SYDARIA - Guide
+# ============================================================
+#
+# 1) MODIFIER / CREER UN KIT ici (plugins/Sydaria/kits.yml)
+# 2) LE VENDRE dans config.yml -> boutique -> categories -> kits
+# 3) LE JOUEUR l'achete en /boutique puis le recupere en /kit
+#
+# REGLES DES ITEMS :
+#   amount: 16        = 16 items (1 par slot inventaire par defaut)
+#   stack: true       = empiler en un seul slot (ex: 64 torches)
+#   (sans stack)      = chaque item dans un slot separe (ideal potions PvP)
+#
+# TYPES D'ITEMS :
+#   - item Sydaria    : item: DASH_FEATHER
+#   - item vanilla    : material: GOLDEN_APPLE
+#   - potion          : potion-type + level + splash
+#
+# ENCHANTEMENTS (sur armes/armures) :
+#   enchants:
+#     PROTECTION: 4        # Protection IV (alias)
+#     UNBREAKING: 3         # Solidite III (alias)
+#   Noms 1.8 aussi acceptes : PROTECTION_ENVIRONMENTAL, DURABILITY, SHARPNESS...
+#
+# POTIONS (level 2 = niveau II) :
+#   potion-type: INSTANT_HEAL   (soin)
+#   potion-type: SPEED
+#   potion-type: STRENGTH       (force)
+#   potion-type: FIRE_RESISTANCE
+#   splash: true                (lançable)
+#   splash: false               (a boire)
+#
+# Apres modification : /sydaria reload
+# ============================================================
+
+gui:
+  title: "&8Kits"
+  size: 54
+  slots:
+    - 10
+    - 11
+    - 12
+    - 13
+    - 14
+    - 15
+    - 16
+    - 19
+    - 20
+    - 21
+    - 22
+    - 23
+    - 24
+    - 25
+
+messages:
+  purchased: "&aKit &e%kit% &adébloqué. Utilise &e/kit &apour le récupérer."
+  claimed: "&aKit &e%kit% &arécupéré."
+
+kits:
+  PVP:
+    name: "&c&lKit PvP"
+    material: DIAMOND_SWORD
+    cooldown-seconds: 86400
+    lore:
+      - "&7Equipement PvP de base."
+      - "&7Cooldown: &e24h"
+    items:
+      - material: DIAMOND_HELMET
+        amount: 1
+        enchants:
+          PROTECTION: 4
+          UNBREAKING: 3
+      - material: DIAMOND_CHESTPLATE
+        amount: 1
+        enchants:
+          PROTECTION: 4
+          UNBREAKING: 3
+      - material: DIAMOND_LEGGINGS
+        amount: 1
+        enchants:
+          PROTECTION: 4
+          UNBREAKING: 3
+      - material: DIAMOND_BOOTS
+        amount: 1
+        enchants:
+          PROTECTION: 4
+          UNBREAKING: 3
+      - material: DIAMOND_SWORD
+        amount: 1
+        enchants:
+          SHARPNESS: 5
+          UNBREAKING: 3
+          FIRE_ASPECT: 2
+      - material: GOLDEN_APPLE
+        amount: 8
+        stack: true
+      - material: COOKED_BEEF
+        amount: 16
+        stack: true
+      - potion-type: INSTANT_HEAL
+        level: 2
+        splash: true
+        amount: 16
+      - potion-type: SPEED
+        level: 2
+        splash: true
+        amount: 8
+      - potion-type: STRENGTH
+        level: 2
+        splash: true
+        amount: 8
+
+  MINER:
+    name: "&e&lKit Mineur"
+    material: DIAMOND_PICKAXE
+    cooldown-seconds: 43200
+    lore:
+      - "&7Outils pour miner."
+      - "&7Cooldown: &e12h"
+    items:
+      - material: DIAMOND_PICKAXE
+        amount: 1
+        enchants:
+          EFFICIENCY: 5
+          UNBREAKING: 3
+      - material: TORCH
+        amount: 64
+        stack: true
+      - material: COOKED_BEEF
+        amount: 32
+        stack: true
+
+  REFILL:
+    name: "&d&lKit Potions"
+    material: POTION
+    cooldown-seconds: 3600
+    lore:
+      - "&7Potions splash pour le PvP."
+      - "&7Cooldown: &e1h"
+    items:
+      - potion-type: INSTANT_HEAL
+        level: 2
+        splash: true
+        amount: 32
+      - potion-type: FIRE_RESISTANCE
+        level: 1
+        splash: true
+        amount: 8
+
+  # --- EXEMPLE : creer un nouveau kit ---
+  #
+  # MON_KIT:
+  #   name: "&a&lMon Kit Custom"
+  #   material: CHEST
+  #   cooldown-seconds: 7200
+  #   lore:
+  #     - "&7Mon kit perso"
+  #     - "&7Cooldown: &e2h"
+  #   items:
+  #     - material: DIAMOND_SWORD
+  #       amount: 1
+  #     - potion-type: INSTANT_HEAL
+  #       level: 2
+  #       splash: true
+  #       amount: 10
+  #
+  # Puis dans config.yml (boutique.items) :
+  #
+  #   KIT_MON_KIT:
+  #     type: KIT
+  #     kit: MON_KIT
+  #     name: "&a&lMon Kit Custom"
+  #     material: CHEST
+  #     price: 1500
+  #
+  # Et ajoute KIT_MON_KIT dans boutique.categories.kits.items

@@ -7,6 +7,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.RegisteredServiceProvider;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -57,65 +59,154 @@ public class GradeManager {
 
     /** Nom affichable du grade (scoreboard, /grade), configurable dans scoreboard.grades.<groupe>. */
     public String displayName(Player player) {
-        String group = group(player);
-        if (!group.isEmpty()) {
-            String mapped = plugin.getConfig().getString("scoreboard.grades." + group);
-            if (mapped != null && !mapped.isEmpty()) {
-                return mapped;
-            }
-            if (!isDefaultGroup(group)) {
-                return capitalize(group);
-            }
-        }
-        String tag = plugin.tags().selectedName(player);
-        if (tag != null && !tag.isEmpty()) {
-            return tag;
-        }
-        return plugin.getConfig().getString("scoreboard.grade-default", "Joueur");
+        return gradeNameForGroup(resolveGroup(player));
     }
 
-    /**
-     * Code couleur du grade (ex: "&d"), configurable dans scoreboard.grade-colors.<groupe>.
-     * Vide pour le groupe par défaut ou si aucune couleur n'est définie.
-     */
-    public String color(Player player) {
-        String group = group(player);
-        if (group.isEmpty() || isDefaultGroup(group)) {
-            return "";
+    /** Nom affichable d'un groupe (ex: marquis -> Marquis). */
+    public String displayNameForGroup(String group) {
+        return gradeNameForGroup(normalizeGroup(group));
+    }
+
+    /** Échelle des grades (partagée avec le rankup). */
+    public List<String> ladder() {
+        List<String> configured = plugin.getConfig().getStringList("rankup.ladder");
+        if (configured == null || configured.isEmpty()) {
+            return defaultLadder();
         }
+        List<String> out = new ArrayList<String>();
+        for (String entry : configured) {
+            out.add(normalizeGroup(entry));
+        }
+        return out;
+    }
+
+    private List<String> defaultLadder() {
+        List<String> out = new ArrayList<String>();
+        out.add("default");
+        out.add("chevalier");
+        out.add("marquis");
+        out.add("seigneur");
+        out.add("empereur");
+        out.add("supreme");
+        out.add("star");
+        return out;
+    }
+
+    public int gradeIndex(String group) {
+        return ladder().indexOf(normalizeGroup(group));
+    }
+
+    /** Index du grade le plus eleve du joueur dans l'echelle (tous groupes LuckPerms confondus). */
+    public int playerGradeIndex(Player player) {
+        return highestGradeIndex(player);
+    }
+
+    /** Groupe le plus eleve du joueur present dans l'echelle rankup. */
+    public String highestGroup(Player player) {
+        List<String> ladder = ladder();
+        int bestIndex = 0;
+        String bestGroup = ladder.get(0);
+        for (String group : allGroups(player)) {
+            int index = ladder.indexOf(normalizeGroup(group));
+            if (index > bestIndex) {
+                bestIndex = index;
+                bestGroup = ladder.get(index);
+            }
+        }
+        return bestGroup;
+    }
+
+    private int highestGradeIndex(Player player) {
+        List<String> ladder = ladder();
+        int best = 0;
+        for (String group : allGroups(player)) {
+            int index = ladder.indexOf(normalizeGroup(group));
+            if (index > best) {
+                best = index;
+            }
+        }
+        return best;
+    }
+
+    private List<String> allGroups(Player player) {
+        List<String> groups = new ArrayList<String>();
+        groups.add(group(player));
+        if (vaultPerm == null) {
+            hook();
+        }
+        if (vaultPerm != null && vaultPerm.hasGroupSupport()) {
+            try {
+                String[] fromVault = vaultPerm.getPlayerGroups(player);
+                if (fromVault != null) {
+                    for (String entry : fromVault) {
+                        if (entry != null && !entry.isEmpty()) {
+                            groups.add(entry);
+                        }
+                    }
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+        return groups;
+    }
+
+    /** True si le joueur a atteint le grade minimum (ou supérieur). */
+    public boolean hasMinGrade(Player player, String minGrade) {
+        if (player.hasPermission("sydaria.gradecommands.bypass")) {
+            return true;
+        }
+        int required = gradeIndex(minGrade);
+        if (required < 0) {
+            return false;
+        }
+        return highestGradeIndex(player) >= required;
+    }
+
+    /** Code couleur du grade (ex: "&d"), configurable dans scoreboard.grade-colors.<groupe>. */
+    public String color(Player player) {
+        String group = resolveGroup(player);
         String color = plugin.getConfig().getString("scoreboard.grade-colors." + group, "");
         return color == null ? "" : color;
     }
 
     /**
-     * Préfixe "NomDuGrade Pseudo" entièrement dans la couleur du grade, ex: pour un
-     * joueur du groupe "star" avec la couleur "&d" ça donne "&dStar " : le code couleur
-     * n'est PAS suivi d'un reset, donc le pseudo qui suit juste après hérite de la même
-     * couleur automatiquement (comportement standard de Minecraft), et le résultat
-     * affiché est "Star Pseudo" entièrement en violet clair.
-     *
-     * Vide (donc rien devant le pseudo) pour le groupe par défaut, ou si aucune couleur
-     * n'est configurée pour ce groupe dans scoreboard.grade-colors.
+     * Préfixe "NomDuGrade Pseudo" entièrement dans la couleur du grade.
+     * Affiche aussi le grade Joueur pour le groupe default.
      */
     public String chatPrefix(Player player) {
-        String group = group(player);
-        if (group.isEmpty() || isDefaultGroup(group)) {
-            return "";
-        }
         String color = color(player);
         if (color.isEmpty()) {
             return "";
         }
-        String name = plugin.getConfig().getString("scoreboard.grades." + group);
-        if (name == null || name.isEmpty()) {
-            name = capitalize(group);
-        }
-        // Certains noms de grade (scoreboard.grades.<groupe>) embarquent déjà leur
-        // propre couleur pour la ligne "Grade:" du scoreboard (ex: "&5Supreme"). On
-        // la retire ici pour que ce soit TOUJOURS la couleur de grade-colors qui
-        // s'applique dans le chat/tab/pseudo, sans exception ni conflit possible.
+        String name = gradeNameForGroup(resolveGroup(player));
         name = stripColor(name);
         return CC.color(color + name + " ");
+    }
+
+    private String resolveGroup(Player player) {
+        return highestGroup(player);
+    }
+
+    private String normalizeGroup(String group) {
+        if (group == null || group.isEmpty()) {
+            return "default";
+        }
+        String lower = group.toLowerCase(Locale.ROOT);
+        if (isDefaultGroup(lower)) {
+            return "default";
+        }
+        return lower;
+    }
+
+    private String gradeNameForGroup(String group) {
+        String mapped = plugin.getConfig().getString("scoreboard.grades." + group);
+        if (mapped != null && !mapped.isEmpty()) {
+            return mapped;
+        }
+        if (isDefaultGroup(group) || "default".equals(group)) {
+            return plugin.getConfig().getString("scoreboard.grade-default", "Joueur");
+        }
+        return capitalize(group);
     }
 
     /** Retire les codes couleur (& et §) d'une chaîne, ex: "&5Supreme" -> "Supreme". */
@@ -124,7 +215,13 @@ public class GradeManager {
     }
 
     private boolean isDefaultGroup(String group) {
-        return "default".equalsIgnoreCase(group) || "default_player".equalsIgnoreCase(group);
+        if (group == null || group.isEmpty()) {
+            return true;
+        }
+        String lower = group.toLowerCase(Locale.ROOT);
+        return "default".equals(lower) || "default_player".equals(lower)
+                || "joueur".equals(lower) || "player".equals(lower)
+                || "member".equals(lower) || "membre".equals(lower);
     }
 
     private String capitalize(String raw) {

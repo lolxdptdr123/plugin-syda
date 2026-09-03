@@ -263,6 +263,9 @@ public class ShopManager implements Listener, CommandExecutor {
             stack.setItemMeta(meta);
             return stack;
         }
+        if ("KIT".equals(type)) {
+            return plugin.kits().buildShopIcon(player, sec, id, money);
+        }
 
         String itemId = sec.getString("item", id);
         ItemStack stack = plugin.items().create(itemId);
@@ -384,6 +387,13 @@ public class ShopManager implements Listener, CommandExecutor {
                 return;
             }
         }
+        if ("KIT".equals(type)) {
+            String kitId = entry.getString("kit", id).toUpperCase(Locale.ROOT);
+            if (plugin.kits().ownsKit(player.getUniqueId(), kitId)) {
+                plugin.msg(player, "&eTu possèdes déjà ce kit. &7Utilise &e/kit&7.");
+                return;
+            }
+        }
 
         if (money) {
             double price = entry.getDouble("price", 0.0);
@@ -420,6 +430,17 @@ public class ShopManager implements Listener, CommandExecutor {
             owned.add(atoutId);
             plugin.data().setList(player.getUniqueId(), "atouts_owned", owned);
             plugin.msg(player, "&aTu as débloqué l'atout &e" + atoutId + "&a. Utilise &e/atouts &apour l'activer.");
+            return true;
+        }
+        if ("KIT".equals(type)) {
+            String kitId = entry.getString("kit", id).toUpperCase(Locale.ROOT);
+            if (plugin.kits().ownsKit(player.getUniqueId(), kitId)) {
+                return false;
+            }
+            if (!plugin.kits().unlockKit(player.getUniqueId(), kitId)) {
+                return false;
+            }
+            plugin.kits().sendPurchasedMessage(player, kitId);
             return true;
         }
 

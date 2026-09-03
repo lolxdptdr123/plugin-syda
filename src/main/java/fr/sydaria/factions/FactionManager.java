@@ -45,13 +45,15 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
             "promote", "demote", "rank", "leader", "show", "who", "list", "desc", "motd", "rename",
             "open", "close", "chest", "upgrade", "perm", "fly", "home", "sethome", "delhome",
             "claim", "unclaim", "unclaimall", "map", "enemy", "neutral",
-            "chat", "c"
+            "chat", "c", "rally"
     );
 
     private final Sydaria plugin;
     private final YamlFile file;
     private final FactionMenus menus;
     private final FactionListener protection;
+    private final FactionRallyManager rally;
+    private LunarWaypointHook lunar;
     private final Map<UUID, FactionChatMode> chatModes = new HashMap<UUID, FactionChatMode>();
     private final Map<UUID, String> pendingDisband = new HashMap<UUID, String>();
 
@@ -60,8 +62,13 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
         this.file = new YamlFile(plugin, "factions.yml");
         this.menus = new FactionMenus(plugin, this);
         this.protection = new FactionListener(plugin, this);
+        this.rally = new FactionRallyManager(plugin, this, file);
+        this.lunar = new LunarWaypointHook(plugin, this, rally);
+        this.rally.setLunarHook(lunar);
         Bukkit.getPluginManager().registerEvents(menus, plugin);
         Bukkit.getPluginManager().registerEvents(protection, plugin);
+        Bukkit.getPluginManager().registerEvents(rally, plugin);
+        Bukkit.getPluginManager().registerEvents(lunar, plugin);
         Bukkit.getScheduler().runTaskTimer(plugin, new Runnable() {
             @Override
             public void run() {
@@ -72,6 +79,10 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
 
     public FactionMenus menus() {
         return menus;
+    }
+
+    public FactionRallyManager rally() {
+        return rally;
     }
 
     public String factionOf(Player player) {
@@ -514,6 +525,8 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
             } else {
                 cycleChat(player);
             }
+        } else if (sub.equals("rally")) {
+            rally.handleCommand(player, args);
         } else {
             help(player);
         }
@@ -551,6 +564,9 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
                         }
                     }
                 }
+            } else if (sub.equals("rally")) {
+                if ("del".startsWith(args[1].toLowerCase(Locale.ROOT))) out.add("del");
+                if ("remove".startsWith(args[1].toLowerCase(Locale.ROOT))) out.add("remove");
             }
         }
         if (args.length == 3 && args[0].equalsIgnoreCase("rank")) {
@@ -571,7 +587,8 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
         plugin.msg(player, "&e/f rank <joueur> <grade> &8- &7Leader, Co-leader, Officier, Membre, Recrue");
         plugin.msg(player, "&e/f leader <joueur> &8- &7Transférer le lead");
         plugin.msg(player, "&e/f join/leave/disband");
-        plugin.msg(player, "&e/f claim/unclaim/map/home");
+        plugin.msg(player, "&e/f claim/unclaim/map/home/rally");
+        plugin.msg(player, "&e/f rally &8- &7Waypoint rally (&e/f rally del &7pour supprimer)");
         plugin.msg(player, "&e/f enemy/neutral <faction>");
         plugin.msg(player, "&e/f upgrade &8- &7Menu des améliorations");
         plugin.msg(player, "&e/f perm &8- &7Menu des permissions");
@@ -630,6 +647,7 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
         }
         pendingDisband.remove(player.getUniqueId());
         String name = displayName(fac);
+        rally.clearRally(fac);
         for (String raw : members(fac)) {
             UUID uuid = UUID.fromString(raw);
             plugin.data().setString(uuid, "faction", "");

@@ -2,8 +2,8 @@ name: Sydaria
 version: ${project.version}
 main: fr.sydaria.Sydaria
 author: Sydaria
-description: Plugin tout-en-un Factions (AntiCleanUp, Atouts, Events, Items, Tokens...)
-softdepend: [Vault, PlaceholderAPI, Votifier, NuVotifier, LuckPerms]
+description: Plugin tout-en-un Factions (AntiCleanUp, Atouts, Items, Tokens...)
+softdepend: [Vault, PlaceholderAPI, Votifier, NuVotifier, LuckPerms, Apollo-Bukkit, Apollo]
 
 commands:
   sydaria:
@@ -68,9 +68,6 @@ commands:
   money:
     description: Argent - utilisé uniquement dans /shop
     aliases: [argent]
-  event:
-    description: Gestion des events
-    aliases: [events]
   f:
     description: Commandes faction Sydaria
   voteparty:
@@ -90,6 +87,26 @@ commands:
   rankup:
     description: Monte de grade avec ton argent
     aliases: [grade, grades]
+  deathinv:
+    description: Consulte l'inventaire d'un joueur tue
+  feed:
+    description: Nourrit le joueur (grade requis)
+  pv:
+    description: Coffre prive du joueur (grade requis)
+  ec:
+    description: Ouvre ton enderchest (grade requis)
+  refill:
+    description: Remplit les slots vides avec des potions (grade requis)
+  craft:
+    description: Table de craft portable (grade requis)
+  near:
+    description: Joueurs proches (grade requis)
+  grades:
+    description: Liste les commandes debloquees par grade
+    aliases: [gradecmds]
+  kit:
+    description: Menu des kits debloques
+    aliases: [kits]
 
 permissions:
   sydaria.admin:
@@ -110,8 +127,9 @@ permissions:
     default: false
   sydaria.faction.bypass:
     default: op
-  sydaria.event.admin:
-    default: op
+  sydaria.gradecommands.bypass:
+    default: false
+    description: Ignore les restrictions de grade pour /feed, /pv, etc.
   sydaria.tokens.give:
     default: op
   sydaria.money.give:

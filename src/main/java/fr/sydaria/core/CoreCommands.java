@@ -19,7 +19,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityExplodeEvent;
-import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.entity.PotionSplashEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
@@ -271,51 +270,8 @@ public class CoreCommands implements CommandExecutor, Listener {
     }
 
     @EventHandler
-    public void onDeathPreview(PlayerDeathEvent event) {
-        if (!plugin.getConfig().getBoolean("core.death-inventory-preview", true)) {
-            return;
-        }
-        Player victim = event.getEntity();
-        Player killer = victim.getKiller();
-        if (killer == null) {
-            return;
-        }
-        StringBuilder sb = new StringBuilder();
-        sb.append(CC.color("&eInventaire de &c" + victim.getName() + " &7: "));
-        for (ItemStack stack : victim.getInventory().getContents()) {
-            if (stack == null || stack.getType() == Material.AIR) {
-                continue;
-            }
-            String n = stack.hasItemMeta() && stack.getItemMeta().hasDisplayName()
-                    ? stack.getItemMeta().getDisplayName()
-                    : stack.getType().name();
-            sb.append(CC.color("&f")).append(ChatColor.stripColor(n)).append(CC.color(" &8x")).append(stack.getAmount()).append(CC.color("&7, "));
-        }
-        killer.sendMessage(sb.toString());
-        Inventory preview = Bukkit.createInventory(null, 54, CC.color("&8Stuff de " + victim.getName()));
-        preview.setContents(copy(victim.getInventory().getContents(), 36));
-        ItemStack[] armor = victim.getInventory().getArmorContents();
-        for (int i = 0; i < armor.length; i++) {
-            preview.setItem(45 + i, armor[i]);
-        }
-        killer.openInventory(preview);
-    }
-
-    private ItemStack[] copy(ItemStack[] src, int max) {
-        ItemStack[] out = new ItemStack[max];
-        for (int i = 0; i < max && i < src.length; i++) {
-            out[i] = src[i] == null ? null : src[i].clone();
-        }
-        return out;
-    }
-
-    @EventHandler
     public void onPreviewClick(InventoryClickEvent event) {
-        String title = event.getView().getTitle();
-        if (title != null && title.contains("Stuff de")) {
-            event.setCancelled(true);
-        }
-        if (TITLE_CLASSEMENT(title)) {
+        if (TITLE_CLASSEMENT(event.getView().getTitle())) {
             event.setCancelled(true);
         }
     }

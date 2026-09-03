@@ -37,11 +37,15 @@ public class DataManager {
             file.get().set(path + ".tag", "");
             file.get().set(path + ".atouts", new ArrayList<String>());
             file.get().set(path + ".atouts_owned", new ArrayList<String>());
+            file.get().set(path + ".kits_owned", new ArrayList<String>());
         } else {
             file.get().set(path + ".name", player.getName());
             if (!file.get().contains(path + ".atouts")) file.get().set(path + ".atouts", new ArrayList<String>());
             if (!file.get().contains(path + ".atouts_owned")) {
                 file.get().set(path + ".atouts_owned", file.get().getStringList(path + ".atouts"));
+            }
+            if (!file.get().contains(path + ".kits_owned")) {
+                file.get().set(path + ".kits_owned", new ArrayList<String>());
             }
             if (!file.get().contains(path + ".money")) {
                 file.get().set(path + ".money", Sydaria.get().getConfig().getDouble("economy.starting", 0));

@@ -75,9 +75,6 @@ public class SydariaPlaceholders extends PlaceholderExpansion {
         if (params.equalsIgnoreCase("tag")) {
             return plugin.tags().display(player);
         }
-        if (params.equalsIgnoreCase("event")) {
-            return plugin.events().currentName();
-        }
         return null;
     }
 }
