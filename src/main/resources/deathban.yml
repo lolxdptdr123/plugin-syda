@@ -1,0 +1,57 @@
+# DeathBan Draftmc - plugins/Draftmc/deathban.yml
+# Ban un joueur d'un monde PvP pendant une duree apres sa mort.
+# Ce n'est PAS un event : ca tourne en permanence.
+
+# Mondes concernes (noms exacts, sensibles a la casse)
+worlds:
+  - warzone
+
+# Monde ou le joueur est renvoye apres une mort / s'il se reconnecte dans un monde interdit
+safe-world: world
+
+# Duree du deathban en secondes
+# 0 = jusqu'a un /deathban unban
+# Exemples : 3600 = 1 heure, 86400 = 24 heures
+ban-duration: 0
+
+# Commandes autorisees DANS les mondes listes ci-dessus (sans le /)
+# Les alias doivent aussi etre listes (ex: msg ET tell)
+allowed-commands:
+  - msg
+  - tell
+  - w
+  - r
+  - reply
+  - report
+  - help
+  - list
+  - spawn
+  - deathban
+  - db
+  - f
+  - br
+  - conquest
+  - domination
+  - masterkill
+
+# Messages (codes couleur & : &c, &a, &e, &7, &b ...)
+messages:
+  prefix: "&c&lDeathBan &8» &7"
+  death-banned: "&cTu es deathban de &e{world}&c. Tu ne peux plus y aller{duration}."
+  already-banned: "&cTu es toujours deathban de ce monde{duration}."
+  teleport-denied: "&cTu ne peux pas te téléporter dans &e{world}&c : tu es deathban{duration}."
+  command-denied: "&cLes commandes sont limitées dans ce monde."
+  unbanned-player: "&a{player} n'est plus deathban."
+  not-banned: "&e{player} n'est pas deathban."
+  banned-by-admin: "&c{player} a été deathban de {world}."
+  reloaded: "&aConfiguration rechargée."
+  no-permission: "&cTu n'as pas la permission."
+  player-not-found: "&cJoueur introuvable."
+  usage: "&e/deathban unban <joueur> &7| &e/deathban ban <joueur> [monde] &7| &e/deathban check <joueur> &7| &e/deathban list &7| &e/deathban reload"
+  duration-permanent: " (permanent)"
+  duration-left: " (&e{time}&c restant)"
+  list-header: "&eJoueurs deathban :"
+  list-empty: "&7Aucun joueur deathban."
+  list-entry: "&7- &f{player} &8» &e{world}{duration}"
+  check-banned: "&e{player} &7est deathban de &e{world}{duration}."
+  check-ok: "&a{player} n'est pas deathban."

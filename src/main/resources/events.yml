@@ -1,0 +1,99 @@
+# Commande /event - maps des events Draftmc
+# Ajoute une map ici, puis (optionnel) le detail des zones dans conquest.yml
+# sous maps.<nom>.zones  — sinon les zones/arene par defaut du fichier event sont utilisees.
+
+prefix: "&8[&6Event&8] &7"
+
+# Points ajoutes au /f top quand une faction gagne l'event.
+top-points:
+  conquest: 15
+  domination: 15
+  totem: 15
+  totemgeant: 15
+  koth: 15
+  battleroyal: 10
+  masterkill: 10
+  teamfight: 15
+  member-message: "&aVotre faction a reçu &e{points} points PVP !"
+
+types:
+  conquest:
+    display: "&6Conquest"
+    maps:
+      default:
+        display: "Default"
+        world: world
+  domination:
+    display: "&cDomination"
+    maps:
+      default:
+        display: "Default"
+        world: world
+  battleroyal:
+    display: "&eBattleroyal"
+    maps:
+      default:
+        display: "Default"
+        world: world
+        # Optionnel : ecrase arena.* de battleroyal.yml le temps de la partie
+        # center-x: 0
+        # center-y: 100
+        # center-z: 0
+        # initial-size: 500
+  masterkill:
+    display: "&cMasterKill"
+    maps:
+      default:
+        display: "Default"
+        world: world
+        # Optionnel : ecrase arena.pos1 / pos2 de masterkill.yml
+        # pos1: { x: 0, y: 64, z: 0 }
+        # pos2: { x: 50, y: 80, z: 50 }
+  totem:
+    display: "&dTotem"
+    maps:
+      default:
+        display: "Default"
+        world: world
+        # Optionnel : ecrase la position de totem.yml maps.<nom>
+        # x: 0
+        # y: 64
+        # z: 0
+  totemgeant:
+    display: "&6Totem Geant"
+    maps:
+      default:
+        display: "Default"
+        world: world
+  koth:
+    display: "&6KOTH Geant"
+    maps: {}
+  teamfight:
+    display: "&cTeamFight 8v8"
+    maps:
+      default:
+        display: Default
+        world: world
+
+# Planning affiche dans /event (blocs de fer, un par jour).
+# event = nom affiche, map = nom de la map, time = horaire affiche
+schedule:
+  gui-title: "&8Events de la semaine"
+  monday:
+    - {event: Conquest, map: Default, time: "18:00"}
+    - {event: KOTH Geant, map: Default, time: "21:00"}
+  tuesday:
+    - {event: Domination, map: Default, time: "18:00"}
+  wednesday:
+    - {event: Totem, map: Default, time: "18:00"}
+    - {event: KOTH Geant, map: Default, time: "21:00"}
+  thursday:
+    - {event: MasterKill, map: Default, time: "18:00"}
+  friday:
+    - {event: Battleroyal, map: Default, time: "18:00"}
+  saturday:
+    - {event: TeamFight, map: Default, time: "18:00"}
+    - {event: Conquest, map: Default, time: "21:00"}
+  sunday:
+    - {event: KOTH Geant, map: Default, time: "21:00"}
+    - {event: Totem, map: Default, time: "18:00"}

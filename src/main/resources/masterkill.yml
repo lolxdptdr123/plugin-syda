@@ -1,0 +1,156 @@
+# ===================== MasterKill - Configuration =====================
+# Fichier : plugins/Draftmc/masterkill.yml
+# Tout ici est rechargeable a chaud avec /masterkill reload.
+
+general:
+  # Empeche les objets de tomber au sol a la mort d'un joueur pendant le match.
+  prevent-item-drop: true
+  # Duree maximale du match (en minutes). A l'expiration, meme s'il reste
+  # plusieurs equipes, c'est celle avec le plus de kills qui gagne.
+  match-duration-minutes: 30
+
+# Couleurs attribuees AUTOMATIQUEMENT aux equipes dans l'ordre de creation
+# (les joueurs ne choisissent jamais leur couleur). La 1ere equipe creee
+# prend la 1ere couleur de la liste, la 2eme equipe la 2eme, etc., et ca
+# boucle si plus d'equipes que de couleurs sont creees. Noms ChatColor
+# valides : RED, BLUE, GREEN, YELLOW, LIGHT_PURPLE, AQUA, GOLD, DARK_PURPLE,
+# DARK_GREEN, DARK_AQUA, WHITE, GRAY, DARK_RED, DARK_BLUE, DARK_GRAY, BLACK.
+team-colors:
+  - YELLOW
+  - RED
+  - BLUE
+  - GREEN
+  - LIGHT_PURPLE
+  - AQUA
+  - GOLD
+  - DARK_PURPLE
+  - DARK_GREEN
+  - DARK_AQUA
+  - WHITE
+  - GRAY
+
+# Ou renvoyer tout le monde a la fin d'un match (victoire ou /masterkill stop).
+# Si non renseigne, se replie sur le spawn du premier monde charge par le serveur.
+spawn:
+  world: world
+  x: 0
+  y: 100
+  z: 0
+  yaw: 0
+  pitch: 0
+
+# Arene ou les equipes sont teleportees, reparties en cercle autour du centre.
+# Definis les deux coins en jeu avec /masterkill setpos1 et /masterkill setpos2.
+arena:
+  pos1: { world: world, x: 0, y: 0, z: 0 }
+  pos2: { world: world, x: 0, y: 0, z: 0 }
+  # Bordure de monde optionnelle (simple conteneur, ne retrecit pas comme
+  # dans un Battle Royale : juste pour empecher de sortir de l'arene).
+  # Sa taille est calculee automatiquement a partir de pos1/pos2.
+  use-border: true
+
+# Stuff predefini et identique pour TOUS les joueurs au lancement du match -
+# un kit "full diamond competitif", comme sur DraftRoyale. Active par defaut.
+kit:
+  enabled: true
+  items:
+    - material: DIAMOND_SWORD
+      amount: 1
+      slot: hand
+      enchantments:
+        - type: DAMAGE_ALL      # Tranchant (Sharpness)
+          level: 5
+        - type: DURABILITY      # Solidite (Unbreaking)
+          level: 3
+
+    - material: DIAMOND_HELMET
+      amount: 1
+      slot: helmet
+      enchantments:
+        - type: PROTECTION_ENVIRONMENTAL
+          level: 4
+        - type: DURABILITY
+          level: 3
+
+    - material: DIAMOND_CHESTPLATE
+      amount: 1
+      slot: chestplate
+      enchantments:
+        - type: PROTECTION_ENVIRONMENTAL
+          level: 4
+        - type: DURABILITY
+          level: 3
+
+    - material: DIAMOND_LEGGINGS
+      amount: 1
+      slot: leggings
+      enchantments:
+        - type: PROTECTION_ENVIRONMENTAL
+          level: 4
+        - type: DURABILITY
+          level: 3
+
+    - material: DIAMOND_BOOTS
+      amount: 1
+      slot: boots
+      enchantments:
+        - type: PROTECTION_ENVIRONMENTAL
+          level: 4
+        - type: DURABILITY
+          level: 3
+
+    - material: GOLDEN_APPLE
+      amount: 16
+
+    - material: ENDER_PEARL
+      amount: 4
+
+    - material: POTION
+      amount: 20
+      potion-type: INSTANT_HEAL
+      potion-level: 2
+      splash: true
+
+# Recompense (commandes console) pour la SEULE faction TOP 1 par kills sur
+# l'ensemble de l'evenement (le top 3 reste affiche dans le scoreboard,
+# mais seul le premier recoit une recompense). Placeholders : {team}, {kills}.
+# Vide par defaut : l'annonce du vainqueur (voir "reward-announce" plus bas)
+# est deja envoyee automatiquement, ceci sert a donner une VRAIE recompense
+# (argent, items...) si tu as un plugin d'economie. Exemple si tu as
+# Vault + un plugin d'economie : "eco give {team} 1000"
+# ATTENTION : n'utilise pas "broadcast" ici, ce n'est pas une commande
+# vanilla (ca necessite un plugin comme Essentials, sinon "Unknown command").
+rewards:
+  rank-1: []
+  # Si false, aucune annonce dans le chat n'est faite pour la recompense
+  # (independamment du fait que "rank-1" contienne des commandes ou non).
+  announce: true
+
+sounds:
+  enabled: true
+  on-kill: LEVEL_UP
+  on-victory: WITHER_SPAWN
+
+titles:
+  enabled: true
+  on-kill:
+    title: "&a+1 KILL"
+    subtitle: "&7{victim} elimine !"
+
+scoreboard:
+  enabled: true
+  title: "&c&lMASTERKILL"
+
+messages:
+  prefix: "&cMasterkill &7> &r"
+  event-started: "Le match commence !"
+  event-stopped: "L'evenement a ete arrete."
+  no-event-running: "Aucun MasterKill en cours."
+  already-running: "Un MasterKill est deja en cours."
+  registration-open: "Les inscriptions sont ouvertes ! Utilisez /masterkill team create <nom> pour former votre equipe."
+  not-enough-teams: "Il faut au moins 2 equipes formees pour lancer le match."
+  kill-broadcast: "{killer} vient de tuer {victim} de la {victimTeam}. La {killerTeam} a gagne 1 point."
+  team-eliminated: "La faction {team} a ete eliminee !"
+  winner: "La faction {team} remporte le Masterkill."
+  reward-announce: "{team} remporte les recompenses avec {kills} kills !"
+  no-permission: "&cPermission refusee."

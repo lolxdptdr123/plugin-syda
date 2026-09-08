@@ -1,0 +1,74 @@
+# Event Totem - plugins/Draftmc/totem.yml
+# Totem classique : meme faction d'affilee, adverse = reset, dernier bloc = victoire.
+# Totem Geant : classement top 3 sur 30 min, points par etage, +10 one-shot.
+# Pose : /totem set <nom>
+# Start classique : /event start totem <nom>  ou  /totem spawn <nom>
+# Start geant : /event start totemgeant <nom>  ou  /totemgeant spawn <nom>
+
+prefix: "&8[&6Totem&8] &7"
+
+start-countdown-seconds: 60
+pvp-points: 15
+
+# Totem Geant : points du sommet (premier ⬜) vers la base.
+# Reset adverse = uniquement les points du bloc casse, puis la tour revient.
+# One-shot = casser toute la tour sans qu'une autre faction reset.
+giant:
+  prefix: "&8[&6Totem Geant&8] &7"
+  duration-minutes: 30
+  oneshot-bonus: 10
+  block-points:
+    - 1
+    - 2
+    - 4
+    - 6
+    - 8
+  ranking-points:
+    1: 15
+    2: 10
+    3: 5
+  reward-commands: []
+
+defaults:
+  size: 5
+  material: QUARTZ_BLOCK
+  item-interact: DIAMOND_SWORD
+
+scoreboard:
+  enabled: true
+  title: "&c✺ &6Draftmc.fr &c✺"
+  none: "-"
+
+messages:
+  countdown-start: "&eLe Totem démarre dans &6{seconds}&e secondes !"
+  countdown-tick: "&eDémarrage dans &6{seconds}&e secondes..."
+  haste-disabled: "&cL'atout Haste est désactivé pendant le Totem."
+  spawn: "&6Le totem est apparu &7(&e{totem}&7) !"
+  stop: "&cLe totem &e{totem} &ca été arrêté."
+  reset: "&eLe totem &6{totem} &ea été reset."
+  set: "&aTotem &e{totem} &aposé à ta position."
+  break: "&eLe joueur &f{player} &7({faction}) &ea cassé un bloc du totem !"
+  break-giant: '&eLe joueur &f"{player}" &7de la &b"{faction}" &ea cassé un bloc du totem ! &a+{gained} points'
+  break-cancel: "&cLa faction &e{faction} &ca reset le totem !"
+  break-cancel-giant: '&eLe joueur &f"{player}" &7de la &b"{faction}" &ea bloqué la faction &c"{blocked}" &e! &a+{gained} points'
+  win: "&6{faction} remporte le totem !"
+  pvp-points: "&aVotre faction a reçu &e{points} points PVP !"
+  oneshot: "&6La faction &e{faction} &6fait un One Shot ! &a+{bonus}"
+  end-giant: "&cLe Totem Geant est terminé !"
+  ranking-header: "&6Classement:"
+  ranking-line: "&e{place}: &f{faction} &7({score} pts) &8→ &a+{points} F Top"
+
+# Commandes console a la victoire. Placeholders : {faction} {player} {totem} {points}
+reward-commands: []
+
+# Chaque entree est aussi une map /event start totem <nom>  (et totemgeant)
+maps:
+  default:
+    display: Default
+    world: world
+    x: 0
+    y: 64
+    z: 0
+    size: 5
+    material: QUARTZ_BLOCK
+    item-interact: DIAMOND_SWORD

@@ -22,6 +22,10 @@ desktop.ini
 *.tmp
 *.bak
 
+# Bot Discord
+discord-bot/node_modules/
+discord-bot/.env
+
 # Données serveur (ne pas versionner)
 plugins/
 *.db

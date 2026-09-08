@@ -1,4 +1,4 @@
-# Sydaria
+# Draftmc
 
 Plugin **tout-en-un** pour Spigot **1.8.8 / 1.8.9** (Java 8). Il regroupe les modules type AntiCleanUp, Atouts, Classement, Core, Items, RandomTP, Staff, Tags et Tokens.
 
@@ -8,12 +8,12 @@ Plugin **tout-en-un** pour Spigot **1.8.8 / 1.8.9** (Java 8). Il regroupe les mo
 mvn clean package
 ```
 
-Le JAR se trouve dans `target/Sydaria.jar`. Place-le dans `plugins/` du serveur.
+Le JAR se trouve dans `target/Draftmc.jar`. Place-le dans `plugins/` du serveur.
 
 ## Dépendances optionnelles
 
-- **Vault** : money pour `/b` et placeholder `%sydaria_money%`
-- **PlaceholderAPI** : `%sydaria_tokens%`, `%sydaria_money%`, `%sydaria_kills%`, `%sydaria_deaths%`, `%sydaria_faction%`, `%sydaria_tag%`
+- **Vault** : money pour `/b` et placeholder `%draftmc_money%`
+- **PlaceholderAPI** : `%draftmc_tokens%`, `%draftmc_money%`, `%draftmc_kills%`, `%draftmc_deaths%`, `%draftmc_faction%`, `%draftmc_tag%`
 - **Votifier / NuVotifier** : incrémente le VoteParty automatiquement
 
 ## Commandes principales
@@ -29,9 +29,9 @@ Le JAR se trouve dans `target/Sydaria.jar`. Place-le dans `plugins/` du serveur.
 | `/f create\|invite\|join\|leave\|chest\|upgrade\|fly` | Faction + coffre + fly |
 | `/staff` `/sc` `/cps` | Mode staff, chat, CPS |
 | `/tags` `/tokens` `/portal` `/voteparty` | Tags, tokens boutique, portails, VP |
-| `/itemsyd <id>` | Donne un des ~40 items custom |
-| `/sydaria reload` | Reload config |
+| `/itemdraft <id>` | Donne un des ~40 items custom |
+| `/draftmc reload` | Reload config |
 
 ## Permissions
 
-`sydaria.admin`, `sydaria.staff`, `sydaria.doublexp`, `sydaria.repair`, `sydaria.tokens.give`, `sydaria.items.give`, `sydaria.randomkey`, `sydaria.bypass.commands`
+`draftmc.admin`, `draftmc.staff`, `draftmc.doublexp`, `draftmc.repair`, `draftmc.tokens.give`, `draftmc.items.give`, `draftmc.randomkey`, `draftmc.bypass.commands`

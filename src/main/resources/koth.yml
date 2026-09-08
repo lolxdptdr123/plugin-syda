@@ -1,0 +1,56 @@
+# Event KOTH Geant - plugins/Draftmc/koth.yml
+# Zones (cuboids) : plugins/Draftmc/events/koth/zones.yml
+# Start : /koth forcestart <zone>  ou  /event start koth <zone>
+
+prefix: "&8[&6KOTH GEANT&8] &7"
+
+points-to-win: 1200
+# Points ajoutes chaque seconde a une faction presente dans la zone.
+# 1 joueur = +1/s, 5 joueurs = +1/s (sauf si multiply-by-players: true).
+points-per-second-per-player: 1
+multiply-by-players: false
+# Pourcentage des points actuels retire a la faction quand un membre meurt.
+death-penalty-percent: 15
+
+ranking-points:
+  1: 15
+  2: 10
+  3: 5
+
+reward-commands: []
+
+scoreboard:
+  enabled: true
+  title: "&c✺ &6Draftmc.fr &c✺"
+  none: "-"
+
+messages:
+  start: "&eLe KOTH Geant a commence a &6{zone} &e!"
+  stop: "&cL'evenement KOTH Geant est termine !"
+  ranking-header: "&6Classement:"
+  ranking-line: "&e{place} place: &f{faction} &7({points}points)"
+  death-penalty: "&c{player} &7({faction}) &cest mort ! &7-{lost} points &8({percent}%)"
+  already-running: "&cUn KOTH Geant est deja en cours."
+  not-running: "&cAucun KOTH Geant en cours."
+  unknown-zone: "&cZone inconnue."
+  created: "&aZone &e{zone} &acreee &7({type})."
+  deleted: "&cZone &e{zone} &csupprimee."
+  reloaded: "&aKOTH Geant recharge."
+  scheduled: "&aKOTH Geant &e{zone} &alance automatiquement &7({day} {time})."
+  no-world: "&cLe monde de la zone &e{zone} &cn'est pas charge."
+
+schedule:
+  enabled: true
+  entries:
+    - day: MONDAY
+      time: "21:00"
+      zone: desert
+    - day: WEDNESDAY
+      time: "21:00"
+      zone: ville
+    - day: FRIDAY
+      time: "21:00"
+      zone: geant
+    - day: SUNDAY
+      time: "21:00"
+      zone: forteresse

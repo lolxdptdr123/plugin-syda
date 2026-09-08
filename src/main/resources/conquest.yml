@@ -1,0 +1,123 @@
+# ===================== Conquest - Configuration =====================
+# Fichier : plugins/Draftmc/conquest.yml
+# Tout ici est rechargeable a chaud avec /conquest reload.
+
+general:
+  # Monde par defaut utilise si une zone n'en precise pas un autre.
+  world: world
+  # Points totaux (somme de toutes les zones) necessaires pour gagner.
+  points-to-win: 100
+  # Duree du compte a rebours (en secondes) entre /conquest start et le
+  # lancement effectif de l'evenement (capture desactivee durant ce temps).
+  start-countdown-seconds: 60
+  # Temps (en secondes) qu'un joueur doit rester dans une zone pour
+  # que sa faction gagne 1 point sur cette zone.
+  capture-duration-seconds: 10
+  # Points maximum qu'une seule zone peut rapporter avant de se verrouiller
+  # (elle ne rapporte plus rien une fois ce plafond atteint par une faction).
+  zone-max-points: 25
+  # Pourcentage du total de points perdu par une faction a chaque mort
+  # d'un de ses membres (retire aleatoirement parmi les zones non a zero).
+  death-penalty-percent: 10
+
+# Zones de capture. Nombre totalement libre : ajoute/retire des entrees
+# ici, ou utilise /conquest createzone <nom> et /conquest deletezone <nom>
+# en jeu. "color" accepte n'importe quel nom de ChatColor Bukkit (RED,
+# GREEN, BLUE, YELLOW, AQUA, GOLD, LIGHT_PURPLE, DARK_PURPLE, WHITE, GRAY...).
+# pos1/pos2 se definissent en jeu avec /conquest setpos1 <nom> et setpos2.
+zones:
+  Verte:
+    color: GREEN
+    world: world
+    pos1: { x: 0, y: 0, z: 0 }
+    pos2: { x: 0, y: 0, z: 0 }
+  Jaune:
+    color: YELLOW
+    world: world
+    pos1: { x: 0, y: 0, z: 0 }
+    pos2: { x: 0, y: 0, z: 0 }
+  Bleue:
+    color: BLUE
+    world: world
+    pos1: { x: 0, y: 0, z: 0 }
+    pos2: { x: 0, y: 0, z: 0 }
+  Rouge:
+    color: RED
+    world: world
+    pos1: { x: 0, y: 0, z: 0 }
+    pos2: { x: 0, y: 0, z: 0 }
+
+# Commandes executees (par la console) quand une faction atteint le score
+# de victoire. Placeholders disponibles : {faction}, {points}.
+reward-commands:
+  - "broadcast {faction} a remporte le Conquest avec {points} points !"
+
+fireworks:
+  enabled: true
+  amount: 10
+  interval-ticks: 5
+
+particles:
+  enabled: true
+  # Effet Bukkit 1.8 (enum org.bukkit.Effect), joue en boucle sur chaque
+  # zone active pour la rendre visible/reperable.
+  effect: FIREWORKS_SPARK
+  interval-ticks: 40
+
+sounds:
+  enabled: true
+  on-capture-tick: NOTE_PLING
+  on-zone-point: LEVEL_UP
+  on-zone-locked: ANVIL_LAND
+  on-victory: WITHER_SPAWN
+
+scoreboard:
+  enabled: true
+  title: "&6&lCONQUEST"
+
+bossbar:
+  enabled: true
+  # Format du texte affiche sur la fausse boss bar (compatible 1.8.9, via
+  # une entite Wither invisible - aucune API BossBar native pre-1.9).
+  format: "&6Conquest &7- &e{total}&7/&e{points-to-win} points"
+
+actionbar:
+  enabled: true
+  # Visible UNIQUEMENT par les joueurs physiquement presents dans une zone
+  # activement capturee (pas par tout le serveur). Placeholders : {zone},
+  # {seconds}, {duration}, {player} (le capteur), {points}, {max}.
+  format: '&7Zone {zone}&7 : &fCapture &e{seconds}s&7/&e{duration} &7par &f{player} &e{points}&7/&e{max}'
+
+titles:
+  enabled: true
+  zone-captured:
+    title: "&6{zone}"
+    subtitle: "&7capturee par &f{faction}"
+
+hologram:
+  # Necessite le plugin HolographicDisplays (detecte automatiquement,
+  # desactive proprement si absent). Affiche un hologramme au-dessus de
+  # chaque zone avec son etat (proprietaire, points, verrouillage).
+  enabled: true
+  height-offset: 2.5
+
+messages:
+  prefix: "&8[&6Conquest&8] &r"
+  event-started: "&aL'evenement Conquest commence !"
+  event-stopped: "&cL'evenement Conquest a ete arrete."
+  countdown-start: "&eLe Conquest demarre dans &6{seconds}&e secondes !"
+  countdown-tick: "&eDemarrage dans &6{seconds}&e secondes..."
+  no-event-running: "&cAucun evenement Conquest en cours."
+  already-running: "&cUn evenement Conquest est deja en cours."
+  zone-created: '&aZone "{zone}" creee.'
+  zone-deleted: '&aZone "{zone}" supprimee.'
+  zone-unknown: '&cZone inconnue : "{zone}".'
+  pos-set: '&aPosition {index} de la zone "{zone}" enregistree.'
+  capture-started: '&e{player} commence a capturer "{zone}".'
+  need-faction: "&cTu dois etre dans une faction pour capturer une zone et gagner des points."
+  capture-point: '&a"{faction}" gagne 1 point sur "{zone}"! ({points}/{max})'
+  zone-locked: '&6"{zone}" est desormais verrouillee par "{faction}".'
+  faction-zone-maxed: "&6Ta faction a atteint le plafond de points sur \"{zone}\" : la capture est transferee a quelqu'un d'autre."
+  victory: '&6&l"{faction}" remporte le Conquest avec {points} points !'
+  death-penalty: '&c"{faction}" perd {amount} points (mort d''un membre).'
+  no-permission: "&cPermission refusee."

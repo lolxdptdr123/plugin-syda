@@ -1,0 +1,148 @@
+# Event TeamFight 8v8 - plugins/Draftmc/teamfight.yml
+# Inscriptions : /event start teamfight default
+# Roster : /teamfight create <nom>  puis  /teamfight invite <joueur>
+# Lancement : 2e /event start teamfight default  (au moins 2 equipes completes)
+
+prefix: "&8[&6TeamFight&8] &7"
+
+roster-size: 8
+max-teams: 8
+countdown-seconds: 5
+between-match-seconds: 15
+prevent-item-drop: true
+cancel-ally-damage: true
+
+# Effects infinis dans l'arene (amplifier 0 = niveau 1, 1 = niveau 2).
+arena-effects:
+  - { type: SPEED, amplifier: 1 }
+  - { type: INCREASE_DAMAGE, amplifier: 0 }
+  - { type: FIRE_RESISTANCE, amplifier: 0 }
+
+spawns:
+  a:
+    world: world
+    x: 0
+    y: 64
+    z: 0
+    yaw: 0
+    pitch: 0
+  b:
+    world: world
+    x: 20
+    y: 64
+    z: 0
+    yaw: 180
+    pitch: 0
+  wait:
+    world: world
+    x: 10
+    y: 64
+    z: 20
+    yaw: 0
+    pitch: 0
+
+arena:
+  pos1: { world: world, x: -20, y: 50, z: -20 }
+  pos2: { world: world, x: 40, y: 90, z: 20 }
+
+kit:
+  enabled: true
+  items:
+    - material: DIAMOND_SWORD
+      amount: 1
+      slot: hand
+      enchantments:
+        - type: DAMAGE_ALL
+          level: 5
+        - type: DURABILITY
+          level: 3
+    - material: DIAMOND_HELMET
+      amount: 1
+      slot: helmet
+      enchantments:
+        - type: PROTECTION_ENVIRONMENTAL
+          level: 4
+        - type: DURABILITY
+          level: 3
+    - material: DIAMOND_CHESTPLATE
+      amount: 1
+      slot: chestplate
+      enchantments:
+        - type: PROTECTION_ENVIRONMENTAL
+          level: 4
+        - type: DURABILITY
+          level: 3
+    - material: DIAMOND_LEGGINGS
+      amount: 1
+      slot: leggings
+      enchantments:
+        - type: PROTECTION_ENVIRONMENTAL
+          level: 4
+        - type: DURABILITY
+          level: 3
+    - material: DIAMOND_BOOTS
+      amount: 1
+      slot: boots
+      enchantments:
+        - type: PROTECTION_ENVIRONMENTAL
+          level: 4
+        - type: DURABILITY
+          level: 3
+    - material: GOLDEN_APPLE
+      amount: 16
+    - material: COOKED_BEEF
+      amount: 32
+    - material: POTION
+      amount: 20
+      potion-type: INSTANT_HEAL
+      potion-level: 2
+      splash: true
+    - material: POTION
+      amount: 2
+      potion-type: STRENGTH
+      potion-level: 2
+      splash: false
+    - material: POTION
+      amount: 4
+      potion-type: SPEED
+      potion-level: 2
+      splash: false
+
+scoreboard:
+  enabled: true
+  title: "&c✺ &6Draftmc.fr &c✺"
+
+messages:
+  registration-open: "&eInscriptions TeamFight 8v8 ouvertes ! &7/teamfight create <nom>"
+  registration-hint: "&7Leader : &e/teamfight invite <joueur> &7pour former un roster de &e{size}&7."
+  team-created: "&aEquipe &e{team} &acreee. Invite tes joueurs avec &e/teamfight invite"
+  team-invite: "&e{leader} &7t'invite dans &6{team}&7."
+  team-joined: "&a{player} &7a rejoint &6{team} &8({count}/{size})"
+  team-full: "&cRoster complet ({size}/{size})."
+  team-ready: "&aEquipe &e{team} &aprete &7({size}/{size}) !"
+  not-leader: "&cSeul le leader peut faire ca."
+  not-in-team: "&cTu n'es dans aucune equipe."
+  already-in-team: "&cTu es deja dans une equipe."
+  need-faction: "&cTu dois etre dans une faction pour creer une equipe."
+  faction-has-team: "&cTa faction a deja une equipe TeamFight."
+  not-same-faction: "&cSeuls les membres de la meme faction peuvent rejoindre cette equipe."
+  too-many-teams: "&cTrop d'equipes inscrites."
+  name-taken: "&cCe nom d'equipe est deja pris."
+  need-teams: "&cIl faut au moins 2 equipes completes ({size} joueurs) pour lancer."
+  match-announce: "&6{round}&7: &b{teamA} &fvs &c{teamB}"
+  countdown: "&eDebut dans &6{seconds}s"
+  fight-start: "&aFIGHT ! &b{teamA} &fvs &c{teamB}"
+  eliminated: "&c{player} &7({team}) est elimine ! &8({alive} restants)"
+  team-out: "&c{team} est eliminee !"
+  match-over: "&6TeamFight termine ! Vainqueur : &a{winner}"
+  next-match: "&eProchain match dans &6{seconds}s"
+  tournament-over: "&6{winner} remporte le TeamFight 8v8 !"
+  stopped: "&cTeamFight arrete."
+  spawn-set: "&aSpawn &e{slot} &adefini."
+  kit-saved: "&aKit TeamFight sauvegarde depuis ton inventaire."
+  no-spawn: "&cDefinis les spawns : &e/teamfight setspawn a|b|wait"
+
+maps:
+  default:
+    display: Default
+    world: world

@@ -1,0 +1,100 @@
+# ===================== Domination - Configuration =====================
+# Fichier : plugins/Draftmc/domination.yml
+# Tout ici est rechargeable a chaud avec /domination reload.
+
+general:
+  # Monde par defaut utilise si une zone n'en precise pas un autre.
+  world: world
+  # Points totaux (somme de toutes les zones) necessaires pour gagner.
+  points-to-win: 2000
+  # Duree du compte a rebours (en secondes) entre /domination start et le
+  # lancement effectif de l'evenement.
+  start-countdown-seconds: 60
+  # Pourcentage du total de points perdu par une faction a chaque mort
+  # d'un de ses membres (retire aleatoirement parmi les zones non a zero).
+  death-penalty-percent: 20
+
+# Zones de controle. Generalement 2, mais totalement configurable : ajoute/
+# retire des entrees ici, ou utilise /domination createzone <nom> et
+# /domination deletezone <nom> en jeu. pos1/pos2 se definissent en jeu avec
+# /domination setpos1 <nom> et setpos2.
+zones:
+  Zone A:
+    color: RED
+    world: world
+    pos1: { x: 0, y: 0, z: 0 }
+    pos2: { x: 0, y: 0, z: 0 }
+  Zone B:
+    color: BLUE
+    world: world
+    pos1: { x: 0, y: 0, z: 0 }
+    pos2: { x: 0, y: 0, z: 0 }
+
+# Commandes executees (par la console) quand une faction atteint le score
+# de victoire. Placeholders disponibles : {faction}, {points}.
+reward-commands:
+  - "broadcast {faction} a remporte le Domination avec {points} points !"
+
+fireworks:
+  enabled: true
+  amount: 10
+  interval-ticks: 5
+
+particles:
+  enabled: true
+  effect: FIREWORKS_SPARK
+  interval-ticks: 40
+
+sounds:
+  enabled: true
+  on-zone-point: NOTE_PLING
+  on-victory: WITHER_SPAWN
+
+scoreboard:
+  enabled: true
+  title: "&6&lDOMINATION"
+
+bossbar:
+  enabled: true
+  # Format du texte affiche (via action bar, voir actionbar) pour les
+  # joueurs qui ne sont PAS dans une zone en ce moment.
+  format: "&6Domination &7- &e{total}&7/&e{points-to-win} points"
+
+actionbar:
+  enabled: true
+  # Visible UNIQUEMENT par les joueurs physiquement presents dans une zone,
+  # montrant leur PROPRE faction (jamais celles des autres). Placeholders :
+  # {zone}, {points}.
+  format: '&7{zone} &7: &ata faction controle &7(&a+1&7/s, total &e{points}&7)'
+  # Affiche a un joueur SANS faction (wilderness) present dans une zone :
+  # il ne marque jamais de points tant qu'il n'a pas rejoint une faction.
+  no-faction-format: '&7{zone} &7: &cTu n''as pas de faction, tu ne marques aucun point ici.'
+
+titles:
+  enabled: true
+  zone-first-point:
+    title: "&6{zone}"
+    subtitle: "&7controlee par &f{faction}"
+
+hologram:
+  # Necessite le plugin HolographicDisplays (detecte automatiquement,
+  # desactive proprement si absent). Affiche un hologramme au-dessus de
+  # chaque zone listant les factions qui la controlent actuellement.
+  enabled: true
+  height-offset: 2.5
+
+messages:
+  prefix: "&8[&6Domination&8] &r"
+  event-started: "&aL'evenement Domination commence !"
+  event-stopped: "&cL'evenement Domination a ete arrete."
+  no-event-running: "&cAucun evenement Domination en cours."
+  already-running: "&cUn evenement Domination est deja en cours."
+  countdown-start: "&eLe Domination demarre dans &6{seconds}&e secondes !"
+  countdown-tick: "&eDemarrage dans &6{seconds}&e secondes..."
+  zone-created: '&aZone "{zone}" creee.'
+  zone-deleted: '&aZone "{zone}" supprimee.'
+  zone-unknown: '&cZone inconnue : "{zone}".'
+  pos-set: '&aPosition {index} de la zone "{zone}" enregistree.'
+  victory: '&6&l"{faction}" remporte le Domination avec {points} points !'
+  death-penalty: '&c"{faction}" perd {amount} points (mort d''un membre).'
+  no-permission: "&cPermission refusee."

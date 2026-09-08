@@ -7,13 +7,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <!-- Informations du plugin -->
-    <groupId>fr.sydaria</groupId>
-    <artifactId>Sydaria</artifactId>
+    <groupId>fr.draftmc</groupId>
+    <artifactId>Draftmc</artifactId>
     <version>1.0.0</version>
 
     <packaging>jar</packaging>
 
-    <name>Sydaria</name>
+    <name>Draftmc</name>
     <description>Plugin tout-en-un Factions (Spigot 1.8.9)</description>
 
     <!-- Java -->
@@ -107,7 +107,7 @@
     <build>
 
         <!-- Nom du JAR final -->
-        <finalName>Sydaria</finalName>
+        <finalName>Draftmc</finalName>
 
         <!-- Resources -->
         <resources>

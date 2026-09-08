@@ -1,8 +1,8 @@
 # ============================================================
-# KITS SYDARIA - Guide
+# KITS DRAFTMC - Guide
 # ============================================================
 #
-# 1) MODIFIER / CREER UN KIT ici (plugins/Sydaria/kits.yml)
+# 1) MODIFIER / CREER UN KIT ici (plugins/Draftmc/kits.yml)
 # 2) LE VENDRE dans config.yml -> boutique -> categories -> kits
 # 3) LE JOUEUR l'achete en /boutique puis le recupere en /kit
 #
@@ -12,7 +12,7 @@
 #   (sans stack)      = chaque item dans un slot separe (ideal potions PvP)
 #
 # TYPES D'ITEMS :
-#   - item Sydaria    : item: DASH_FEATHER
+#   - item Draftmc    : item: DASH_FEATHER
 #   - item vanilla    : material: GOLDEN_APPLE
 #   - potion          : potion-type + level + splash
 #
@@ -30,7 +30,7 @@
 #   splash: true                (lançable)
 #   splash: false               (a boire)
 #
-# Apres modification : /sydaria reload
+# Apres modification : /draftmc reload
 # ============================================================
 
 gui:
@@ -146,6 +146,207 @@ kits:
         level: 1
         splash: true
         amount: 8
+
+  CHEVALIER:
+    name: "&2&lKit Chevalier"
+    material: GOLD_HELMET
+    min-grade: chevalier
+    cooldown-seconds: 86400
+    lore:
+      - "&7Kit du grade Chevalier."
+      - "&7Cooldown: &e24h"
+    items:
+      - material: IRON_HELMET
+        amount: 1
+        enchants:
+          PROTECTION: 2
+          UNBREAKING: 2
+      - material: IRON_CHESTPLATE
+        amount: 1
+        enchants:
+          PROTECTION: 2
+          UNBREAKING: 2
+      - material: IRON_LEGGINGS
+        amount: 1
+        enchants:
+          PROTECTION: 2
+          UNBREAKING: 2
+      - material: IRON_BOOTS
+        amount: 1
+        enchants:
+          PROTECTION: 2
+          UNBREAKING: 2
+      - material: IRON_SWORD
+        amount: 1
+        enchants:
+          SHARPNESS: 2
+          UNBREAKING: 2
+      - material: COOKED_BEEF
+        amount: 16
+        stack: true
+
+  MARQUIS:
+    name: "&3&lKit Marquis"
+    material: DIAMOND_HELMET
+    min-grade: marquis
+    cooldown-seconds: 86400
+    lore:
+      - "&7Kit du grade Marquis."
+      - "&7Cooldown: &e24h"
+    items:
+      - material: IRON_HELMET
+        amount: 1
+        enchants:
+          PROTECTION: 3
+          UNBREAKING: 3
+      - material: IRON_CHESTPLATE
+        amount: 1
+        enchants:
+          PROTECTION: 3
+          UNBREAKING: 3
+      - material: IRON_LEGGINGS
+        amount: 1
+        enchants:
+          PROTECTION: 3
+          UNBREAKING: 3
+      - material: IRON_BOOTS
+        amount: 1
+        enchants:
+          PROTECTION: 3
+          UNBREAKING: 3
+      - material: DIAMOND_SWORD
+        amount: 1
+        enchants:
+          SHARPNESS: 3
+          UNBREAKING: 3
+      - material: DIAMOND_PICKAXE
+        amount: 1
+        enchants:
+          EFFICIENCY: 4
+          UNBREAKING: 3
+      - material: GOLDEN_APPLE
+        amount: 4
+        stack: true
+
+  SEIGNEUR:
+    name: "&e&lKit Seigneur"
+    material: GOLD_CHESTPLATE
+    min-grade: seigneur
+    cooldown-seconds: 86400
+    lore:
+      - "&7Kit du grade Seigneur."
+      - "&7Cooldown: &e24h"
+    items:
+      - material: DIAMOND_HELMET
+        amount: 1
+        enchants:
+          PROTECTION: 2
+          UNBREAKING: 3
+      - material: DIAMOND_CHESTPLATE
+        amount: 1
+        enchants:
+          PROTECTION: 2
+          UNBREAKING: 3
+      - material: DIAMOND_LEGGINGS
+        amount: 1
+        enchants:
+          PROTECTION: 2
+          UNBREAKING: 3
+      - material: DIAMOND_BOOTS
+        amount: 1
+        enchants:
+          PROTECTION: 2
+          UNBREAKING: 3
+      - material: DIAMOND_SWORD
+        amount: 1
+        enchants:
+          SHARPNESS: 4
+          UNBREAKING: 3
+      - material: GOLDEN_APPLE
+        amount: 8
+        stack: true
+
+  EMPEREUR:
+    name: "&6&lKit Empereur"
+    material: DIAMOND_CHESTPLATE
+    min-grade: empereur
+    cooldown-seconds: 86400
+    lore:
+      - "&7Kit du grade Empereur."
+      - "&7Cooldown: &e24h"
+    items:
+      - material: DIAMOND_HELMET
+        amount: 1
+        enchants:
+          PROTECTION: 3
+          UNBREAKING: 3
+      - material: DIAMOND_CHESTPLATE
+        amount: 1
+        enchants:
+          PROTECTION: 3
+          UNBREAKING: 3
+      - material: DIAMOND_LEGGINGS
+        amount: 1
+        enchants:
+          PROTECTION: 3
+          UNBREAKING: 3
+      - material: DIAMOND_BOOTS
+        amount: 1
+        enchants:
+          PROTECTION: 3
+          UNBREAKING: 3
+      - material: DIAMOND_SWORD
+        amount: 1
+        enchants:
+          SHARPNESS: 5
+          UNBREAKING: 3
+          FIRE_ASPECT: 2
+      - material: GOLDEN_APPLE
+        amount: 16
+        stack: true
+
+  SUPREME:
+    name: "&5&lKit Supreme"
+    material: NETHER_STAR
+    min-grade: supreme
+    cooldown-seconds: 86400
+    lore:
+      - "&7Kit du grade Supreme."
+      - "&7Cooldown: &e24h"
+    items:
+      - material: DIAMOND_HELMET
+        amount: 1
+        enchants:
+          PROTECTION: 4
+          UNBREAKING: 3
+      - material: DIAMOND_CHESTPLATE
+        amount: 1
+        enchants:
+          PROTECTION: 4
+          UNBREAKING: 3
+      - material: DIAMOND_LEGGINGS
+        amount: 1
+        enchants:
+          PROTECTION: 4
+          UNBREAKING: 3
+      - material: DIAMOND_BOOTS
+        amount: 1
+        enchants:
+          PROTECTION: 4
+          UNBREAKING: 3
+      - material: DIAMOND_SWORD
+        amount: 1
+        enchants:
+          SHARPNESS: 5
+          UNBREAKING: 3
+          FIRE_ASPECT: 2
+      - material: GOLDEN_APPLE
+        amount: 32
+        stack: true
+      - potion-type: INSTANT_HEAL
+        level: 2
+        splash: true
+        amount: 16
 
   # --- EXEMPLE : creer un nouveau kit ---
   #

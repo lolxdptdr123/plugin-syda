@@ -1,11 +1,103 @@
-# Sydaria - configuration principale (Spigot 1.8.9)
+# Draftmc - configuration principale (Spigot 1.8.9)
 
-prefix: "&8[&6Sydaria&8] &7"
+prefix: "&8[&6Draftmc&8] &7"
 
 anti-cleanup:
   enabled: true
   duration-seconds: 30
   protect-killer-drops: true
+  hologram: true
+  hologram-height: 1.8
+  hologram-text: "&cAnti-clean &7» &e{time}s"
+
+teleport:
+  command-cooldown-seconds: 5
+  cooldown-message: "&cAttends encore &e{time}s &cavant une téléportation."
+
+# Combat tag : tag PvP, blocage des teleports, mort si deconnexion.
+combat-tag:
+  enabled: true
+  duration-seconds: 15
+  combat-log: true
+  actionbar: true
+  ignore-faction: true
+  message: "&cTu es en combat encore &e{time}s&c."
+  tagged-message: "&cTu es en combat pendant &e{time}s&c."
+  untagged-message: "&aTu n'es plus en combat."
+  log-broadcast: "&c{player} s'est déconnecté en combat."
+  blocked-commands:
+    - home
+    - sethome
+    - homes
+    - tpa
+    - tpahere
+    - tpyes
+    - tpaccept
+    - tpdeny
+    - back
+    - randomtp
+    - rtp
+    - spawn
+    - warp
+    - warps
+    - setwarp
+    - delwarp
+    - tp
+    - fly
+    - refill
+    - shop
+    - boutique
+    - magasin
+    - kit
+    - kits
+    - bin
+    - poubelle
+    - trash
+    - ec
+    - pv
+    - invsee
+    - hat
+    - hdv
+    - ah
+    - auction
+    - rankup
+    - grade
+    - grades
+    - gradecmds
+    - sell
+    - sellall
+    - repair
+    - repairall
+  blocked-subcommands:
+    - "f home"
+    - "f sethome"
+    - "f fly"
+    - "repair all"
+    - "sell all"
+
+tpa:
+  expire-seconds: 60
+
+enderpearl:
+  enabled: true
+  cooldown-seconds: 15
+  message: "&cEnderpearl en cooldown : &e{time}s"
+
+homes:
+  teleport-delay-seconds: 5
+  cancel-on-move: true
+  cancel-on-damage: true
+  warmup-message: "&7Téléportation dans &e{time}s&7. &8Ne bouge pas."
+  cancel-move-message: "&cTéléportation annulée : tu as bougé."
+  cancel-damage-message: "&cTéléportation annulée : tu as pris des dégâts."
+
+warps:
+  teleport-delay-seconds: 5
+  cancel-on-move: true
+  cancel-on-damage: true
+  warmup-message: "&7Téléportation dans &e{time}s&7. &8Ne bouge pas."
+  cancel-move-message: "&cTéléportation annulée : tu as bougé."
+  cancel-damage-message: "&cTéléportation annulée : tu as pris des dégâts."
 
 anti-command:
   enabled: true
@@ -76,21 +168,63 @@ rankup:
     chevalier:
       cost: 50000
       currency: money
+      advantages:
+        - "&7Préfixe &2Chevalier Pseudo"
+        - "&7Grade Discord Chevalier"
+        - "&e/kit chevalier"
+        - "&e/craft &7/bottlexp"
+        - "&73 sethomes &8| &75 ventes HDV"
+        - "&7Accès Shop Kits"
     marquis:
       cost: 150000
       currency: money
+      advantages:
+        - "&7Préfixe &3Marquis Pseudo"
+        - "&7Grade Discord Marquis"
+        - "&e/kit marquis"
+        - "&e/feed &7/refill &7/compact"
+        - "&74 sethomes &8| &76 ventes HDV"
+        - "&7Accès Shop Spawners"
     seigneur:
       cost: 500000
       currency: money
+      advantages:
+        - "&7Préfixe &eSeigneur Pseudo"
+        - "&7Grade Discord Seigneur"
+        - "&e/kit seigneur"
+        - "&75 sethomes &8| &78 ventes HDV"
+        - "&7Conserve les avantages inférieurs"
     empereur:
       cost: 1500000
       currency: money
+      advantages:
+        - "&7Préfixe &6Empereur Pseudo"
+        - "&7Grade Discord Empereur"
+        - "&e/kit empereur"
+        - "&e/hat &7/near &7/back &7/ec"
+        - "&e/pv 1"
+        - "&e/repair &72h &8| &e/repair all &76h"
+        - "&78 sethomes &8| &712 ventes HDV"
+        - "&7Accès Shop Atouts"
     supreme:
       cost: 5000000
       currency: money
+      advantages:
+        - "&7Préfixe &5Supreme Pseudo"
+        - "&7Grade Discord Supreme"
+        - "&e/kit supreme"
+        - "&e/pv 1-2 &7/invsee &7/f fly"
+        - "&e/sell all"
+        - "&e/repair &72min &8| &e/repair all &71h"
+        - "&712 sethomes &8| &715 ventes HDV"
+        - "&7Accès Shop Items"
     star:
       cost: 15000000
       currency: money
+      advantages:
+        - "&7Préfixe &dStar Pseudo"
+        - "&7Grade Discord Star"
+        - "&7Tous les avantages Supreme"
 
 # Commandes débloquées par grade (LuckPerms).
 # min-grade = grade minimum requis (default, chevalier, marquis, seigneur, empereur, supreme, star)
@@ -102,37 +236,86 @@ grade-commands:
     feed: "&aTu as été nourri."
     refill: "&a%count% slot(s) rempli(s) avec des potions."
   commands:
-    feed:
-      enabled: true
-      min-grade: marquis
-      cooldown-seconds: 300
-    pv:
-      enabled: true
-      min-grade: supreme
-      max-vaults: 5
-      size: 54
-      title: "&8Coffre privé #%number%"
-    ec:
-      enabled: true
-      min-grade: marquis
-      cooldown-seconds: 0
-    refill:
-      enabled: true
-      min-grade: marquis
-      cooldown-seconds: 10
-      potions:
-        - type: INSTANT_HEAL
-          level: 3
-          splash: true
     craft:
       enabled: true
       min-grade: chevalier
       cooldown-seconds: 0
+      description: Table de craft
+    bottlexp:
+      enabled: true
+      min-grade: chevalier
+      cooldown-seconds: 0
+      description: Transforme l'XP en bouteilles
+    feed:
+      enabled: true
+      min-grade: marquis
+      cooldown-seconds: 300
+      description: Se nourrir
+    refill:
+      enabled: true
+      min-grade: marquis
+      cooldown-seconds: 120
+      description: Remplit tes potions
+      potions:
+        - type: INSTANT_HEAL
+          level: 2
+          splash: false
+        - type: SPEED
+          level: 2
+          splash: false
+        - type: FIRE_RESISTANCE
+          level: 1
+          splash: false
+        - type: STRENGTH
+          level: 2
+          splash: false
+    compact:
+      enabled: true
+      min-grade: marquis
+      cooldown-seconds: 0
+      description: Compacte minerais et lingots
+    hat:
+      enabled: true
+      min-grade: empereur
+      cooldown-seconds: 0
+      description: Item sur la tete
     near:
       enabled: true
-      min-grade: seigneur
+      min-grade: empereur
       radius: 100
       cooldown-seconds: 30
+      description: Joueurs proches
+    back:
+      enabled: true
+      min-grade: empereur
+      cooldown-seconds: 0
+      description: Retour a la derniere position
+    ec:
+      enabled: true
+      min-grade: empereur
+      cooldown-seconds: 0
+      description: Enderchest
+    pv:
+      enabled: true
+      min-grade: empereur
+      max-vaults: 1
+      size: 54
+      title: "&8Coffre privé #%number%"
+      description: Coffres privés
+    repair:
+      enabled: true
+      min-grade: empereur
+      description: Repare tes items
+    invsee:
+      enabled: true
+      min-grade: supreme
+      cooldown-seconds: 0
+      description: Voir l'inventaire d'un joueur
+    sellall:
+      enabled: true
+      min-grade: supreme
+      cooldown-seconds: 30
+      description: Vend tout l'inventaire
 
 # GUIs d'achat
 # /boutique = tokens ; /shop = argent via Vault.
@@ -234,38 +417,14 @@ boutique:
   information:
     slot: 4
     material: BOOK
-    name: "&6&lBoutique Sydaria"
+    name: "&6&lBoutique Draftmc"
     lore:
       - "&7Achète tes atouts avec tes tokens."
       - "&7Une fois acheté, utilise &e/atouts&7."
 
   categories:
-    atouts_combat:
-      name: "&c&lAtouts Combat"
-      material: DIAMOND_SWORD
-      lore:
-        - "&7Atouts pour améliorer tes combats."
-        - "&7Paiement en tokens."
-      items:
-        - INCREASE_DAMAGE
-        - FIRE_RESISTANCE
-
-    atouts_utilitaires:
-      name: "&b&lAtouts Utilitaires"
-      material: FEATHER
-      lore:
-        - "&7Atouts pour améliorer ton confort."
-        - "&7Paiement en tokens."
-      items:
-        - SPEED
-        - FAST_DIGGING
-        - ANTI_CHUTE
-        - NO_HUNGER
-        - NO_DEBUFF
-        - KEEP_XP
-
-    grades:
-      name: "&2&lGrades"
+    grades_abonnement:
+      name: "&2&lGrade & Abonnement"
       material: GOLD_HELMET
       lore:
         - "&7Achète ton prochain grade."
@@ -282,14 +441,258 @@ boutique:
     kits:
       name: "&6&lKits"
       material: CHEST
+      min-grade: chevalier
       lore:
         - "&7Achète des kits permanents."
         - "&7Récupère-les avec &e/kit&7."
         - "&7Paiement en tokens."
+        - "&cGrade Chevalier requis."
       items:
         - KIT_PVP
         - KIT_MINER
         - KIT_REFILL
+
+    boutique_caisse:
+      name: "&e&lBoutique Caisse"
+      material: ENDER_CHEST
+      lore:
+        - "&7Packs de clés à prix réduit."
+        - "&7Paiement en tokens."
+      items:
+        PACK_COMMON_5:
+          type: ITEM
+          item: KEY_COMMON
+          amount: 5
+          name: "&fPack 5 Clés Communes"
+          price: 1200
+        PACK_RARE_3:
+          type: ITEM
+          item: KEY_RARE
+          amount: 3
+          name: "&bPack 3 Clés Rares"
+          price: 2500
+        PACK_LEGENDARY_2:
+          type: ITEM
+          item: KEY_LEGENDARY
+          amount: 2
+          name: "&6Pack 2 Clés Légendaires"
+          price: 6000
+
+    abonnement:
+      name: "&d&lAbonnement"
+      material: WATCH
+      lore:
+        - "&7Abonnements et avantages récurrents."
+        - "&cBientôt disponible."
+      items: []
+
+    equipement:
+      name: "&b&lEquipement"
+      material: DIAMOND_CHESTPLATE
+      lore:
+        - "&7Armes, armures et outils."
+        - "&7Paiement en tokens."
+      items:
+        EQ_DIAMOND_SWORD:
+          type: ITEM
+          material: DIAMOND_SWORD
+          amount: 1
+          price: 400
+        EQ_DIAMOND_HELMET:
+          type: ITEM
+          material: DIAMOND_HELMET
+          amount: 1
+          price: 450
+        EQ_DIAMOND_CHESTPLATE:
+          type: ITEM
+          material: DIAMOND_CHESTPLATE
+          amount: 1
+          price: 700
+        EQ_DIAMOND_LEGGINGS:
+          type: ITEM
+          material: DIAMOND_LEGGINGS
+          amount: 1
+          price: 600
+        EQ_DIAMOND_BOOTS:
+          type: ITEM
+          material: DIAMOND_BOOTS
+          amount: 1
+          price: 400
+        EQ_DIAMOND_PICKAXE:
+          type: ITEM
+          material: DIAMOND_PICKAXE
+          amount: 1
+          price: 350
+        EQ_BOW:
+          type: ITEM
+          material: BOW
+          amount: 1
+          price: 200
+        EQ_ARROWS:
+          type: ITEM
+          material: ARROW
+          amount: 64
+          price: 150
+
+    divers:
+      name: "&a&lDivers"
+      material: CHEST
+      lore:
+        - "&7Objets utiles variés."
+        - "&7Paiement en tokens."
+      items:
+        DIV_INFINITE_WATER:
+          type: ITEM
+          item: INFINITE_WATER
+          amount: 1
+          price: 800
+        DIV_INFINITE_LAVA:
+          type: ITEM
+          item: INFINITE_LAVA
+          amount: 1
+          price: 1200
+        DIV_ENDER_CHEST:
+          type: ITEM
+          material: ENDER_CHEST
+          amount: 1
+          price: 500
+        DIV_WORKBENCH:
+          type: ITEM
+          material: WORKBENCH
+          amount: 1
+          price: 50
+        DIV_ANVIL:
+          type: ITEM
+          material: ANVIL
+          amount: 1
+          price: 400
+
+    cles:
+      name: "&6&lClés"
+      material: TRIPWIRE_HOOK
+      lore:
+        - "&7Clés de caisses à l'unité."
+        - "&7Paiement en tokens."
+      items:
+        CLE_VOTE:
+          type: ITEM
+          item: KEY_VOTE
+          amount: 1
+          price: 100
+        CLE_COMMON:
+          type: ITEM
+          item: KEY_COMMON
+          amount: 1
+          price: 300
+        CLE_RARE:
+          type: ITEM
+          item: KEY_RARE
+          amount: 1
+          price: 1000
+        CLE_LEGENDARY:
+          type: ITEM
+          item: KEY_LEGENDARY
+          amount: 1
+          price: 3500
+
+    atouts:
+      name: "&c&lAtouts"
+      material: BLAZE_POWDER
+      min-grade: empereur
+      lore:
+        - "&7Atouts permanents (combat et confort)."
+        - "&7Paiement en tokens."
+        - "&cGrade Empereur requis."
+      items:
+        - INCREASE_DAMAGE
+        - FIRE_RESISTANCE
+        - SPEED
+        - FAST_DIGGING
+        - ANTI_CHUTE
+        - NO_HUNGER
+        - NO_DEBUFF
+        - KEEP_XP
+
+    powers:
+      name: "&5&lPowers"
+      material: NETHER_STAR
+      lore:
+        - "&7Orbes d'effet réutilisables à cooldown."
+        - "&7L'effet est temporaire, contrairement aux atouts."
+        - "&7Paiement en tokens."
+      items:
+        POWER_SPEED:
+          type: ITEM
+          item: ORB_SPEED
+          amount: 1
+          price: 300
+        POWER_FORCE:
+          type: ITEM
+          item: ORB_FORCE
+          amount: 1
+          price: 300
+        POWER_FIRE_RESISTANCE:
+          type: ITEM
+          item: ORB_FIRE_RESISTANCE
+          amount: 1
+          price: 300
+        POWER_HASTE:
+          type: ITEM
+          item: ORB_HASTE
+          amount: 1
+          price: 300
+
+    spawners:
+      name: "&a&lSpawners"
+      material: MOB_SPAWNER
+      min-grade: marquis
+      lore:
+        - "&7Oeufs de spawners."
+        - "&7Paiement en tokens."
+        - "&cGrade Marquis requis."
+      items:
+        SPAWNER_ZOMBIE:
+          type: ITEM
+          material: MONSTER_EGG
+          data: 54
+          name: "&2Oeuf de Zombie"
+          amount: 1
+          price: 5000
+        SPAWNER_SKELETON:
+          type: ITEM
+          material: MONSTER_EGG
+          data: 51
+          name: "&fOeuf de Squelette"
+          amount: 1
+          price: 5000
+        SPAWNER_CREEPER:
+          type: ITEM
+          material: MONSTER_EGG
+          data: 50
+          name: "&aOeuf de Creeper"
+          amount: 1
+          price: 8000
+        SPAWNER_COW:
+          type: ITEM
+          material: MONSTER_EGG
+          data: 92
+          name: "&6Oeuf de Vache"
+          amount: 1
+          price: 1500
+        SPAWNER_PIG:
+          type: ITEM
+          material: MONSTER_EGG
+          data: 90
+          name: "&dOeuf de Cochon"
+          amount: 1
+          price: 1500
+        SPAWNER_VILLAGER:
+          type: ITEM
+          material: MONSTER_EGG
+          data: 120
+          name: "&eOeuf de Villageois"
+          amount: 1
+          price: 10000
 
   # Les définitions peuvent rester ici.
   # Le code accepte aussi les définitions directement sous categories.<id>.items.<id>.
@@ -378,7 +781,7 @@ boutique:
       type: RANKUP
       rank: chevalier
       name: "&2&lGrade Chevalier"
-      material: LEATHER_HELMET
+      material: GOLD_HELMET
       lore:
         - "&7Passe au grade Chevalier."
       price: 5000
@@ -387,7 +790,7 @@ boutique:
       type: RANKUP
       rank: marquis
       name: "&3&lGrade Marquis"
-      material: CHAIN_HELMET
+      material: DIAMOND_HELMET
       lore:
         - "&7Passe au grade Marquis."
       price: 15000
@@ -396,7 +799,7 @@ boutique:
       type: RANKUP
       rank: seigneur
       name: "&e&lGrade Seigneur"
-      material: IRON_CHESTPLATE
+      material: GOLD_CHESTPLATE
       lore:
         - "&7Passe au grade Seigneur."
       price: 50000
@@ -405,7 +808,7 @@ boutique:
       type: RANKUP
       rank: empereur
       name: "&6&lGrade Empereur"
-      material: GOLD_CHESTPLATE
+      material: DIAMOND_CHESTPLATE
       lore:
         - "&7Passe au grade Empereur."
       price: 150000
@@ -414,7 +817,7 @@ boutique:
       type: RANKUP
       rank: supreme
       name: "&5&lGrade Supreme"
-      material: DIAMOND_CHESTPLATE
+      material: NETHER_STAR
       lore:
         - "&7Passe au grade Supreme."
       price: 500000
@@ -423,7 +826,7 @@ boutique:
       type: RANKUP
       rank: star
       name: "&d&lGrade Star"
-      material: NETHER_STAR
+      material: BEACON
       lore:
         - "&7Passe au grade Star."
       price: 1500000
@@ -435,6 +838,7 @@ boutique:
       material: DIAMOND_SWORD
       lore:
         - "&7Débloque le kit PvP permanent."
+        - "&7Récupère-le avec &e/kit&7."
       price: 2500
 
     KIT_MINER:
@@ -544,46 +948,358 @@ shop:
   information:
     slot: 4
     material: BOOK
-    name: "&6&lShop Sydaria"
+    name: "&6&lShop Draftmc"
     lore:
       - "&7Achète tes objets avec ton argent."
       - "&7Paiement via Vault."
 
   categories:
-    cles:
-      name: "&6&lClés"
-      material: TRIPWIRE_HOOK
+    bloc:
+      name: "&7&lBloc"
+      material: STONE
       lore:
-        - "&7Achète tes clés de caisses."
+        - "&7Blocs de construction."
         - "&7Paiement avec ton argent."
       items:
-        - KEY_VOTE
-        - KEY_COMMON
-        - KEY_RARE
-        - KEY_LEGENDARY
+        BLOC_STONE:
+          type: ITEM
+          material: STONE
+          amount: 64
+          price: 200.0
+        BLOC_COBBLESTONE:
+          type: ITEM
+          material: COBBLESTONE
+          amount: 64
+          price: 100.0
+        BLOC_LOG:
+          type: ITEM
+          material: LOG
+          amount: 64
+          price: 300.0
+        BLOC_GLASS:
+          type: ITEM
+          material: GLASS
+          amount: 64
+          price: 350.0
+        BLOC_SAND:
+          type: ITEM
+          material: SAND
+          amount: 64
+          price: 150.0
+        BLOC_GRAVEL:
+          type: ITEM
+          material: GRAVEL
+          amount: 64
+          price: 150.0
+        BLOC_SANDSTONE:
+          type: ITEM
+          material: SANDSTONE
+          amount: 64
+          price: 250.0
+        BLOC_OBSIDIAN:
+          type: ITEM
+          material: OBSIDIAN
+          amount: 16
+          price: 1200.0
+        BLOC_GLOWSTONE:
+          type: ITEM
+          material: GLOWSTONE
+          amount: 16
+          price: 800.0
+        BLOC_ENDSTONE:
+          type: ITEM
+          material: ENDER_STONE
+          amount: 64
+          price: 600.0
 
-    orbes:
-      name: "&d&lOrbes d'Effet"
-      material: NETHER_STAR
+    farming:
+      name: "&a&lFarming"
+      material: WHEAT
       lore:
-        - "&7Objets réutilisables à cooldown."
-        - "&7Contrairement aux atouts, l'effet est temporaire."
-        - "&7Paiement en tokens."
-      items:
-        - ORB_SPEED
-        - ORB_FORCE
-        - ORB_FIRE_RESISTANCE
-        - ORB_HASTE
-
-    objets_utilitaires:
-      name: "&a&lObjets Utilitaires"
-      material: CHEST
-      lore:
-        - "&7Objets utiles pour ton aventure."
+        - "&7Graines et cultures."
         - "&7Paiement avec ton argent."
       items:
-        - INFINITE_WATER
-        - INFINITE_LAVA
+        FARM_SEEDS:
+          type: ITEM
+          material: SEEDS
+          amount: 32
+          price: 80.0
+        FARM_WHEAT:
+          type: ITEM
+          material: WHEAT
+          amount: 32
+          price: 160.0
+        FARM_CARROT:
+          type: ITEM
+          material: CARROT_ITEM
+          amount: 32
+          price: 160.0
+        FARM_POTATO:
+          type: ITEM
+          material: POTATO_ITEM
+          amount: 32
+          price: 160.0
+        FARM_SUGAR_CANE:
+          type: ITEM
+          material: SUGAR_CANE
+          amount: 32
+          price: 200.0
+        FARM_CACTUS:
+          type: ITEM
+          material: CACTUS
+          amount: 32
+          price: 200.0
+        FARM_PUMPKIN_SEEDS:
+          type: ITEM
+          material: PUMPKIN_SEEDS
+          amount: 16
+          price: 150.0
+        FARM_MELON_SEEDS:
+          type: ITEM
+          material: MELON_SEEDS
+          amount: 16
+          price: 150.0
+        FARM_BONEMEAL:
+          type: ITEM
+          material: INK_SACK
+          data: 15
+          name: "&fPoudre d'os"
+          amount: 32
+          price: 250.0
+
+    minerais:
+      name: "&b&lMinerais"
+      material: DIAMOND
+      lore:
+        - "&7Minerais et lingots."
+        - "&7Paiement avec ton argent."
+      items:
+        MIN_COAL:
+          type: ITEM
+          material: COAL
+          amount: 32
+          price: 400.0
+        MIN_IRON:
+          type: ITEM
+          material: IRON_INGOT
+          amount: 32
+          price: 1200.0
+        MIN_GOLD:
+          type: ITEM
+          material: GOLD_INGOT
+          amount: 32
+          price: 1600.0
+        MIN_DIAMOND:
+          type: ITEM
+          material: DIAMOND
+          amount: 8
+          price: 4000.0
+        MIN_EMERALD:
+          type: ITEM
+          material: EMERALD
+          amount: 8
+          price: 5000.0
+        MIN_REDSTONE:
+          type: ITEM
+          material: REDSTONE
+          amount: 64
+          price: 600.0
+        MIN_LAPIS:
+          type: ITEM
+          material: INK_SACK
+          data: 4
+          name: "&9Lapis-lazuli"
+          amount: 64
+          price: 600.0
+        MIN_QUARTZ:
+          type: ITEM
+          material: QUARTZ
+          amount: 32
+          price: 800.0
+
+    pillage:
+      name: "&c&lPillage"
+      material: TNT
+      lore:
+        - "&7Tout pour raid les factions ennemies."
+        - "&7Paiement avec ton argent."
+      items:
+        PIL_TNT:
+          type: ITEM
+          material: TNT
+          amount: 16
+          price: 4000.0
+        PIL_FLINT_AND_STEEL:
+          type: ITEM
+          material: FLINT_AND_STEEL
+          amount: 1
+          price: 300.0
+        PIL_FIREBALL:
+          type: ITEM
+          material: FIREBALL
+          amount: 8
+          price: 1500.0
+        PIL_ENDER_PEARL:
+          type: ITEM
+          material: ENDER_PEARL
+          amount: 16
+          price: 2500.0
+        PIL_WEB:
+          type: ITEM
+          material: WEB
+          amount: 16
+          price: 1800.0
+        PIL_LADDER:
+          type: ITEM
+          material: LADDER
+          amount: 64
+          price: 500.0
+
+    loots_mob:
+      name: "&2&lLoots de mob"
+      material: ROTTEN_FLESH
+      lore:
+        - "&7Drops de monstres."
+        - "&7Paiement avec ton argent."
+      items:
+        LOOT_BONE:
+          type: ITEM
+          material: BONE
+          amount: 32
+          price: 400.0
+        LOOT_STRING:
+          type: ITEM
+          material: STRING
+          amount: 32
+          price: 450.0
+        LOOT_GUNPOWDER:
+          type: ITEM
+          material: SULPHUR
+          amount: 32
+          price: 900.0
+        LOOT_ROTTEN_FLESH:
+          type: ITEM
+          material: ROTTEN_FLESH
+          amount: 64
+          price: 250.0
+        LOOT_SPIDER_EYE:
+          type: ITEM
+          material: SPIDER_EYE
+          amount: 16
+          price: 350.0
+        LOOT_SLIME_BALL:
+          type: ITEM
+          material: SLIME_BALL
+          amount: 16
+          price: 900.0
+        LOOT_BLAZE_ROD:
+          type: ITEM
+          material: BLAZE_ROD
+          amount: 16
+          price: 1400.0
+        LOOT_GHAST_TEAR:
+          type: ITEM
+          material: GHAST_TEAR
+          amount: 8
+          price: 2000.0
+
+    ingredients:
+      name: "&e&lIngredients"
+      material: NETHER_STALK
+      lore:
+        - "&7Ingrédients de potions et de craft."
+        - "&7Paiement avec ton argent."
+      items:
+        ING_SUGAR:
+          type: ITEM
+          material: SUGAR
+          amount: 32
+          price: 250.0
+        ING_NETHER_WART:
+          type: ITEM
+          material: NETHER_STALK
+          amount: 32
+          price: 800.0
+        ING_GLOWSTONE_DUST:
+          type: ITEM
+          material: GLOWSTONE_DUST
+          amount: 32
+          price: 600.0
+        ING_MAGMA_CREAM:
+          type: ITEM
+          material: MAGMA_CREAM
+          amount: 16
+          price: 900.0
+        ING_BLAZE_POWDER:
+          type: ITEM
+          material: BLAZE_POWDER
+          amount: 16
+          price: 800.0
+        ING_FERMENTED_EYE:
+          type: ITEM
+          material: FERMENTED_SPIDER_EYE
+          amount: 8
+          price: 600.0
+        ING_GOLDEN_CARROT:
+          type: ITEM
+          material: GOLDEN_CARROT
+          amount: 8
+          price: 700.0
+        ING_SPECKLED_MELON:
+          type: ITEM
+          material: SPECKLED_MELON
+          amount: 8
+          price: 700.0
+
+    potions:
+      name: "&d&lPotions"
+      material: POTION
+      lore:
+        - "&7Potions prêtes à boire."
+        - "&7Paiement avec ton argent."
+      items:
+        POT_HEAL:
+          type: ITEM
+          material: POTION
+          data: 8229
+          name: "&cPotion de Soin II"
+          amount: 1
+          price: 500.0
+        POT_SPEED:
+          type: ITEM
+          material: POTION
+          data: 8226
+          name: "&bPotion de Vitesse II"
+          amount: 1
+          price: 500.0
+        POT_STRENGTH:
+          type: ITEM
+          material: POTION
+          data: 8233
+          name: "&4Potion de Force II"
+          amount: 1
+          price: 900.0
+        POT_FIRE_RES:
+          type: ITEM
+          material: POTION
+          data: 8259
+          name: "&6Potion de Résistance au Feu (8:00)"
+          amount: 1
+          price: 600.0
+        POT_REGEN:
+          type: ITEM
+          material: POTION
+          data: 8225
+          name: "&dPotion de Régénération"
+          amount: 1
+          price: 800.0
+        POT_SPLASH_HEAL:
+          type: ITEM
+          material: POTION
+          data: 16421
+          name: "&cSplash de Soin II"
+          amount: 1
+          price: 650.0
 
     grades:
       name: "&2&lGrades"
@@ -599,6 +1315,130 @@ shop:
         - RANKUP_EMPEREUR
         - RANKUP_SUPREME
         - RANKUP_STAR
+
+    kits:
+      name: "&6&lKits"
+      material: CHEST
+      min-grade: chevalier
+      lore:
+        - "&7Achète des kits permanents."
+        - "&7Récupère-les avec &e/kit&7."
+        - "&7Paiement avec ton argent."
+        - "&cGrade Chevalier requis."
+      items:
+        SHOP_KIT_PVP:
+          type: KIT
+          kit: PVP
+          name: "&c&lKit PvP"
+          material: DIAMOND_SWORD
+          lore:
+            - "&7Débloque le kit PvP permanent."
+          price: 25000.0
+        SHOP_KIT_MINER:
+          type: KIT
+          kit: MINER
+          name: "&e&lKit Mineur"
+          material: DIAMOND_PICKAXE
+          lore:
+            - "&7Débloque le kit Mineur permanent."
+          price: 15000.0
+        SHOP_KIT_REFILL:
+          type: KIT
+          kit: REFILL
+          name: "&d&lKit Potions"
+          material: POTION
+          lore:
+            - "&7Débloque le kit Potions permanent."
+          price: 8000.0
+
+    spawners:
+      name: "&a&lSpawners"
+      material: MOB_SPAWNER
+      min-grade: marquis
+      lore:
+        - "&7Oeufs de spawners."
+        - "&cGrade Marquis requis."
+      items:
+        - EGG_ZOMBIE
+        - EGG_SKELETON
+        - EGG_CREEPER
+        - EGG_COW
+        - EGG_PIG
+        - EGG_VILLAGER
+
+    atouts:
+      name: "&c&lAtouts"
+      material: BLAZE_POWDER
+      min-grade: empereur
+      lore:
+        - "&7Atouts permanents (combat et confort)."
+        - "&7Paiement avec ton argent."
+        - "&cGrade Empereur requis."
+      items:
+        SHOP_ATOUT_FORCE:
+          type: ATOUT
+          atout: INCREASE_DAMAGE
+          name: "&c&lAtout Force"
+          material: BLAZE_POWDER
+          lore:
+            - "&7Augmente ta puissance en combat."
+          price: 75000.0
+        SHOP_ATOUT_FIRE_RES:
+          type: ATOUT
+          atout: FIRE_RESISTANCE
+          name: "&6&lAtout Fire Resistance"
+          material: MAGMA_CREAM
+          lore:
+            - "&7Protège contre le feu et la lave."
+          price: 60000.0
+        SHOP_ATOUT_SPEED:
+          type: ATOUT
+          atout: SPEED
+          name: "&b&lAtout Speed"
+          material: SUGAR
+          lore:
+            - "&7Obtiens un bonus de vitesse."
+          price: 50000.0
+        SHOP_ATOUT_HASTE:
+          type: ATOUT
+          atout: FAST_DIGGING
+          name: "&e&lAtout Haste"
+          material: GOLD_PICKAXE
+          lore:
+            - "&7Mine plus rapidement."
+          price: 65000.0
+        SHOP_ATOUT_ANTI_CHUTE:
+          type: ATOUT
+          atout: ANTI_CHUTE
+          name: "&a&lAtout Anti-Chute"
+          material: FEATHER
+          lore:
+            - "&7Annule les dégâts de chute."
+          price: 40000.0
+        SHOP_ATOUT_NO_HUNGER:
+          type: ATOUT
+          atout: NO_HUNGER
+          name: "&e&lAtout No-Hunger"
+          material: COOKED_BEEF
+          lore:
+            - "&7Empêche la faim de diminuer."
+          price: 50000.0
+        SHOP_ATOUT_NO_DEBUFF:
+          type: ATOUT
+          atout: NO_DEBUFF
+          name: "&d&lAtout No-Debuff"
+          material: MILK_BUCKET
+          lore:
+            - "&7Supprime les effets négatifs."
+          price: 90000.0
+        SHOP_ATOUT_KEEP_XP:
+          type: ATOUT
+          atout: KEEP_XP
+          name: "&b&lAtout Keep-XP"
+          material: EXP_BOTTLE
+          lore:
+            - "&7Conserve ton expérience à ta mort."
+          price: 100000.0
 
   items:
     KEY_VOTE:
@@ -638,6 +1478,56 @@ shop:
       item: INFINITE_LAVA
       amount: 1
       price: 7500.0
+
+    EGG_ZOMBIE:
+      type: ITEM
+      material: MONSTER_EGG
+      data: 54
+      name: "&2Oeuf de Zombie"
+      amount: 1
+      price: 25000.0
+      lore:
+        - "&7Spawn egg Zombie."
+
+    EGG_SKELETON:
+      type: ITEM
+      material: MONSTER_EGG
+      data: 51
+      name: "&fOeuf de Squelette"
+      amount: 1
+      price: 25000.0
+
+    EGG_CREEPER:
+      type: ITEM
+      material: MONSTER_EGG
+      data: 50
+      name: "&aOeuf de Creeper"
+      amount: 1
+      price: 40000.0
+
+    EGG_COW:
+      type: ITEM
+      material: MONSTER_EGG
+      data: 92
+      name: "&6Oeuf de Vache"
+      amount: 1
+      price: 8000.0
+
+    EGG_PIG:
+      type: ITEM
+      material: MONSTER_EGG
+      data: 90
+      name: "&dOeuf de Cochon"
+      amount: 1
+      price: 8000.0
+
+    EGG_VILLAGER:
+      type: ITEM
+      material: MONSTER_EGG
+      data: 120
+      name: "&eOeuf de Villageois"
+      amount: 1
+      price: 50000.0
 
     ORB_FORCE:
       item: ORB_FORCE
@@ -766,7 +1656,7 @@ core:
 
 scoreboard:
   enabled: true
-  title: "&c✺ &6Sydaria.fr &c✺"
+  title: "&c✺ &6Draftmc.fr &c✺"
   refresh-ticks: 20
   # Nom du grade par défaut affiché (%grade%) quand le joueur n'a pas de groupe
   # de permission particulier / n'est associé à aucune entrée ci-dessous.
@@ -785,10 +1675,8 @@ scoreboard:
     default: "Joueur"
   # Couleur du grade appliquée au nom du grade ET au pseudo dans le chat public,
   # le tab-list et au-dessus de la tête, par groupe de permission (ex: &d = violet
-  # clair -> "Star Pseudo" tout en violet). Un groupe absent d'ici (ou "" comme
-  # couleur) n'affiche rien devant le pseudo, même s'il a un nom dans "grades" ci-
-  # dessus. Rappel : le grade donne des permissions/commandes en plus (LuckPerms),
-  # contrairement au tag (/tags) qui est purement décoratif.
+  # clair -> "Star Pseudo" tout en violet). Le groupe "default" affiche le grade
+  # Joueur dans le chat et le tab.
   grade-colors:
     default: "&7"
     star: "&d"
@@ -803,12 +1691,13 @@ scoreboard:
     - "&f&m--------------------"
     - "&6%player%"
     - "&fGrade: &d%grade%"
-    - "&fFaction: &c%faction%"
+    - "&fFaction: &a%faction%"
     - "&fArgent: &e%money% &6❂"
     - "&fCendres: &d%cendres% &d❂"
     - "&fTokens: &b%tokens% &b❂"
     - " "
     - "&6Infos"
+    - "&fCombat: &c%combat%"
     - "&fPower: &e%power%"
     - "&fFly Claim: &a%flyclaim%"
     - "  "
@@ -830,9 +1719,46 @@ randomtp:
   max-tries: 30
   cooldown-seconds: 60
 
+# Interdiction d'items : ni craftables, ni brewables, ni utilisables.
+# /banitem (admin) ajoute/retire l'item en main. /banitem list pour voir.
+banned-items:
+  enabled: true
+  message: "&cCet item est interdit sur le serveur."
+  admin-bypass: true
+  items:
+    - GOLDEN_APPLE:1
+    - MINECART
+    - STORAGE_MINECART
+    - POWERED_MINECART
+    - EXPLOSIVE_MINECART
+    - HOPPER_MINECART
+    - COMMAND_MINECART
+  potions:
+    - SLOWNESS
+    - WEAKNESS
+    - INSTANT_DAMAGE
+    - POISON
+    - JUMP
+    - INVISIBILITY
+    - NIGHT_VISION
+  potion-min-level:
+    STRENGTH: 2
+  enchantments:
+    - THORNS
+    - KNOCKBACK
+
 staff:
   vanish-on-enable: true
-  cps-window-seconds: 2
+  # Fenêtre (secondes) utilisée pour la moyenne du /cps.
+  cps-window-seconds: 5
+  report:
+    # Cooldown entre deux /report d'un même joueur (secondes).
+    cooldown-seconds: 60
+    # Nombre max de reports gardés en mémoire/fichier.
+    max-stored: 100
+    # Les reports sont supprimés automatiquement après ce délai.
+    expire-hours: 24
+    alert: "&8[&cReport&8] &e%reporter% &7a signalé &c%target% &7» &f%reason%"
 
 tokens:
   starting: 0
@@ -862,6 +1788,22 @@ factions:
     start: 10
     per-death: 2
     regen-per-minute: 0.2
+  rally:
+    enabled: true
+    expire-minutes: 30
+    update-ticks: 20
+    compass: true
+    particles: false
+    particle-effect: ENDER_SIGNAL
+    particle-height: 6
+    actionbar-distance: true
+    lunar-waypoints: true
+    lunar-debug: false
+    messages:
+      set: "&aWaypoint &eRally &adéfini par &e%player%&a."
+      removed: "&eWaypoint Rally supprimé par &f%player%&e."
+      coords: "&7Rally » &f%x%&7, &f%y%&7, &f%z% &7(&f%world%&7)"
+      actionbar: "&6Rally &7» &e%distance%m &7(%direction%)"
   claim:
     enabled: true
     worlds:
@@ -884,3 +1826,92 @@ discord:
   enabled: true
   webhook-url: "https://discord.com/api/webhooks/1543608101461033041/rLijWaaIQuOQ8ipI8eoIq_yzqymPxehSUQD7bOWH1Mkm4-WJRIeGi6FQHmdcY2hpFCmL"
   event-results: true
+
+# Plafonds par grade (le plus haut grade du joueur est utilisé).
+grade-perks:
+  default:
+    homes: 1
+    hdv: 3
+    vaults: 0
+    repair-seconds: 7200
+    repair-all-seconds: 21600
+  chevalier:
+    homes: 3
+    hdv: 5
+    vaults: 0
+  marquis:
+    homes: 4
+    hdv: 6
+    vaults: 0
+  seigneur:
+    homes: 5
+    hdv: 8
+    vaults: 0
+  empereur:
+    homes: 8
+    hdv: 12
+    vaults: 1
+    repair-seconds: 7200
+    repair-all-seconds: 21600
+  supreme:
+    homes: 12
+    hdv: 15
+    vaults: 2
+    repair-seconds: 120
+    repair-all-seconds: 3600
+  star:
+    homes: 12
+    hdv: 15
+    vaults: 2
+    repair-seconds: 120
+    repair-all-seconds: 3600
+
+# Lien Minecraft <-> Discord (bot separe : dossier discord-bot/).
+# 1. Cree une application https://discord.com/developers/applications
+# 2. Bot -> Reset Token, intents : MESSAGE CONTENT + SERVER MEMBERS
+# 3. Invite le bot (Gerer les surnoms + Gerer les roles)
+# 4. Salon de lien : ID dans discord-bot/.env (LINK_CHANNEL_ID + GUILD_ID + DISCORD_TOKEN)
+# 5. Ici : api-port + api-secret (identique a PLUGIN_SECRET du bot)
+# 6. Dans discord-bot/ : npm install && node index.js
+discord-link:
+  enabled: true
+  api-bind: "0.0.0.0"
+  api-port: 8765
+  api-secret: "CHANGE_ME"
+  code-expire-seconds: 300
+  nickname-format: "%grade% %player%"
+  roles:
+    chevalier: ""
+    marquis: ""
+    seigneur: ""
+    empereur: ""
+    supreme: ""
+    star: ""
+
+# Prix unitaires pour /sell all (material 1.8 -> argent)
+sell-prices:
+  COBBLESTONE: 0.5
+  STONE: 0.8
+  DIRT: 0.2
+  GRAVEL: 0.3
+  SAND: 0.3
+  NETHERRACK: 0.4
+  LOG: 2.0
+  LOG_2: 2.0
+  COAL: 3.0
+  IRON_INGOT: 8.0
+  GOLD_INGOT: 12.0
+  DIAMOND: 40.0
+  EMERALD: 35.0
+  REDSTONE: 1.5
+  INK_SACK: 2.0
+  WHEAT: 1.0
+  COOKED_BEEF: 2.0
+  ROTTEN_FLESH: 0.5
+  BONE: 1.0
+  STRING: 1.0
+  GUNPOWDER: 4.0
+  ENDER_PEARL: 15.0
+  BLAZE_ROD: 12.0
+  GHAST_TEAR: 25.0
+

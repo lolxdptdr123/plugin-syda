@@ -1,0 +1,137 @@
+# ===================== Battleroyal - Configuration =====================
+# Fichier : plugins/Draftmc/battleroyal.yml  |  Commandes : /br  /battleroyal
+
+arena:
+  world: world
+  center-x: 0
+  center-y: 100
+  center-z: 0
+  initial-size: 500
+
+border:
+  damage-amount: 1.0
+  damage-buffer: 2.0
+  # Chaque etape : on attend "wait" secondes, puis la bordure se
+  # resserre progressivement jusqu'a "size" en "shrink-duration" secondes.
+  stages:
+    - wait: 30
+      shrink-duration: 60
+      size: 300
+    - wait: 30
+      shrink-duration: 60
+      size: 150
+    - wait: 20
+      shrink-duration: 40
+      size: 50
+    - wait: 20
+      shrink-duration: 30
+      size: 10
+
+points:
+  kill: 10
+  win: 100
+  survival-per-minute: 2
+
+factions:
+  # Si true, un joueur ne peut inviter dans sa team BR que des membres
+  # de SA PROPRE faction Draftmc, et seul le leader de faction peut creer
+  # une equipe. Passe a false pour autoriser des teams mixtes.
+  require-same-faction: true
+
+# Ou teleporter tout le monde a la fin d'une partie (victoire ou /br stop).
+# Si non renseigne, Battleroyal se replie sur le spawn du premier monde
+# charge par le serveur.
+spawn:
+  world: world
+  x: 0
+  y: 100
+  z: 0
+  yaw: 0
+  pitch: 0
+
+# Bloque TOUTES les commandes (meme celles d'autres plugins) pour un joueur
+# physiquement present dans la zone du BR pendant une partie en cours.
+# Les joueurs avec la permission battleroyal.admin ne sont jamais bloques.
+command-block:
+  enabled: true
+
+# Zone rectangulaire (definie en jeu avec /br setbuffzone1 et /br setbuffzone2)
+# ou des effets sont appliques en continu, tant qu'un joueur y reste, quel
+# que soit l'etat de la partie (utile par ex. pour une zone de spawn buffee).
+buff-zone:
+  enabled: true
+  effects:
+    - type: INCREASE_DAMAGE   # Force (Strength)
+      amplifier: 0
+    - type: SPEED             # Vitesse II (amplifier 1 = niveau 2)
+      amplifier: 1
+    - type: FIRE_RESISTANCE
+      amplifier: 0
+    - type: SATURATION
+      amplifier: 0
+
+# Stuff predefini et identique pour TOUS les joueurs au debut de la partie.
+# Pas de loot aleatoire : chaque equipe part strictement a egalite.
+# "slot" est optionnel : helmet / chestplate / leggings / boots / hand,
+# ou un numero de slot d'inventaire precis. Si absent, l'objet est ajoute
+# au premier emplacement libre de l'inventaire.
+# Pour une potion, utilise "potion-type" (ex. INSTANT_HEAL), "potion-level"
+# (1 = niveau I, 2 = niveau II) et "splash: true/false".
+kit:
+  items:
+    - material: DIAMOND_SWORD
+      amount: 1
+      slot: hand
+      enchantments:
+        - type: DAMAGE_ALL      # Tranchant (Sharpness)
+          level: 5
+        - type: DURABILITY      # Solidite (Unbreaking)
+          level: 3
+
+    - material: DIAMOND_HELMET
+      amount: 1
+      slot: helmet
+      enchantments:
+        - type: PROTECTION_ENVIRONMENTAL   # Protection
+          level: 4
+        - type: DURABILITY
+          level: 3
+
+    - material: DIAMOND_CHESTPLATE
+      amount: 1
+      slot: chestplate
+      enchantments:
+        - type: PROTECTION_ENVIRONMENTAL
+          level: 4
+        - type: DURABILITY
+          level: 3
+
+    - material: DIAMOND_LEGGINGS
+      amount: 1
+      slot: leggings
+      enchantments:
+        - type: PROTECTION_ENVIRONMENTAL
+          level: 4
+        - type: DURABILITY
+          level: 3
+
+    - material: DIAMOND_BOOTS
+      amount: 1
+      slot: boots
+      enchantments:
+        - type: PROTECTION_ENVIRONMENTAL
+          level: 4
+        - type: DURABILITY
+          level: 3
+
+    - material: GOLDEN_APPLE
+      amount: 16
+
+    - material: ENDER_PEARL
+      amount: 4
+
+    - material: POTION
+      amount: 20
+      potion-type: INSTANT_HEAL
+      potion-level: 2
+      splash: true

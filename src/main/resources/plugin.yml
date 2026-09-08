@@ -1,14 +1,15 @@
-name: Sydaria
+name: Draftmc
 version: ${project.version}
-main: fr.sydaria.Sydaria
-author: Sydaria
+main: fr.draftmc.Draftmc
+author: Draftmc
 description: Plugin tout-en-un Factions (AntiCleanUp, Atouts, Items, Tokens...)
 softdepend: [Vault, PlaceholderAPI, Votifier, NuVotifier, LuckPerms, Apollo-Bukkit, Apollo]
 
 commands:
-  sydaria:
+  draftmc:
     description: Commande admin du plugin
-    aliases: [syd]
+    aliases: [dmc]
+    permission: draftmc.admin
   atouts:
     description: Menu des atouts
     aliases: [atout]
@@ -29,14 +30,17 @@ commands:
   randomkey:
     description: Donne une clé aléatoire
     aliases: [rkey]
+    permission: draftmc.randomkey
   repair:
     description: Répare l'item en main
     aliases: [fix]
   title:
     description: Envoie un title
+    permission: draftmc.admin
   actionbar:
     description: Envoie une actionbar
     aliases: [ab]
+    permission: draftmc.admin
   poubelle:
     description: Poubelle
     aliases: [trash, bin]
@@ -51,16 +55,20 @@ commands:
     aliases: [rtp, wild]
   staff:
     description: Mode staff
+    permission: draftmc.staff
   sc:
     description: Chat staff
     aliases: [staffchat]
+    permission: draftmc.staff
   cps:
     description: Voir les CPS d'un joueur
+    permission: draftmc.staff
   freeze:
     description: Gèle/dégèle un joueur (immobilisation totale)
     aliases: [gel]
+    permission: draftmc.staff.freeze
   tags:
-    description: Tags
+    description: Menu des tags (/tags create pour le staff)
     aliases: [tag]
   tokens:
     description: Tokens - utilisés uniquement dans /boutique
@@ -69,26 +77,29 @@ commands:
     description: Argent - utilisé uniquement dans /shop
     aliases: [argent]
   f:
-    description: Commandes faction Sydaria
+    description: Commandes faction Draftmc
   voteparty:
     description: VoteParty
     aliases: [vp]
   portal:
     description: Portails custom
     aliases: [portails]
-  itemsyd:
-    description: Donne un item Sydaria
-    aliases: [sitem, giveitem]
+    permission: draftmc.admin
+  itemdraft:
+    description: Donne un item Draftmc
+    aliases: [ditem, giveitem]
+    permission: draftmc.items.give
   boutique:
-    description: Boutique Sydaria - achats avec des tokens
+    description: Boutique Draftmc - achats avec des tokens
   shop:
-    description: Shop Sydaria - achats avec l'argent
+    description: Shop Draftmc - achats avec l'argent
     aliases: [magasin]
   rankup:
     description: Monte de grade avec ton argent
     aliases: [grade, grades]
   deathinv:
     description: Consulte l'inventaire d'un joueur tue
+    permission: draftmc.staff
   feed:
     description: Nourrit le joueur (grade requis)
   pv:
@@ -107,38 +118,204 @@ commands:
   kit:
     description: Menu des kits debloques
     aliases: [kits]
+  hat:
+    description: Place l'item en main sur la tete (grade Empereur)
+  back:
+    description: Retour a la derniere position (grade Empereur)
+  compact:
+    description: Compacte minerais/lingots (grade Marquis)
+  invsee:
+    description: Voir l'inventaire d'un joueur (grade Supreme)
+  sellall:
+    description: Vend tout l'inventaire (grade Supreme)
+  sell:
+    description: /sell all
+  home:
+    description: Teleporte a un home
+  sethome:
+    description: Definit un home
+  delhome:
+    description: Supprime un home
+  homes:
+    description: Liste tes homes
+  warp:
+    description: Teleporte a un warp
+  warps:
+    description: Liste les warps
+  setwarp:
+    description: Cree un warp (staff)
+    permission: draftmc.staff
+  delwarp:
+    description: Supprime un warp (staff)
+    permission: draftmc.staff
+  tpa:
+    description: Demande a te teleporter a un joueur
+  tpahere:
+    description: Demande a un joueur de se teleporter a toi
+  tpyes:
+    description: Accepte une demande de teleportation
+    aliases: [tpaccept, tpac]
+  tpdeny:
+    description: Refuse une demande de teleportation
+    aliases: [tpno]
+  hdv:
+    description: Hotel des ventes
+    aliases: [ah, auction]
+  discord:
+    description: Lie ton compte Minecraft a Discord
+    aliases: [linkdiscord]
+  report:
+    description: Signale un joueur au staff
+  reports:
+    description: Liste des reports (staff)
+    permission: draftmc.staff
+  banitem:
+    description: Interdit/autorise l'item en main (admin)
+    aliases: [banitems]
+    permission: draftmc.admin
+  conquest:
+    description: Event Conquest
+    aliases: [cq]
+    permission: conquest.admin
+  domination:
+    description: Event Domination
+    aliases: [dom]
+    permission: domination.admin
+  br:
+    description: Event Battleroyal
+    aliases: [battleroyal, battleroyale, battle]
+    permission: battleroyal.admin
+  masterkill:
+    description: Event MasterKill
+    aliases: [mk]
+    permission: masterkill.admin
+  totem:
+    description: Event Totem
+    aliases: [tot]
+    permission: totem.admin
+  totemgeant:
+    description: Event Totem Geant
+    aliases: [totemg, gianttotem]
+    permission: totem.admin
+  koth:
+    description: Event KOTH Geant
+    aliases: [kothgeant, kothg]
+    permission: koth.admin
+  teamfight:
+    description: Event TeamFight 8v8
+    aliases: [tf, 8v8]
+    permission: teamfight.admin
+  deathban:
+    description: Ban d'un monde pour une duree
+    aliases: [db]
+    permission: deathban.admin
+  event:
+    description: Planning des events Draftmc
+    aliases: [events]
 
 permissions:
-  sydaria.admin:
+  draftmc.admin:
     default: op
-  sydaria.staff:
+    children:
+      conquest.admin: true
+      domination.admin: true
+      battleroyal.admin: true
+      masterkill.admin: true
+      totem.admin: true
+      koth.admin: true
+      teamfight.admin: true
+      deathban.admin: true
+      deathban.bypass.ban: true
+      deathban.bypass.teleport: true
+      deathban.bypass.commands: true
+      draftmc.event: true
+      draftmc.faction.top: true
+  draftmc.staff:
     default: op
-  sydaria.staff.freeze:
+  draftmc.staff.freeze:
     default: op
-  sydaria.bypass.commands:
+  draftmc.bypass.commands:
     default: op
-  sydaria.doublexp:
+  draftmc.banitem.bypass:
+    default: op
+    description: Peut utiliser les items interdits (le craft reste bloqué pour tous)
+  draftmc.doublexp:
     default: false
-  sydaria.repair:
-    default: true
-  sydaria.repair.bypass:
-    default: op
-  sydaria.fly:
+  draftmc.repair:
     default: false
-  sydaria.faction.bypass:
+  draftmc.repair.bypass:
     default: op
-  sydaria.gradecommands.bypass:
+  draftmc.fly:
+    default: false
+  draftmc.faction.bypass:
+    default: op
+  draftmc.gradecommands.bypass:
     default: false
     description: Ignore les restrictions de grade pour /feed, /pv, etc.
-  sydaria.tokens.give:
+  draftmc.tokens.give:
     default: op
-  sydaria.money.give:
+  draftmc.money.give:
     default: op
-  sydaria.items.give:
+  draftmc.items.give:
     default: op
-  sydaria.welcome:
+  conquest.admin:
+    default: op
+  conquest.start:
+    default: op
+  conquest.stop:
+    default: op
+  conquest.reload:
+    default: op
+  domination.admin:
+    default: op
+  domination.start:
+    default: op
+  domination.stop:
+    default: op
+  domination.reload:
+    default: op
+  battleroyal.admin:
+    default: op
+  masterkill.admin:
+    default: op
+  masterkill.start:
+    default: op
+  masterkill.stop:
+    default: op
+  masterkill.reload:
+    default: op
+  totem.admin:
+    default: op
+  koth.admin:
+    default: op
+  teamfight.admin:
+    default: op
+  deathban.admin:
+    default: op
+  deathban.bypass.ban:
+    default: op
+  deathban.bypass.teleport:
+    default: op
+  deathban.bypass.commands:
+    default: op
+  draftmc.welcome:
     default: true
-  sydaria.rtp:
+  draftmc.rtp:
     default: true
-  sydaria.randomkey:
+  draftmc.randomkey:
     default: op
+  draftmc.event:
+    default: op
+    description: /event start, stop, list, info (le planning /event est public)
+  draftmc.faction.top:
+    default: op
+    description: Gerer le F Top (/f top add, remove, reset)
+  draftmc.combattag.bypass:
+    default: op
+    description: Ignore le combat tag
+  draftmc.enderpearl.bypass:
+    default: op
+    description: Ignore le cooldown des enderpearls
+  draftmc.tpa:
+    default: true
+    description: Commandes /tpa /tpyes /tpdeny /tpahere
