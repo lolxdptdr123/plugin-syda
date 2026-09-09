@@ -22,6 +22,7 @@ import fr.draftmc.randomtp.RandomTpCommand;
 import fr.draftmc.staff.FreezeManager;
 import fr.draftmc.staff.ReportManager;
 import fr.draftmc.staff.StaffManager;
+import fr.draftmc.stats.StatsManager;
 import fr.draftmc.tags.TagManager;
 import fr.draftmc.tokens.TokenManager;
 import fr.draftmc.rankup.RankUpManager;
@@ -61,6 +62,7 @@ public class Draftmc extends JavaPlugin {
     private EconomyHook economy;
     private AtoutManager atouts;
     private ClassementManager classement;
+    private StatsManager stats;
     private ItemManager items;
     private BannedItemManager bannedItems;
     private StaffManager staff;
@@ -102,6 +104,7 @@ public class Draftmc extends JavaPlugin {
         this.economy = new EconomyHook();
         this.atouts = new AtoutManager(this);
         this.classement = new ClassementManager(this);
+        this.stats = new StatsManager(this);
         this.items = new ItemManager(this);
         this.bannedItems = new BannedItemManager(this);
         this.staff = new StaffManager(this);
@@ -132,6 +135,7 @@ public class Draftmc extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new AntiCommandListener(this), this);
         Bukkit.getPluginManager().registerEvents(atouts, this);
         Bukkit.getPluginManager().registerEvents(classement, this);
+        Bukkit.getPluginManager().registerEvents(stats, this);
         Bukkit.getPluginManager().registerEvents(items, this);
         Bukkit.getPluginManager().registerEvents(bannedItems, this);
         Bukkit.getPluginManager().registerEvents(staff, this);
@@ -157,6 +161,7 @@ public class Draftmc extends JavaPlugin {
         cmd("draftmc", new AdminCommand(this));
         cmd("atouts", atouts);
         cmd("classement", classement);
+        cmd("stats", stats);
         cmd("enclume", core);
         cmd("bottlexp", gradeCommands);
         cmd("enchantement", core);
@@ -505,6 +510,7 @@ public class Draftmc extends JavaPlugin {
     public TokenManager tokens() { return tokens; }
     public EconomyHook economy() { return economy; }
     public ClassementManager classement() { return classement; }
+    public StatsManager stats() { return stats; }
     public ItemManager items() { return items; }
     public BannedItemManager bannedItems() { return bannedItems; }
     public TagManager tags() { return tags; }

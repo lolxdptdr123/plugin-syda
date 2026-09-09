@@ -89,6 +89,7 @@ public class TeamFightPlugin extends EventModule {
                 .replace("{leader}", team == null ? "" : String.valueOf(team.leaderName()))
                 .replace("{count}", String.valueOf(number))
                 .replace("{size}", String.valueOf(manager == null ? 8 : manager.rosterSize()))
+                .replace("{min}", String.valueOf(manager == null ? 3 : manager.minRoster()))
                 .replace("{alive}", String.valueOf(number))
                 .replace("{seconds}", String.valueOf(number)));
     }

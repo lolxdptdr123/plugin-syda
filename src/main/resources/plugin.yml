@@ -3,7 +3,7 @@ version: ${project.version}
 main: fr.draftmc.Draftmc
 author: Draftmc
 description: Plugin tout-en-un Factions (AntiCleanUp, Atouts, Items, Tokens...)
-softdepend: [Vault, PlaceholderAPI, Votifier, NuVotifier, LuckPerms, Apollo-Bukkit, Apollo]
+softdepend: [Vault, PlaceholderAPI, Votifier, NuVotifier, LuckPerms, Apollo-Bukkit, Apollo, Jobs]
 
 commands:
   draftmc:
@@ -16,6 +16,9 @@ commands:
   classement:
     description: Classements joueurs
     aliases: [top, leaderboard]
+  stats:
+    description: Statistiques joueur (GUI)
+    aliases: [stat, statistique, statistiques]
   enclume:
     description: Enclume portable
   bottlexp:
@@ -197,6 +200,9 @@ commands:
     description: Event Totem Geant
     aliases: [totemg, gianttotem]
     permission: totem.admin
+  totemstats:
+    description: Stats du dernier Totem
+    aliases: [totemstat, tstats]
   koth:
     description: Event KOTH Geant
     aliases: [kothgeant, kothg]

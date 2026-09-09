@@ -92,6 +92,8 @@ public class Totem {
         if (factionId == null) {
             return;
         }
+        plugin.getTotemManager().recordBlockBreak(player);
+        plugin.getHost().data().addInt(player.getUniqueId(), "totem_blocks", 1);
         if (capturingFactionId != null && !capturingFactionId.equals(factionId)) {
             lastBreakerName = player.getName();
             lastBreakerFaction = plugin.getEventFactionHook().getFactionDisplayName(factionId);

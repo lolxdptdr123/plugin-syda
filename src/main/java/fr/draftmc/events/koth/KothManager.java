@@ -231,6 +231,8 @@ public class KothManager {
         plugin.getScoreboard().stop();
         if (announceRanking) {
             finish(null);
+        } else {
+            plugin.broadcast("stop", active, null, 0, 0);
         }
         active = null;
         scores.clear();
@@ -370,6 +372,9 @@ public class KothManager {
                 hub.awardTopPoints(EventType.KOTH, entry.getKey(), reward);
             }
             place++;
+        }
+        if (hub != null) {
+            hub.announceDiscordRanking(EventType.KOTH, active == null ? "" : active.getDisplay(), ranking, 5);
         }
         if (winnerId == null && !ranking.isEmpty()) {
             winnerId = ranking.get(0).getKey();

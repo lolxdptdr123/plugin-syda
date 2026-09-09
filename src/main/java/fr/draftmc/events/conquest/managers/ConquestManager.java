@@ -223,6 +223,7 @@ public class ConquestManager {
 
         if (plugin.getHost().events() != null) {
             plugin.getHost().events().awardTopPoints(fr.draftmc.events.EventType.CONQUEST, factionId);
+            plugin.getHost().events().announceDiscordWinner(fr.draftmc.events.EventType.CONQUEST, "", factionName, points);
         }
 
         stop();

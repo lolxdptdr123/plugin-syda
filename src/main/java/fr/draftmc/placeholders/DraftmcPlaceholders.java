@@ -63,6 +63,26 @@ public class DraftmcPlaceholders extends PlaceholderExpansion {
         if (params.equalsIgnoreCase("deaths")) {
             return String.valueOf(plugin.data().getInt(player.getUniqueId(), "deaths"));
         }
+        if (params.equalsIgnoreCase("playtime")) {
+            return plugin.stats() == null ? "0h 0m"
+                    : plugin.stats().format(fr.draftmc.stats.StatsManager.StatType.PLAYTIME,
+                    plugin.stats().valueOf(player.getUniqueId(), fr.draftmc.stats.StatsManager.StatType.PLAYTIME));
+        }
+        if (params.equalsIgnoreCase("mined") || params.equalsIgnoreCase("blocks_mined")) {
+            return String.valueOf(plugin.data().getInt(player.getUniqueId(), "blocks_mined"));
+        }
+        if (params.equalsIgnoreCase("mobs") || params.equalsIgnoreCase("mobs_killed")) {
+            return String.valueOf(plugin.data().getInt(player.getUniqueId(), "mobs_killed"));
+        }
+        if (params.equalsIgnoreCase("streak") || params.equalsIgnoreCase("killstreak")) {
+            return String.valueOf(plugin.data().getInt(player.getUniqueId(), "killstreak_best"));
+        }
+        if (params.equalsIgnoreCase("totem") || params.equalsIgnoreCase("totem_blocks")) {
+            return String.valueOf(plugin.data().getInt(player.getUniqueId(), "totem_blocks"));
+        }
+        if (params.equalsIgnoreCase("jobs") || params.equalsIgnoreCase("job_level")) {
+            return String.valueOf(plugin.data().getInt(player.getUniqueId(), "job_level"));
+        }
         if (params.equalsIgnoreCase("faction")) {
             return plugin.factions().displayOf(player);
         }

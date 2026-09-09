@@ -58,6 +58,15 @@ public class ClassementManager implements Listener, CommandExecutor {
         plugin.data().addInt(uuid, "playtime", seconds);
     }
 
+    public int playtimeSeconds(UUID uuid) {
+        int stored = plugin.data().getInt(uuid, "playtime");
+        Long start = joinedAt.get(uuid);
+        if (start != null) {
+            stored += (int) ((System.currentTimeMillis() - start) / 1000L);
+        }
+        return stored;
+    }
+
     @EventHandler
     public void onBreak(BlockBreakEvent event) {
         plugin.data().addInt(event.getPlayer().getUniqueId(), "blocks_mined", 1);
@@ -94,8 +103,15 @@ public class ClassementManager implements Listener, CommandExecutor {
     @EventHandler
     public void onPlayerDeath(PlayerDeathEvent event) {
         plugin.data().addInt(event.getEntity().getUniqueId(), "deaths", 1);
+        plugin.data().setInt(event.getEntity().getUniqueId(), "killstreak", 0);
         if (event.getEntity().getKiller() != null) {
-            plugin.data().addInt(event.getEntity().getKiller().getUniqueId(), "players_killed", 1);
+            UUID killer = event.getEntity().getKiller().getUniqueId();
+            plugin.data().addInt(killer, "players_killed", 1);
+            plugin.data().addInt(killer, "killstreak", 1);
+            int streak = plugin.data().getInt(killer, "killstreak");
+            if (streak > plugin.data().getInt(killer, "killstreak_best")) {
+                plugin.data().setInt(killer, "killstreak_best", streak);
+            }
         }
     }
 

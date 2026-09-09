@@ -213,7 +213,7 @@ public class KothCommand implements CommandExecutor, TabCompleter {
     }
 
     private boolean handleStop(CommandSender sender) {
-        if (!plugin.getKothManager().stop(true)) {
+        if (!plugin.getKothManager().stop(false)) {
             msg(sender, plugin.format("not-running", null, null, 0, 0));
         }
         return true;

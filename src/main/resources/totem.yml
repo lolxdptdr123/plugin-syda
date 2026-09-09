@@ -9,6 +9,14 @@ prefix: "&8[&6Totem&8] &7"
 
 start-countdown-seconds: 60
 pvp-points: 15
+stats-seconds: 120
+
+# Fire res + anti-poison uniquement tant que le totem (classique ou geant) est LANCE.
+# radius : autour du totem. 0 = tout le monde de la map.
+effects:
+  fire-resistance: true
+  block-poison: true
+  radius: 200
 
 # Totem Geant : points du sommet (premier ⬜) vers la base.
 # Reset adverse = uniquement les points du bloc casse, puis la tour revient.
@@ -55,6 +63,7 @@ messages:
   pvp-points: "&aVotre faction a reçu &e{points} points PVP !"
   oneshot: "&6La faction &e{faction} &6fait un One Shot ! &a+{bonus}"
   end-giant: "&cLe Totem Geant est terminé !"
+  stats-hint: "&eLes stats sont disponibles : &a/totemstats &7pendant &e{stats-seconds}s&7 !"
   ranking-header: "&6Classement:"
   ranking-line: "&e{place}: &f{faction} &7({score} pts) &8→ &a+{points} F Top"
 

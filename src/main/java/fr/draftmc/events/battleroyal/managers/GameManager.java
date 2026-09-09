@@ -358,8 +358,12 @@ public class GameManager {
             for (UUID uuid : winner.getMembers()) {
                 pointsManager.addPoints(uuid, winPoints);
             }
-            if (winner.getFactionId() != null && plugin.getHost().events() != null) {
-                plugin.getHost().events().awardTopPoints(fr.draftmc.events.EventType.BATTLEROYAL, winner.getFactionId());
+            if (plugin.getHost().events() != null) {
+                if (winner.getFactionId() != null) {
+                    plugin.getHost().events().awardTopPoints(fr.draftmc.events.EventType.BATTLEROYAL, winner.getFactionId());
+                }
+                plugin.getHost().events().announceDiscordWinner(fr.draftmc.events.EventType.BATTLEROYAL,
+                        "", winner.getDisplayName(), -1);
             }
         } else {
             broadcast(ChatColor.RED + "Partie terminee, aucune equipe survivante.");

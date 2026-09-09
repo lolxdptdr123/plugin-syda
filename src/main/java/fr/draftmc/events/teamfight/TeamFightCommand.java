@@ -124,12 +124,8 @@ public class TeamFightCommand implements CommandExecutor, TabCompleter, Listener
             sender.sendMessage(plugin.prefix() + CC.color("&cLes inscriptions ne sont pas ouvertes."));
             return true;
         }
-        if (args.length < 2) {
-            sender.sendMessage(CC.color("&e/teamfight create <nom>"));
-            return true;
-        }
         Player player = (Player) sender;
-        String deny = plugin.getManager().createDenyReason(player, args[1]);
+        String deny = plugin.getManager().createDenyReason(player);
         if (deny != null) {
             String text = plugin.format(deny, null, player, 0);
             if (text == null || text.isEmpty()) {
@@ -138,7 +134,7 @@ public class TeamFightCommand implements CommandExecutor, TabCompleter, Listener
             sender.sendMessage(plugin.prefix() + text);
             return true;
         }
-        TfTeam team = plugin.getManager().createTeam(player, args[1]);
+        TfTeam team = plugin.getManager().createTeam(player);
         if (team == null) {
             sender.sendMessage(plugin.prefix() + CC.color("&cImpossible de creer cette equipe."));
             return true;
@@ -275,14 +271,16 @@ public class TeamFightCommand implements CommandExecutor, TabCompleter, Listener
     private boolean handleList(CommandSender sender) {
         sender.sendMessage(plugin.prefix() + CC.color("&6Equipes TeamFight"));
         int size = plugin.getManager().rosterSize();
+        int min = plugin.getManager().minRoster();
         List<TfTeam> all = plugin.getManager().getTeams();
         if (all.isEmpty()) {
             sender.sendMessage(CC.color("&7Aucune equipe."));
             return true;
         }
         for (TfTeam team : all) {
-            sender.sendMessage(CC.color((team.isFull(size) ? "&a" : "&e")
+            sender.sendMessage(CC.color((plugin.getManager().isTeamReady(team) ? "&a" : "&e")
                     + team.getName() + " &8(" + team.getMembers().size() + "/" + size + ")"
+                    + " &7min &e" + min
                     + " &7leader: &f" + team.leaderName()));
         }
         return true;
@@ -305,8 +303,8 @@ public class TeamFightCommand implements CommandExecutor, TabCompleter, Listener
     }
 
     private void sendHelp(CommandSender sender) {
-        sender.sendMessage(plugin.prefix() + CC.color("&6TeamFight 8v8"));
-        sender.sendMessage(CC.color("&e/teamfight create <nom>"));
+        sender.sendMessage(plugin.prefix() + CC.color("&6TeamFight"));
+        sender.sendMessage(CC.color("&e/teamfight create &7- equipe au nom de ta faction"));
         sender.sendMessage(CC.color("&e/teamfight invite [joueur] &7- GUI si aucun nom"));
         sender.sendMessage(CC.color("&e/teamfight accept <equipe>"));
         sender.sendMessage(CC.color("&e/teamfight list"));

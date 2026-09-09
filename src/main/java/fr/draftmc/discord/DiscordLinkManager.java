@@ -17,7 +17,9 @@ import com.sun.net.httpserver.HttpServer;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -39,6 +41,7 @@ public class DiscordLinkManager implements CommandExecutor, Listener {
     private final Draftmc plugin;
     private final Map<String, PendingLink> pending = new ConcurrentHashMap<String, PendingLink>();
     private final ConcurrentLinkedQueue<SyncJob> syncQueue = new ConcurrentLinkedQueue<SyncJob>();
+    private final ConcurrentLinkedQueue<EventPost> eventQueue = new ConcurrentLinkedQueue<EventPost>();
     private final Random random = new Random();
     private HttpServer httpServer;
 
@@ -95,6 +98,12 @@ public class DiscordLinkManager implements CommandExecutor, Listener {
                 @Override
                 public void handle(HttpExchange exchange) {
                     handleSync(exchange);
+                }
+            });
+            httpServer.createContext("/events", new com.sun.net.httpserver.HttpHandler() {
+                @Override
+                public void handle(HttpExchange exchange) {
+                    handleEvents(exchange);
                 }
             });
             httpServer.setExecutor(null);
@@ -184,9 +193,18 @@ public class DiscordLinkManager implements CommandExecutor, Listener {
     }
 
     private String nicknameFor(Player player) {
-        String format = plugin.getConfig().getString("discord-link.nickname-format", "%grade% %player%");
-        String grade = plugin.grades().displayName(player).replaceAll("(?i)[&§][0-9A-FK-OR]", "");
-        String nick = format.replace("%grade%", grade).replace("%player%", player.getName());
+        return clipNick(player == null ? "" : player.getName());
+    }
+
+    private String nicknameForName(String name) {
+        return clipNick(name);
+    }
+
+    private static String clipNick(String name) {
+        if (name == null) {
+            return "";
+        }
+        String nick = name.replaceAll("(?i)[&§][0-9A-FK-OR]", "").trim();
         if (nick.length() > 32) {
             nick = nick.substring(0, 32);
         }
@@ -292,11 +310,11 @@ public class DiscordLinkManager implements CommandExecutor, Listener {
         plugin.data().setString(pendingLink.uuid, "discord_id", discordId);
         Player player = Bukkit.getPlayer(pendingLink.uuid);
         String name = plugin.data().nameOf(pendingLink.uuid);
-        String nick = name;
+        String nick = player != null && player.isOnline() ? nicknameFor(player) : nicknameForName(name);
         String roleId = "";
         if (player != null && player.isOnline()) {
             plugin.msg(player, "&aCompte Discord lié !");
-            nick = nicknameFor(player);
+            plugin.msg(player, "&7Ton pseudo Discord devient &e" + nick + "&7.");
             roleId = roleFor(player);
             applyRank(player);
         }
@@ -397,6 +415,93 @@ public class DiscordLinkManager implements CommandExecutor, Listener {
         return json.substring(start + 1, end).replace("\\\"", "\"");
     }
 
+    public void postEventResult(String title, String subtitle, List<String> lines, int color) {
+        if (!eventsEnabled()) {
+            return;
+        }
+        final EventPost post = new EventPost(
+                title,
+                subtitle,
+                lines,
+                color,
+                plugin.getConfig().getString("discord.events.field", "Classement"),
+                plugin.getConfig().getString("discord.events.footer", "Draftmc"));
+        final String webhook = plugin.getConfig().getString("discord.webhook-url", "");
+        if (webhook != null && webhook.startsWith("https://discord.com/api/webhooks/")) {
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+                @Override
+                public void run() {
+                    sendWebhook(webhook, post);
+                }
+            });
+            return;
+        }
+        eventQueue.add(post);
+    }
+
+    private boolean eventsEnabled() {
+        if (!plugin.getConfig().getBoolean("discord.enabled", true)) {
+            return false;
+        }
+        if (plugin.getConfig().isSet("discord.events.enabled")) {
+            return plugin.getConfig().getBoolean("discord.events.enabled");
+        }
+        return plugin.getConfig().getBoolean("discord.event-results", true);
+    }
+
+    private void handleEvents(HttpExchange exchange) {
+        if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+            reply(exchange, 405, "{\"ok\":false}");
+            return;
+        }
+        if (!authorized(exchange)) {
+            reply(exchange, 401, "{\"ok\":false,\"error\":\"unauthorized\"}");
+            return;
+        }
+        StringBuilder sb = new StringBuilder("{\"ok\":true,\"pending\":[");
+        boolean first = true;
+        EventPost post;
+        int count = 0;
+        while (count < 20 && (post = eventQueue.poll()) != null) {
+            if (!first) {
+                sb.append(',');
+            }
+            first = false;
+            sb.append(post.toJson());
+            count++;
+        }
+        sb.append("]}");
+        reply(exchange, 200, sb.toString());
+    }
+
+    private void sendWebhook(String url, EventPost post) {
+        HttpURLConnection conn = null;
+        try {
+            conn = (HttpURLConnection) new URL(url).openConnection();
+            conn.setRequestMethod("POST");
+            conn.setDoOutput(true);
+            conn.setConnectTimeout(8000);
+            conn.setReadTimeout(8000);
+            conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+            conn.setRequestProperty("User-Agent", "Draftmc");
+            byte[] body = ("{\"embeds\":[" + post.toEmbedJson() + "]}").getBytes(StandardCharsets.UTF_8);
+            conn.setFixedLengthStreamingMode(body.length);
+            OutputStream out = conn.getOutputStream();
+            out.write(body);
+            out.close();
+            int code = conn.getResponseCode();
+            if (code < 200 || code >= 300) {
+                plugin.getLogger().warning("Discord events: webhook HTTP " + code);
+            }
+        } catch (Exception ex) {
+            plugin.getLogger().warning("Discord events: webhook " + ex.getMessage());
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
+    }
+
     private static String jsonArray(List<String> values) {
         StringBuilder sb = new StringBuilder("[");
         for (int i = 0; i < values.size(); i++) {
@@ -450,6 +555,64 @@ public class DiscordLinkManager implements CommandExecutor, Listener {
             this.roleId = roleId;
             this.removeRoleIds = removeRoleIds;
             this.unlink = unlink;
+        }
+    }
+
+    private static class EventPost {
+        private final String title;
+        private final String subtitle;
+        private final List<String> lines;
+        private final int color;
+        private final String field;
+        private final String footer;
+
+        private EventPost(String title, String subtitle, List<String> lines, int color, String field, String footer) {
+            this.title = title == null || title.isEmpty() ? "Event" : title;
+            this.subtitle = subtitle == null ? "" : subtitle;
+            this.lines = lines == null ? new ArrayList<String>() : new ArrayList<String>(lines);
+            this.color = color;
+            this.field = field == null || field.isEmpty() ? "Classement" : field;
+            this.footer = footer == null || footer.isEmpty() ? "Draftmc" : footer;
+        }
+
+        private String toJson() {
+            StringBuilder sb = new StringBuilder();
+            sb.append("{\"title\":\"").append(escape(title)).append('"');
+            sb.append(",\"description\":\"").append(escape(subtitle)).append('"');
+            sb.append(",\"color\":").append(color);
+            sb.append(",\"field\":\"").append(escape(field)).append('"');
+            sb.append(",\"footer\":\"").append(escape(footer)).append('"');
+            sb.append(",\"lines\":[");
+            for (int i = 0; i < lines.size(); i++) {
+                if (i > 0) {
+                    sb.append(',');
+                }
+                sb.append('"').append(escape(lines.get(i))).append('"');
+            }
+            sb.append("]}");
+            return sb.toString();
+        }
+
+        private String toEmbedJson() {
+            StringBuilder value = new StringBuilder();
+            if (lines.isEmpty()) {
+                value.append("Aucun score.");
+            } else {
+                for (int i = 0; i < lines.size(); i++) {
+                    if (i > 0) {
+                        value.append("\\n");
+                    }
+                    value.append(escape(lines.get(i)));
+                }
+            }
+            if (value.length() > 1000) {
+                value.setLength(1000);
+            }
+            String desc = subtitle.isEmpty() ? "" : ",\"description\":\"" + escape(subtitle) + "\"";
+            return "{\"title\":\"" + escape(title) + "\"" + desc
+                    + ",\"color\":" + color
+                    + ",\"fields\":[{\"name\":\"" + escape(field) + "\",\"value\":\"" + value + "\"}]"
+                    + ",\"footer\":{\"text\":\"" + escape(footer) + "\"}}";
         }
     }
 }

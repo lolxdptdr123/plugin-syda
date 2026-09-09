@@ -93,6 +93,18 @@ public class TeamFightManager {
         return Math.max(1, plugin.getConfig().getInt("roster-size", 8));
     }
 
+    public int minRoster() {
+        int min = plugin.getConfig().getInt("min-roster", 3);
+        if (min < 1) {
+            min = 1;
+        }
+        return Math.min(min, rosterSize());
+    }
+
+    public boolean isTeamReady(TfTeam team) {
+        return team != null && !team.isTournamentOut() && team.getMembers().size() >= minRoster();
+    }
+
     public boolean openRegistrations() {
         if (state != TeamFightState.WAITING && state != TeamFightState.ENDED) {
             return false;
@@ -110,9 +122,8 @@ public class TeamFightManager {
 
     public List<TfTeam> readyTeams() {
         List<TfTeam> ready = new ArrayList<TfTeam>();
-        int size = rosterSize();
         for (TfTeam team : teams.values()) {
-            if (team.isFull(size) && !team.isTournamentOut()) {
+            if (isTeamReady(team)) {
                 ready.add(team);
             }
         }
@@ -164,8 +175,8 @@ public class TeamFightManager {
         return true;
     }
 
-    public String createDenyReason(Player leader, String name) {
-        if (leader == null || name == null) {
+    public String createDenyReason(Player leader) {
+        if (leader == null) {
             return "need-faction";
         }
         if (state != TeamFightState.REGISTRATION) {
@@ -183,10 +194,6 @@ public class TeamFightManager {
         }
         if (teams.size() >= plugin.getConfig().getInt("max-teams", 8)) {
             return "too-many-teams";
-        }
-        String id = name.toLowerCase(Locale.ROOT).replace(" ", "");
-        if (id.isEmpty() || teams.containsKey(id)) {
-            return "name-taken";
         }
         return null;
     }
@@ -211,13 +218,17 @@ public class TeamFightManager {
         return team.getFactionId().equals(factionId);
     }
 
-    public TfTeam createTeam(Player leader, String name) {
-        if (createDenyReason(leader, name) != null) {
+    public TfTeam createTeam(Player leader) {
+        if (createDenyReason(leader) != null) {
             return null;
         }
         String factionId = plugin.getEventFactionHook().getFactionId(leader);
-        String id = name.toLowerCase(Locale.ROOT).replace(" ", "");
-        TfTeam team = new TfTeam(id, name, leader.getUniqueId(), factionId);
+        String display = plugin.getEventFactionHook().getFactionDisplayName(factionId);
+        if (display == null || display.isEmpty()) {
+            display = factionId;
+        }
+        String id = factionId.toLowerCase(Locale.ROOT).replace(" ", "");
+        TfTeam team = new TfTeam(id, display, leader.getUniqueId(), factionId);
         teams.put(id, team);
         playerTeam.put(leader.getUniqueId(), id);
         return team;
@@ -260,8 +271,8 @@ public class TeamFightManager {
         }
         playerTeam.put(player.getUniqueId(), team.getId());
         plugin.broadcast("team-joined", team, player, team.getMembers().size());
-        if (team.isFull(rosterSize())) {
-            plugin.broadcast("team-ready", team, null, rosterSize());
+        if (team.getMembers().size() == minRoster()) {
+            plugin.broadcast("team-ready", team, null, team.getMembers().size());
         }
         return true;
     }
@@ -482,6 +493,8 @@ public class TeamFightManager {
                 }
                 if (factionId != null) {
                     hub.awardTopPoints(EventType.TEAMFIGHT, factionId);
+                    String facName = plugin.getEventFactionHook().getFactionDisplayName(factionId);
+                    hub.announceDiscordWinner(EventType.TEAMFIGHT, tournamentWinner.getName(), facName, -1);
                 }
                 hub.clearActive(EventType.TEAMFIGHT, null);
             }

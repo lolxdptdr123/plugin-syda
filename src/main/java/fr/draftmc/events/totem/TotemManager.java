@@ -8,6 +8,8 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitTask;
 
 import fr.draftmc.util.NmsTitles;
@@ -17,17 +19,24 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 
 public class TotemManager {
     private final TotemPlugin plugin;
     private final Map<String, Totem> totems = new LinkedHashMap<String, Totem>();
     private final Map<String, Integer> scores = new LinkedHashMap<String, Integer>();
+    private final Map<UUID, Integer> liveBreaks = new HashMap<UUID, Integer>();
+    private final Map<UUID, String> liveNames = new HashMap<UUID, String>();
+    private List<TotemStat> lastStats = new ArrayList<TotemStat>();
+    private long statsUntilMillis;
     private BukkitTask countdownTask;
     private BukkitTask durationTask;
+    private BukkitTask effectsTask;
     private int countdownSecondsLeft;
     private String countdownTotem;
     private boolean giantMode;
@@ -184,6 +193,8 @@ public class TotemManager {
         cancelDuration();
         giantMode = giant;
         scores.clear();
+        liveBreaks.clear();
+        liveNames.clear();
         endAtMillis = 0;
         totem.setGiant(giant);
         totem.setStatusStarting();
@@ -233,6 +244,7 @@ public class TotemManager {
         totem.setGiant(giantMode);
         totem.spawn();
         plugin.broadcast("spawn", totem, null);
+        startMapEffects();
         if (giantMode) {
             startDurationTimer();
         }
@@ -272,6 +284,72 @@ public class TotemManager {
         return (int) Math.max(0L, (endAtMillis - System.currentTimeMillis()) / 1000L);
     }
 
+    public void recordBlockBreak(Player player) {
+        if (player == null) {
+            return;
+        }
+        UUID uuid = player.getUniqueId();
+        Integer current = liveBreaks.get(uuid);
+        liveBreaks.put(uuid, current == null ? 1 : current.intValue() + 1);
+        liveNames.put(uuid, player.getName());
+    }
+
+    public void freezeStats() {
+        List<TotemStat> list = new ArrayList<TotemStat>();
+        for (Map.Entry<UUID, Integer> entry : liveBreaks.entrySet()) {
+            String name = liveNames.get(entry.getKey());
+            if (name == null || name.isEmpty()) {
+                name = Bukkit.getOfflinePlayer(entry.getKey()).getName();
+            }
+            if (name == null) {
+                name = "?";
+            }
+            list.add(new TotemStat(entry.getKey(), name, entry.getValue().intValue()));
+        }
+        Collections.sort(list, new Comparator<TotemStat>() {
+            @Override
+            public int compare(TotemStat a, TotemStat b) {
+                int cmp = Integer.compare(b.blocks, a.blocks);
+                if (cmp != 0) {
+                    return cmp;
+                }
+                return a.name.compareToIgnoreCase(b.name);
+            }
+        });
+        lastStats = list;
+        int seconds = Math.max(10, plugin.getConfig().getInt("stats-seconds", 120));
+        statsUntilMillis = System.currentTimeMillis() + seconds * 1000L;
+        liveBreaks.clear();
+        liveNames.clear();
+    }
+
+    public boolean hasStats() {
+        return statsUntilMillis > 0L && System.currentTimeMillis() < statsUntilMillis;
+    }
+
+    public int statsSecondsLeft() {
+        if (!hasStats()) {
+            return 0;
+        }
+        return (int) Math.max(0L, (statsUntilMillis - System.currentTimeMillis()) / 1000L);
+    }
+
+    public List<TotemStat> getLastStats() {
+        return lastStats == null ? Collections.<TotemStat>emptyList() : lastStats;
+    }
+
+    public static class TotemStat {
+        public final UUID uuid;
+        public final String name;
+        public final int blocks;
+
+        TotemStat(UUID uuid, String name, int blocks) {
+            this.uuid = uuid;
+            this.name = name;
+            this.blocks = blocks;
+        }
+    }
+
     public void addScore(String factionId, int amount) {
         if (factionId == null || factionId.isEmpty() || amount == 0) {
             return;
@@ -308,11 +386,16 @@ public class TotemManager {
     }
 
     public void finishGiant() {
+        endGiant(true);
+    }
+
+    public void endGiant(boolean awardPoints) {
         cancelDuration();
         cancelCountdown();
         countdownTotem = null;
         Totem totem = getActive();
         List<Map.Entry<String, Integer>> ranking = ranking();
+        freezeStats();
         if (totem != null) {
             if (totem.getStatus() == TotemStatus.STARTED) {
                 totem.finishWithBedrock();
@@ -321,7 +404,7 @@ public class TotemManager {
             }
             totem.setGiant(false);
         }
-        plugin.completeGiant(totem, ranking);
+        plugin.completeGiant(totem, ranking, awardPoints);
         scores.clear();
         giantMode = false;
         endAtMillis = 0L;
@@ -348,13 +431,15 @@ public class TotemManager {
             return false;
         }
         if (giantMode) {
-            finishGiant();
+            endGiant(false);
             return true;
         }
+        freezeStats();
         cancelCountdown();
         totem.stop();
         plugin.onTotemEnded();
         plugin.broadcast("stop", totem, null);
+        plugin.announceStatsHint(totem);
         return true;
     }
 
@@ -438,6 +523,80 @@ public class TotemManager {
             totem.setGiant(false);
         }
         plugin.onTotemEnded();
+    }
+
+    public boolean isLaunched() {
+        Totem totem = getActive();
+        return totem != null && totem.getStatus() == TotemStatus.STARTED;
+    }
+
+    public boolean inEffectZone(Player player) {
+        if (player == null || !isLaunched()) {
+            return false;
+        }
+        Totem totem = getActive();
+        Location loc = totem == null ? null : totem.getLocation();
+        if (loc == null || loc.getWorld() == null || player.getWorld() == null) {
+            return false;
+        }
+        if (!player.getWorld().getName().equalsIgnoreCase(loc.getWorld().getName())) {
+            return false;
+        }
+        int radius = plugin.getConfig().getInt("effects.radius", 200);
+        if (radius <= 0) {
+            return true;
+        }
+        return player.getLocation().distanceSquared(loc) <= (double) radius * (double) radius;
+    }
+
+    public void startMapEffects() {
+        stopMapEffects();
+        if (!plugin.getConfig().getBoolean("effects.fire-resistance", true)
+                && !plugin.getConfig().getBoolean("effects.block-poison", true)) {
+            return;
+        }
+        effectsTask = Bukkit.getScheduler().runTaskTimer(plugin.getHost(), new Runnable() {
+            @Override
+            public void run() {
+                tickMapEffects();
+            }
+        }, 10L, 20L);
+    }
+
+    public void stopMapEffects() {
+        if (effectsTask != null) {
+            effectsTask.cancel();
+            effectsTask = null;
+        }
+    }
+
+    private void tickMapEffects() {
+        if (!isLaunched()) {
+            stopMapEffects();
+            return;
+        }
+        boolean fire = plugin.getConfig().getBoolean("effects.fire-resistance", true);
+        boolean poison = plugin.getConfig().getBoolean("effects.block-poison", true);
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (!inEffectZone(player)) {
+                continue;
+            }
+            if (poison) {
+                player.removePotionEffect(PotionEffectType.POISON);
+            }
+            if (fire) {
+                PotionEffect current = null;
+                for (PotionEffect effect : player.getActivePotionEffects()) {
+                    if (effect.getType().equals(PotionEffectType.FIRE_RESISTANCE)) {
+                        current = effect;
+                        break;
+                    }
+                }
+                if (current == null || current.getDuration() < 80) {
+                    player.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, 8 * 20, 0, true, false), true);
+                }
+            }
+        }
     }
 
     private Totem readTotem(String name, ConfigurationSection section) {

@@ -231,6 +231,94 @@ public class EventHub {
         }
     }
 
+    public void announceDiscord(EventType type, String subtitle, List<String> lines) {
+        if (plugin.discord() == null || type == null) {
+            return;
+        }
+        String map = subtitle == null ? "" : subtitle;
+        FileConfiguration cfg = plugin.getConfig();
+        String title = cfg.getString("discord.events.title", "{event} termine")
+                .replace("{event}", type.display())
+                .replace("{map}", map);
+        List<String> all = new ArrayList<String>();
+        if (lines != null) {
+            all.addAll(lines);
+        }
+        List<String> extra = cfg.getStringList("discord.events.extra." + type.id());
+        if (extra != null) {
+            for (String line : extra) {
+                if (line == null || line.isEmpty()) {
+                    continue;
+                }
+                all.add(line.replace("{event}", type.display()).replace("{map}", map));
+            }
+        }
+        plugin.discord().postEventResult(title, map, all, discordColor(type));
+    }
+
+    public void announceDiscordRanking(EventType type, String subtitle,
+            List<Map.Entry<String, Integer>> ranking, int limit) {
+        String tpl = plugin.getConfig().getString("discord.events.ranking", "{place}. {name} — {score} pts");
+        List<String> lines = new ArrayList<String>();
+        int place = 1;
+        if (ranking != null) {
+            for (Map.Entry<String, Integer> entry : ranking) {
+                if (place > limit) {
+                    break;
+                }
+                String name = plugin.factions() == null
+                        ? entry.getKey()
+                        : plugin.factions().displayName(entry.getKey());
+                lines.add(tpl
+                        .replace("{place}", String.valueOf(place))
+                        .replace("{name}", name)
+                        .replace("{score}", String.valueOf(entry.getValue())));
+                place++;
+            }
+        }
+        if (lines.isEmpty()) {
+            lines.add(plugin.getConfig().getString("discord.events.empty", "Aucun score."));
+        }
+        announceDiscord(type, subtitle, lines);
+    }
+
+    public void announceDiscordWinner(EventType type, String subtitle, String winnerName, int score) {
+        List<String> lines = new ArrayList<String>();
+        String name = winnerName == null || winnerName.isEmpty() ? "?" : winnerName;
+        if (score >= 0) {
+            lines.add(plugin.getConfig().getString("discord.events.winner", "1. {name} — {score} pts")
+                    .replace("{name}", name)
+                    .replace("{score}", String.valueOf(score)));
+        } else {
+            lines.add(plugin.getConfig().getString("discord.events.winner-no-score", "1. {name}")
+                    .replace("{name}", name));
+        }
+        announceDiscord(type, subtitle, lines);
+    }
+
+    private static int discordColor(EventType type) {
+        switch (type) {
+            case CONQUEST:
+                return 0xE67E22;
+            case DOMINATION:
+                return 0xE74C3C;
+            case BATTLEROYAL:
+                return 0xF1C40F;
+            case MASTERKILL:
+                return 0xC0392B;
+            case TOTEM:
+                return 0x9B59B6;
+            case TOTEM_GEANT:
+                return 0xD35400;
+            case KOTH:
+                return 0xF39C12;
+            case TEAMFIGHT:
+                return 0x3498DB;
+            default:
+                return 0x95A5A6;
+        }
+    }
+
     public List<String> mapIds(EventType type) {
         return new ArrayList<String>(mapsOf(type).keySet());
     }
@@ -472,7 +560,7 @@ public class EventHub {
                 ok = totem.getTotemManager().stop(map);
                 break;
             case KOTH:
-                ok = koth.getKothManager().stop(true);
+                ok = koth.getKothManager().stop(false);
                 break;
             case TEAMFIGHT:
                 ok = teamfight.getManager().stop();

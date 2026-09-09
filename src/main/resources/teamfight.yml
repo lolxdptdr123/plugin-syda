@@ -1,11 +1,12 @@
-# Event TeamFight 8v8 - plugins/Draftmc/teamfight.yml
+# Event TeamFight - plugins/Draftmc/teamfight.yml
 # Inscriptions : /event start teamfight default
-# Roster : /teamfight create <nom>  puis  /teamfight invite <joueur>
-# Lancement : 2e /event start teamfight default  (au moins 2 equipes completes)
+# Roster : /teamfight create  (nom = faction)  puis  /teamfight invite <joueur>
+# Lancement : 2e /event start teamfight default  (au moins 2 equipes de min-roster)
 
 prefix: "&8[&6TeamFight&8] &7"
 
 roster-size: 8
+min-roster: 3
 max-teams: 8
 countdown-seconds: 5
 between-match-seconds: 15
@@ -113,22 +114,23 @@ scoreboard:
   title: "&c✺ &6Draftmc.fr &c✺"
 
 messages:
-  registration-open: "&eInscriptions TeamFight 8v8 ouvertes ! &7/teamfight create <nom>"
-  registration-hint: "&7Leader : &e/teamfight invite <joueur> &7pour former un roster de &e{size}&7."
-  team-created: "&aEquipe &e{team} &acreee. Invite tes joueurs avec &e/teamfight invite"
+  registration-open: "&eInscriptions TeamFight ouvertes ! &7/teamfight create"
+  registration-hint: "&7Leader : &e/teamfight invite <joueur> &7(&e{min}&7 min, &e{size}&7 max)."
+  team-created: "&aEquipe &e{team} &acreee (nom de ta faction). Invite avec &e/teamfight invite"
   team-invite: "&e{leader} &7t'invite dans &6{team}&7."
   team-joined: "&a{player} &7a rejoint &6{team} &8({count}/{size})"
   team-full: "&cRoster complet ({size}/{size})."
-  team-ready: "&aEquipe &e{team} &aprete &7({size}/{size}) !"
+  team-ready: "&aEquipe &e{team} &aprete &7({count} joueurs, min {min}) !"
   not-leader: "&cSeul le leader peut faire ca."
   not-in-team: "&cTu n'es dans aucune equipe."
   already-in-team: "&cTu es deja dans une equipe."
+  not-open: "&cLes inscriptions ne sont pas ouvertes."
   need-faction: "&cTu dois etre dans une faction pour creer une equipe."
   faction-has-team: "&cTa faction a deja une equipe TeamFight."
   not-same-faction: "&cSeuls les membres de la meme faction peuvent rejoindre cette equipe."
   too-many-teams: "&cTrop d'equipes inscrites."
-  name-taken: "&cCe nom d'equipe est deja pris."
-  need-teams: "&cIl faut au moins 2 equipes completes ({size} joueurs) pour lancer."
+  name-taken: "&cCette faction a deja une equipe."
+  need-teams: "&cIl faut au moins 2 equipes de &e{min}&c joueurs pour lancer."
   match-announce: "&6{round}&7: &b{teamA} &fvs &c{teamB}"
   countdown: "&eDebut dans &6{seconds}s"
   fight-start: "&aFIGHT ! &b{teamA} &fvs &c{teamB}"
@@ -136,7 +138,7 @@ messages:
   team-out: "&c{team} est eliminee !"
   match-over: "&6TeamFight termine ! Vainqueur : &a{winner}"
   next-match: "&eProchain match dans &6{seconds}s"
-  tournament-over: "&6{winner} remporte le TeamFight 8v8 !"
+  tournament-over: "&6{winner} remporte le TeamFight !"
   stopped: "&cTeamFight arrete."
   spawn-set: "&aSpawn &e{slot} &adefini."
   kit-saved: "&aKit TeamFight sauvegarde depuis ton inventaire."

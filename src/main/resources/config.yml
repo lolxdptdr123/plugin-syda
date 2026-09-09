@@ -1614,6 +1614,19 @@ classement:
     - mobs_killed
     - players_killed
     - deaths
+    - killstreak_best
+    - totem_blocks
+
+stats:
+  title: "&8Statistiques"
+  top-title: "&8Top {stat}"
+  top-limit: 10
+  unknown: "&cJoueur introuvable."
+  back: "&eRetour"
+  your-head: "&6Tes statistiques"
+  other-head: "&6Stats de &e{player}"
+  click-top: "&7Clique pour voir le top serveur."
+  click-player: "&7Clique pour voir ses stats."
 
 core:
   death-inventory-preview: true
@@ -1836,7 +1849,20 @@ factions:
 
 discord:
   enabled: true
+  # Webhook du salon events (Integrations -> Webhooks). Laisse vide si tu
+  # utilises le bot avec EVENTS_CHANNEL_ID (sinon le resultat serait poste 2 fois).
   webhook-url: "https://discord.com/api/webhooks/1543608101461033041/rLijWaaIQuOQ8ipI8eoIq_yzqymPxehSUQD7bOWH1Mkm4-WJRIeGi6FQHmdcY2hpFCmL"
+  events:
+    enabled: true
+    # Textes des embeds (plugins/Draftmc/config.yml puis /draftmc reload).
+    # {event} = nom de l'event, {map} = map / sous-titre, {place} {name} {score}
+    title: "{event} termine"
+    field: "Classement"
+    footer: "Draftmc"
+    ranking: "{place}. {name} — {score} pts"
+    winner: "1. {name} — {score} pts"
+    winner-no-score: "1. {name}"
+    empty: "Aucun score."
 
 # Plafonds par grade (le plus haut grade du joueur est utilisé).
 grade-perks:
@@ -1877,20 +1903,27 @@ grade-perks:
     repair-seconds: 120
     repair-all-seconds: 3600
 
-# Lien Minecraft <-> Discord (bot separe : dossier discord-bot/).
-# 1. Cree une application https://discord.com/developers/applications
-# 2. Bot -> Reset Token, intents : MESSAGE CONTENT + SERVER MEMBERS
-# 3. Invite le bot (Gerer les surnoms + Gerer les roles)
-# 4. Salon de lien : ID dans discord-bot/.env (LINK_CHANNEL_ID + GUILD_ID + DISCORD_TOKEN)
-# 5. Ici : api-port + api-secret (identique a PLUGIN_SECRET du bot)
-# 6. Dans discord-bot/ : npm install && node index.js
+# Lien Minecraft <-> Discord (bot : dossier discord-bot/).
+# 1. https://discord.com/developers/applications -> New Application -> Bot
+# 2. Bot : Reset Token, activer MESSAGE CONTENT INTENT + SERVER MEMBERS INTENT
+# 3. OAuth2 -> URL Generator : scopes bot. Permissions : Lire/Envoyer des messages,
+#    Integrer des liens, Gerer les surnoms, Gerer les roles
+#    (role du bot AU-DESSUS des roles de grade)
+# 4. Discord : Parametres -> Avance -> Mode developpeur
+# 5. Clic droit serveur -> Copier l'identifiant = GUILD_ID
+#    Salon lien comptes = LINK_CHANNEL_ID
+#    Salon resultats events = EVENTS_CHANNEL_ID (inutile si webhook-url est rempli)
+# 6. Ici : discord-link.enabled true, api-secret = PLUGIN_SECRET du .env
+# 7. discord-bot/ : copy .env.example .env  puis  npm install && node index.js
+# 8. Joueur : /discord en jeu, coller DMC-XXXXXX dans le salon lien
 discord-link:
   enabled: true
   api-bind: "0.0.0.0"
   api-port: 8765
   api-secret: "CHANGE_ME"
   code-expire-seconds: 300
-  nickname-format: "%grade% %player%"
+  # Pseudo Discord = pseudo Minecraft du compte lie (%player%).
+  nickname-format: "%player%"
   roles:
     chevalier: "1545119086747586662"
     marquis: "1545119060101169184"

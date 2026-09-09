@@ -57,13 +57,12 @@ public class KothScoreboard {
         }
         String title = plugin.getConfig().getString("scoreboard.title",
                 plugin.getHost().getConfig().getString("scoreboard.title", "&c✺ &6Draftmc.fr &c✺"));
-        List<String> lines = buildLines(zone);
         for (Player player : Bukkit.getOnlinePlayers()) {
-            update(player, title, lines);
+            update(player, title, buildLines(zone, player));
         }
     }
 
-    private List<String> buildLines(KothZone zone) {
+    private List<String> buildLines(KothZone zone, Player player) {
         List<String> lines = new ArrayList<String>();
         String none = plugin.getConfig().getString("scoreboard.none", "-");
         String eventName = "KOTH Geant";
@@ -71,6 +70,14 @@ public class KothScoreboard {
         lines.add(CC.color("&fEvent : &6" + eventName));
         lines.add(CC.color("&fZone : &e" + zone.getDisplay()));
         lines.add(CC.color("&fObjectif: &6" + zone.getPointsToWin()));
+        String factionId = plugin.getEventFactionHook().getFactionId(player);
+        if (factionId == null) {
+            lines.add(CC.color("&fTa faction: &7" + none));
+        } else {
+            String name = plugin.getEventFactionHook().getFactionDisplayName(factionId);
+            int pts = plugin.getKothManager().getScore(factionId);
+            lines.add(CC.color("&fTa faction: &a" + name + " &6" + pts));
+        }
         lines.add(" ");
         lines.add(CC.color("&6Classement"));
         List<Map.Entry<String, Integer>> top = plugin.getKothManager().top(5);

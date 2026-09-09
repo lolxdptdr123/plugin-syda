@@ -4,6 +4,7 @@ const { Client, GatewayIntentBits } = require("discord.js");
 const TOKEN = process.env.DISCORD_TOKEN;
 const GUILD_ID = process.env.GUILD_ID;
 const CHANNEL_ID = process.env.LINK_CHANNEL_ID;
+const EVENTS_CHANNEL_ID = process.env.EVENTS_CHANNEL_ID || "";
 const PLUGIN_URL = (process.env.PLUGIN_URL || "http://127.0.0.1:8765").replace(/\/$/, "");
 const SECRET = process.env.PLUGIN_SECRET;
 const CODE_REGEX = /\bDMC-[A-HJ-NP-Z2-9]{6}\b/i;
@@ -51,11 +52,24 @@ async function applyMember(guild, job) {
     await member.roles.remove(toRemove, "Draftmc link").catch(() => null);
   }
   if (job.unlink) {
-    await member.setNickname(null, "Draftmc unlink").catch(() => null);
+    await member.setNickname(null, "Draftmc unlink").catch((err) => {
+      console.warn("Reset pseudo", member.user.tag, ":", err.message);
+    });
     return;
   }
-  if (job.nick) {
-    await member.setNickname(job.nick, "Draftmc link").catch(() => null);
+  const nick = String(job.nick || "").trim().slice(0, 32);
+  if (nick && member.nickname !== nick) {
+    if (!member.manageable) {
+      console.warn(
+        "Impossible de changer le pseudo de",
+        member.user.tag,
+        ": mets le role du bot AU-DESSUS de ce membre (et pas le proprio du serveur)."
+      );
+    } else {
+      await member.setNickname(nick, "Draftmc link").catch((err) => {
+        console.warn("Pseudo Discord", member.user.tag, ":", err.message);
+      });
+    }
   }
   if (job.roleId && !member.roles.cache.has(job.roleId)) {
     await member.roles.add(job.roleId, "Draftmc grade").catch(() => null);
@@ -80,6 +94,41 @@ async function pollSync() {
   }
 }
 
+async function pollEvents() {
+  if (!EVENTS_CHANNEL_ID) {
+    return;
+  }
+  try {
+    const { ok, json } = await pluginFetch("/events", { method: "GET" });
+    if (!ok || !json.pending) {
+      return;
+    }
+    const channel = await client.channels.fetch(EVENTS_CHANNEL_ID).catch(() => null);
+    if (!channel || !channel.isTextBased()) {
+      return;
+    }
+    for (const post of json.pending) {
+      const lines = Array.isArray(post.lines) ? post.lines : [];
+      await channel.send({
+        embeds: [
+          {
+            title: post.title || "Event",
+            description: post.description || undefined,
+            color: post.color || 0xf39c12,
+            fields: lines.length
+              ? [{ name: post.field || "Classement", value: lines.join("\n").slice(0, 1024) }]
+              : [],
+            footer: { text: post.footer || "Draftmc" },
+            timestamp: new Date().toISOString(),
+          },
+        ],
+      }).catch((err) => console.warn("Event Discord:", err.message));
+    }
+  } catch (err) {
+    console.warn("Events plugin:", err.message);
+  }
+}
+
 client.once("ready", async () => {
   console.log("Bot pret :", client.user.tag);
   try {
@@ -92,8 +141,15 @@ client.once("ready", async () => {
   } catch (err) {
     console.warn("Plugin Minecraft injoignable :", err.message);
   }
+  if (EVENTS_CHANNEL_ID) {
+    console.log("Salon events :", EVENTS_CHANNEL_ID);
+  } else {
+    console.log("EVENTS_CHANNEL_ID vide : les resultats d'events passent par le webhook du plugin.");
+  }
   setInterval(pollSync, 15000);
+  setInterval(pollEvents, 10000);
   pollSync();
+  pollEvents();
 });
 
 client.on("messageCreate", async (message) => {

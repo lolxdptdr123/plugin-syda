@@ -44,7 +44,18 @@ public class EconomyHook implements CommandExecutor {
         if (vault != null) {
             Player online = Bukkit.getPlayer(uuid);
             if (online != null) {
-                return vault.getBalance(online);
+                try {
+                    return vault.getBalance(online);
+                } catch (Throwable ignored) {
+                }
+            }
+            try {
+                return vault.getBalance(Bukkit.getOfflinePlayer(uuid));
+            } catch (Throwable ignored) {
+            }
+            try {
+                return vault.getBalance(Draftmc.get().data().nameOf(uuid));
+            } catch (Throwable ignored) {
             }
         }
         return Draftmc.get().data().getMoney(uuid);

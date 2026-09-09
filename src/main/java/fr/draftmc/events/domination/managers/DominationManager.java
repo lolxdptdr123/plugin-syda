@@ -217,6 +217,7 @@ public class DominationManager {
 
         if (plugin.getHost().events() != null) {
             plugin.getHost().events().awardTopPoints(fr.draftmc.events.EventType.DOMINATION, factionId);
+            plugin.getHost().events().announceDiscordWinner(fr.draftmc.events.EventType.DOMINATION, "", factionName, points);
         }
 
         stop();

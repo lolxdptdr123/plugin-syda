@@ -6,7 +6,9 @@ import fr.draftmc.events.EventHub;
 import fr.draftmc.events.EventModule;
 import fr.draftmc.events.EventType;
 import fr.draftmc.util.CC;
+import fr.draftmc.util.NmsTitles;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Effect;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -39,6 +41,11 @@ public class TotemPlugin extends EventModule {
             getCommand("totemgeant").setExecutor(command);
             getCommand("totemgeant").setTabCompleter(command);
         }
+        TotemStatsCommand stats = new TotemStatsCommand(this);
+        if (getCommand("totemstats") != null) {
+            getCommand("totemstats").setExecutor(stats);
+        }
+        getServer().getPluginManager().registerEvents(stats, getHost());
         getLogger().info("[Totem] Event charge (totem.yml).");
     }
 
@@ -79,6 +86,9 @@ public class TotemPlugin extends EventModule {
     }
 
     public void onTotemEnded() {
+        if (totemManager != null) {
+            totemManager.stopMapEffects();
+        }
         if (scoreboard != null) {
             scoreboard.stop();
         }
@@ -130,8 +140,12 @@ public class TotemPlugin extends EventModule {
 
     public String format(String key, Totem totem, Player player) {
         String raw = getConfig().getString("messages." + key, "");
-        if (raw == null) {
-            raw = "";
+        if (raw == null || raw.isEmpty()) {
+            if ("stats-hint".equals(key)) {
+                raw = "&eLes stats sont disponibles : &a/totemstats &7pendant &e{stats-seconds}s&7 !";
+            } else {
+                raw = "";
+            }
         }
         String faction = "";
         if (player != null && factionHook.getFactionId(player) != null) {
@@ -144,6 +158,7 @@ public class TotemPlugin extends EventModule {
             blocked = factionHook.getFactionDisplayName(totem.getCapturingFactionId());
         }
         int seconds = totemManager == null ? 0 : Math.max(0, totemManager.getCountdownSecondsLeft());
+        int statsSeconds = getConfig().getInt("stats-seconds", 120);
         int points = getConfig().getInt("pvp-points", 15);
         int score = 0;
         if (player != null && factionHook.getFactionId(player) != null && totemManager != null) {
@@ -159,6 +174,7 @@ public class TotemPlugin extends EventModule {
                 .replace("{block}", ordinal(totem == null ? 0 : totem.getLastBlockNumber()))
                 .replace("{totem}", totem != null ? totem.getName() : "")
                 .replace("{seconds}", String.valueOf(seconds))
+                .replace("{stats-seconds}", String.valueOf(statsSeconds))
                 .replace("{points}", String.valueOf(points))
                 .replace("{gained}", totem != null ? String.valueOf(totem.getLastGained()) : "0")
                 .replace("{score}", String.valueOf(score))
@@ -193,7 +209,19 @@ public class TotemPlugin extends EventModule {
         }
     }
 
+    public void announceStatsHint(Totem totem) {
+        broadcast("stats-hint", totem, null);
+        int seconds = getConfig().getInt("stats-seconds", 120);
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            NmsTitles.send(online,
+                    ChatColor.translateAlternateColorCodes('&', "&6&l/totemstats"),
+                    ChatColor.translateAlternateColorCodes('&', "&7Disponible pendant &e" + seconds + "s"),
+                    10, 60, 10);
+        }
+    }
+
     public void victory(Totem totem, Player player) {
+        getTotemManager().freezeStats();
         broadcast("win", totem, player);
         if (totem.getLocation() != null && totem.getLocation().getWorld() != null) {
             totem.getLocation().getWorld().playEffect(totem.getLocation(), Effect.FIREWORKS_SPARK, 1);
@@ -204,6 +232,9 @@ public class TotemPlugin extends EventModule {
         int points = hub != null ? hub.topPointsFor(EventType.TOTEM) : getConfig().getInt("pvp-points", 15);
         if (hub != null && factionId != null) {
             hub.awardTopPoints(EventType.TOTEM, factionId);
+        }
+        if (hub != null) {
+            hub.announceDiscordWinner(EventType.TOTEM, totem.getName(), faction, points);
         }
         List<String> rewards = getConfig().getStringList("reward-commands");
         for (String command : rewards) {
@@ -218,47 +249,55 @@ public class TotemPlugin extends EventModule {
         }
         totem.finishWithBedrock();
         onTotemEnded();
+        announceStatsHint(totem);
         if (hub != null) {
             hub.clearActive(EventType.TOTEM, totem.getName());
         }
     }
 
-    public void completeGiant(Totem totem, List<java.util.Map.Entry<String, Integer>> ranking) {
+    public void completeGiant(Totem totem, List<java.util.Map.Entry<String, Integer>> ranking, boolean awardPoints) {
         if (ranking == null) {
             ranking = java.util.Collections.emptyList();
         }
         broadcast("end-giant", totem, null);
         broadcastRanking(ranking);
         EventHub hub = getHost().events();
-        int place = 1;
-        for (java.util.Map.Entry<String, Integer> entry : ranking) {
-            if (place > 3) {
-                break;
-            }
-            int reward = rankingPoints(place);
-            if (hub != null && reward > 0) {
-                hub.awardTopPoints(EventType.TOTEM_GEANT, entry.getKey(), reward);
-            }
-            place++;
-        }
-        if (totem != null && ranking != null && !ranking.isEmpty()) {
-            String winnerId = ranking.get(0).getKey();
-            String faction = winnerId == null ? "?" : factionHook.getFactionDisplayName(winnerId);
-            List<String> rewards = getConfig().getStringList("giant.reward-commands");
-            if (rewards == null || rewards.isEmpty()) {
-                rewards = getConfig().getStringList("reward-commands");
-            }
-            for (String command : rewards) {
-                if (command == null || command.isEmpty()) {
-                    continue;
+        if (awardPoints) {
+            int place = 1;
+            for (java.util.Map.Entry<String, Integer> entry : ranking) {
+                if (place > 3) {
+                    break;
                 }
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command
-                        .replace("{faction}", faction)
-                        .replace("{totem}", totem.getName())
-                        .replace("{points}", String.valueOf(ranking.get(0).getValue())));
+                int reward = rankingPoints(place);
+                if (hub != null && reward > 0) {
+                    hub.awardTopPoints(EventType.TOTEM_GEANT, entry.getKey(), reward);
+                }
+                place++;
             }
+            if (totem != null && ranking != null && !ranking.isEmpty()) {
+                String winnerId = ranking.get(0).getKey();
+                String faction = winnerId == null ? "?" : factionHook.getFactionDisplayName(winnerId);
+                List<String> rewards = getConfig().getStringList("giant.reward-commands");
+                if (rewards == null || rewards.isEmpty()) {
+                    rewards = getConfig().getStringList("reward-commands");
+                }
+                for (String command : rewards) {
+                    if (command == null || command.isEmpty()) {
+                        continue;
+                    }
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command
+                            .replace("{faction}", faction)
+                            .replace("{totem}", totem.getName())
+                            .replace("{points}", String.valueOf(ranking.get(0).getValue())));
+                }
+            }
+        }
+        if (awardPoints && hub != null) {
+            String map = totem == null ? "" : totem.getName();
+            hub.announceDiscordRanking(EventType.TOTEM_GEANT, map, ranking, 5);
         }
         onTotemEnded();
+        announceStatsHint(totem);
         if (hub != null) {
             hub.clearActive(EventType.TOTEM_GEANT, totem == null ? null : totem.getName());
         }

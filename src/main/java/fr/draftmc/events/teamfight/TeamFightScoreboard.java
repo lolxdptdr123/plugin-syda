@@ -65,7 +65,7 @@ public class TeamFightScoreboard {
         TeamFightManager mgr = plugin.getManager();
         TfMatch match = mgr.getCurrentMatch();
         lines.add(CC.color(SEPARATOR));
-        lines.add(CC.color("&fEvent : &6TeamFight 8v8"));
+        lines.add(CC.color("&fEvent : &6TeamFight"));
         if (match != null) {
             lines.add(CC.color("&fManche : &e" + match.getRound()));
             lines.add(" ");
