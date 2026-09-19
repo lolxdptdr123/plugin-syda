@@ -18,6 +18,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.potion.Potion;
 import org.bukkit.potion.PotionType;
 
@@ -71,17 +72,32 @@ public class KitManager implements Listener, CommandExecutor {
         }
         int size = Math.max(9, Math.min(54, kitsConfig.getInt("gui.size", 54)));
         size = (size / 9) * 9;
-        String title = CC.color(kitsConfig.getString("gui.title", "&8Kits"));
+        String title = CC.color(kitsConfig.getString("gui.title", "&8Mes kits"));
         KitGuiHolder holder = new KitGuiHolder();
         Inventory inv = Bukkit.createInventory(holder, size, title);
         holder.inventory = inv;
+        fillGui(inv, size);
 
-        List<Integer> slots = kitsConfig.getIntegerList("gui.slots");
-        if (slots.isEmpty()) {
-            slots = defaultSlots();
+        List<String> gradeKits = new ArrayList<String>();
+        List<String> shopKits = new ArrayList<String>();
+        for (String id : kits.getKeys(false)) {
+            ConfigurationSection section = kits.getConfigurationSection(id);
+            if (isGradeKit(section)) {
+                gradeKits.add(id);
+            } else {
+                shopKits.add(id);
+            }
         }
-        List<String> ids = new ArrayList<String>(kits.getKeys(false));
+
         Map<Integer, String> slotMap = new HashMap<Integer, String>();
+        placeKits(player, inv, kits, gradeKits, gradeSlots(), size, slotMap);
+        placeKits(player, inv, kits, shopKits, shopSlots(), size, slotMap);
+        holder.slotToKit = slotMap;
+        player.openInventory(inv);
+    }
+
+    private void placeKits(Player player, Inventory inv, ConfigurationSection kits,
+                            List<String> ids, List<Integer> slots, int size, Map<Integer, String> slotMap) {
         for (int i = 0; i < ids.size() && i < slots.size(); i++) {
             int slot = slots.get(i);
             if (slot < 0 || slot >= size) {
@@ -91,13 +107,48 @@ public class KitManager implements Listener, CommandExecutor {
             inv.setItem(slot, displayKit(player, kitId, kits.getConfigurationSection(kitId)));
             slotMap.put(slot, kitId.toUpperCase(Locale.ROOT));
         }
-        holder.slotToKit = slotMap;
-        player.openInventory(inv);
     }
 
-    private List<Integer> defaultSlots() {
+    private void fillGui(Inventory inv, int size) {
+        short borderData = (short) kitsConfig.getInt("gui.border-data", 3);
+        short innerData = (short) kitsConfig.getInt("gui.inner-data", 7);
+        ItemStack border = new ItemBuilder(Material.STAINED_GLASS_PANE, 1, borderData).name("&r").build();
+        ItemStack inner = new ItemBuilder(Material.STAINED_GLASS_PANE, 1, innerData).name("&r").build();
+        int rows = size / 9;
+        for (int slot = 0; slot < size; slot++) {
+            int col = slot % 9;
+            int row = slot / 9;
+            boolean edge = row == 0 || row == rows - 1 || col == 0 || col == 8 || col == 4;
+            inv.setItem(slot, edge ? border : inner);
+        }
+    }
+
+    private boolean isGradeKit(ConfigurationSection section) {
+        if (section == null) {
+            return false;
+        }
+        String minGrade = section.getString("min-grade");
+        return minGrade != null && !minGrade.isEmpty();
+    }
+
+    private List<Integer> gradeSlots() {
+        List<Integer> slots = kitsConfig.getIntegerList("gui.grade-slots");
+        if (slots == null || slots.isEmpty()) {
+            return toList(10, 11, 12, 19, 20, 21, 28, 29, 30, 37, 38, 39);
+        }
+        return slots;
+    }
+
+    private List<Integer> shopSlots() {
+        List<Integer> slots = kitsConfig.getIntegerList("gui.kit-slots");
+        if (slots == null || slots.isEmpty()) {
+            return toList(14, 15, 16, 23, 24, 25, 32, 33, 34);
+        }
+        return slots;
+    }
+
+    private List<Integer> toList(int... values) {
         List<Integer> out = new ArrayList<Integer>();
-        int[] values = {10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31, 32, 33, 34};
         for (int value : values) {
             out.add(value);
         }
@@ -135,7 +186,8 @@ public class KitManager implements Listener, CommandExecutor {
         if (cooldown > 0 && owned) {
             lore.add("&7Cooldown: &f" + formatTime(cooldown));
         }
-        return new ItemBuilder(material)
+        short data = (short) section.getInt("data", 0);
+        return new ItemBuilder(material, 1, data)
                 .name(section.getString("name", "&f" + kitId))
                 .lore(lore)
                 .build();
@@ -376,9 +428,69 @@ public class KitManager implements Listener, CommandExecutor {
         return new ItemStack(material, 1);
     }
 
-    @SuppressWarnings("unchecked")
     private void applyEnchants(Map<String, Object> map, ItemStack stack) {
         Object enchantsObj = map.get("enchants");
+        if (enchantsObj == null) {
+            enchantsObj = map.get("enchantments");
+        }
+        applyEnchantsObject(enchantsObj, stack);
+        if (stack.getType() == Material.BOW && hasInfinityRequest(enchantsObj)) {
+            applyEnchant(stack, "ARROW_INFINITE", 1);
+        }
+    }
+
+    private boolean hasInfinityRequest(Object enchantsObj) {
+        if (enchantsObj == null) {
+            return false;
+        }
+        if (enchantsObj instanceof ConfigurationSection) {
+            for (String key : ((ConfigurationSection) enchantsObj).getKeys(false)) {
+                if (isInfinityName(key)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        if (enchantsObj instanceof Map) {
+            for (Object key : ((Map<?, ?>) enchantsObj).keySet()) {
+                if (isInfinityName(String.valueOf(key))) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        if (enchantsObj instanceof List) {
+            for (Object entry : (List<?>) enchantsObj) {
+                if (entry instanceof Map) {
+                    Map<?, ?> emap = (Map<?, ?>) entry;
+                    if (isInfinityName(String.valueOf(emap.get("type")))) {
+                        return true;
+                    }
+                    for (Object key : emap.keySet()) {
+                        if (isInfinityName(String.valueOf(key))) {
+                            return true;
+                        }
+                    }
+                } else if (isInfinityName(String.valueOf(entry))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean isInfinityName(String name) {
+        if (name == null) {
+            return false;
+        }
+        String upper = name.toUpperCase(Locale.ROOT);
+        return upper.contains("INFIN") || upper.contains("ARROW_INFINITE");
+    }
+
+    private void applyEnchantsObject(Object enchantsObj, ItemStack stack) {
+        if (enchantsObj == null) {
+            return;
+        }
         if (enchantsObj instanceof ConfigurationSection) {
             ConfigurationSection section = (ConfigurationSection) enchantsObj;
             for (String key : section.getKeys(false)) {
@@ -387,10 +499,34 @@ public class KitManager implements Listener, CommandExecutor {
             return;
         }
         if (enchantsObj instanceof Map) {
-            Map<String, Object> enchants = (Map<String, Object>) enchantsObj;
-            for (Map.Entry<String, Object> entry : enchants.entrySet()) {
-                applyEnchant(stack, entry.getKey(), parseInt(entry.getValue(), 1));
+            for (Map.Entry<?, ?> entry : ((Map<?, ?>) enchantsObj).entrySet()) {
+                applyEnchant(stack, String.valueOf(entry.getKey()), parseInt(entry.getValue(), 1));
             }
+            return;
+        }
+        if (!(enchantsObj instanceof List)) {
+            return;
+        }
+        for (Object entry : (List<?>) enchantsObj) {
+            if (entry instanceof ConfigurationSection) {
+                applyEnchantsObject(entry, stack);
+                continue;
+            }
+            if (entry instanceof Map) {
+                Map<?, ?> emap = (Map<?, ?>) entry;
+                if (emap.containsKey("type")) {
+                    applyEnchant(stack, String.valueOf(emap.get("type")), parseInt(emap.get("level"), 1));
+                } else {
+                    for (Map.Entry<?, ?> enchantEntry : emap.entrySet()) {
+                        applyEnchant(stack, String.valueOf(enchantEntry.getKey()),
+                                parseInt(enchantEntry.getValue(), 1));
+                    }
+                }
+                continue;
+            }
+            String raw = String.valueOf(entry);
+            String[] parts = raw.split("[: ]+");
+            applyEnchant(stack, parts[0], parts.length > 1 ? parseInt(parts[1], 1) : 1);
         }
     }
 
@@ -400,15 +536,24 @@ public class KitManager implements Listener, CommandExecutor {
             plugin.getLogger().warning("Kit: enchantement inconnu '" + name + "'");
             return;
         }
-        stack.addUnsafeEnchantment(enchant, Math.max(1, level));
+        int safeLevel = Math.max(1, level);
+        stack.addUnsafeEnchantment(enchant, safeLevel);
+        ItemMeta meta = stack.getItemMeta();
+        if (meta != null) {
+            meta.addEnchant(enchant, safeLevel, true);
+            stack.setItemMeta(meta);
+        }
     }
 
     private Enchantment resolveEnchantment(String name) {
-        if (name == null || name.isEmpty()) {
+        if (name == null || name.isEmpty() || "null".equalsIgnoreCase(name)) {
             return null;
         }
-        String upper = name.toUpperCase(Locale.ROOT);
-        if ("PROTECTION".equals(upper)) {
+        String upper = name.toUpperCase(Locale.ROOT).replace(" ", "_").replace("-", "_");
+        if (upper.contains("INFIN")) {
+            return infinityEnchant();
+        }
+        if ("PROTECTION".equals(upper) || "PROT".equals(upper)) {
             upper = "PROTECTION_ENVIRONMENTAL";
         } else if ("UNBREAKING".equals(upper)) {
             upper = "DURABILITY";
@@ -424,8 +569,46 @@ public class KitManager implements Listener, CommandExecutor {
             upper = "PROTECTION_FIRE";
         } else if ("PROJECTILE_PROTECTION".equals(upper)) {
             upper = "PROTECTION_PROJECTILE";
+        } else if ("POWER".equals(upper)) {
+            upper = "ARROW_DAMAGE";
+        } else if ("PUNCH".equals(upper)) {
+            upper = "ARROW_KNOCKBACK";
+        } else if ("FLAME".equals(upper)) {
+            upper = "ARROW_FIRE";
         }
-        return Enchantment.getByName(upper);
+        Enchantment byName = Enchantment.getByName(upper);
+        if (byName != null) {
+            return byName;
+        }
+        for (Enchantment enchantment : Enchantment.values()) {
+            if (enchantment != null && enchantment.getName() != null
+                    && enchantment.getName().equalsIgnoreCase(upper)) {
+                return enchantment;
+            }
+        }
+        return null;
+    }
+
+    private Enchantment infinityEnchant() {
+        try {
+            if (Enchantment.ARROW_INFINITE != null) {
+                return Enchantment.ARROW_INFINITE;
+            }
+        } catch (Throwable ignored) {
+        }
+        Enchantment named = Enchantment.getByName("ARROW_INFINITE");
+        if (named != null) {
+            return named;
+        }
+        named = Enchantment.getByName("INFINITY");
+        if (named != null) {
+            return named;
+        }
+        try {
+            return Enchantment.getById(51);
+        } catch (Throwable ignored) {
+            return null;
+        }
     }
 
     private ItemStack createPotion(String typeName, int level, boolean splash) {

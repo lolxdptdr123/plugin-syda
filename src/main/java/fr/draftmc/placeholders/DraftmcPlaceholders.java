@@ -101,6 +101,10 @@ public class DraftmcPlaceholders extends PlaceholderExpansion {
             }
             return String.valueOf(plugin.combat().remainingSeconds(player));
         }
+        if (params.equalsIgnoreCase("ping")) {
+            int ping = fr.draftmc.core.PingCommand.pingOf(player);
+            return ping < 0 ? "-" : String.valueOf(ping);
+        }
         return null;
     }
 }

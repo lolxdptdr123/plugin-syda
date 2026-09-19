@@ -56,3 +56,56 @@ items:
     lore:
       - "&7Clé légendaire."
     ability: KEY
+  ORB_SPEED:
+    name: "&bOrbe de Vitesse"
+    material: SUGAR
+    lore:
+      - "&7Speed II pendant 20s."
+      - "&8Clic droit pour activer."
+    ability: ORB_EFFECT
+    effect: SPEED
+    amplifier: 1
+    duration-seconds: 20
+    cooldown-seconds: 60
+  ORB_FORCE:
+    name: "&cOrbe de Force"
+    material: BLAZE_POWDER
+    lore:
+      - "&7Force II pendant 20s."
+      - "&8Clic droit pour activer."
+    ability: ORB_EFFECT
+    effect: INCREASE_DAMAGE
+    amplifier: 1
+    duration-seconds: 20
+    cooldown-seconds: 60
+  ORB_FIRE_RESISTANCE:
+    name: "&6Orbe de Résistance au feu"
+    material: MAGMA_CREAM
+    lore:
+      - "&7Fire Resistance pendant 45s."
+      - "&8Clic droit pour activer."
+    ability: ORB_EFFECT
+    effect: FIRE_RESISTANCE
+    amplifier: 0
+    duration-seconds: 45
+    cooldown-seconds: 60
+  ORB_HASTE:
+    name: "&eOrbe de Hâte"
+    material: GOLD_NUGGET
+    lore:
+      - "&7Haste II pendant 20s."
+      - "&8Clic droit pour activer."
+    ability: ORB_EFFECT
+    effect: FAST_DIGGING
+    amplifier: 1
+    duration-seconds: 20
+    cooldown-seconds: 60
+  POINTS_CLASSEMENT:
+    name: "&6Point Classement"
+    material: NETHER_STAR
+    lore:
+      - "&7Ajoute &e1 point &7au /f top"
+      - "&7de ta faction."
+      - "&8Clic droit pour utiliser."
+    ability: TOP_POINTS
+    points: 1

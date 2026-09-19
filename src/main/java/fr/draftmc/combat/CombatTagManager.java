@@ -4,19 +4,29 @@ import fr.draftmc.Draftmc;
 import fr.draftmc.util.ActionBars;
 import fr.draftmc.util.CC;
 import org.bukkit.Bukkit;
-import org.bukkit.entity.Arrow;
+import org.bukkit.Material;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.EnderPearl;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.entity.PotionSplashEvent;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.metadata.FixedMetadataValue;
+import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.Arrays;
@@ -30,7 +40,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Combat tag Factions : tag PvP, blocage des TP, combat-log.
  */
-public class CombatTagManager implements Listener {
+public class CombatTagManager implements Listener, CommandExecutor {
     private static final List<String> ALWAYS_BLOCKED = Arrays.asList(
             "home", "tpa", "tpahere", "tpyes", "tpaccept", "tpdeny", "back",
             "randomtp", "rtp", "spawn", "warp", "warps", "setwarp", "delwarp", "tp", "fly",
@@ -64,6 +74,28 @@ public class CombatTagManager implements Listener {
         taggedUntil.clear();
     }
 
+    @Override
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage("§cJoueur uniquement.");
+            return true;
+        }
+        Player player = (Player) sender;
+        if (!enabled()) {
+            plugin.msg(player, "&cCombat tag désactivé.");
+            return true;
+        }
+        int left = remainingSeconds(player);
+        if (left <= 0) {
+            plugin.msg(player, plugin.getConfig().getString("combat-tag.ct-not-tagged",
+                    "&aTu n'es pas en combat."));
+            return true;
+        }
+        plugin.msg(player, plugin.getConfig().getString("combat-tag.ct-message",
+                "&cTu es en combat encore &e{time}s&c.").replace("{time}", String.valueOf(left)));
+        return true;
+    }
+
     public boolean isTagged(Player player) {
         return player != null && remainingSeconds(player) > 0;
     }
@@ -85,7 +117,7 @@ public class CombatTagManager implements Listener {
      * @return true si la commande / téléportation doit être refusée
      */
     public boolean denyIfTagged(Player player) {
-        if (!enabled() || !isTagged(player) || player.hasPermission("draftmc.combattag.bypass")) {
+        if (!enabled() || !isTagged(player) || commandBypass(player)) {
             return false;
         }
         int left = remainingSeconds(player);
@@ -98,23 +130,17 @@ public class CombatTagManager implements Listener {
         if (!enabled() || player == null || !player.isOnline()) {
             return;
         }
-        if (player.hasPermission("draftmc.combattag.bypass")) {
-            return;
-        }
-        if (plugin.staff() != null && plugin.staff().isStaff(player)) {
+        if (inStaffMode(player)) {
             return;
         }
         boolean wasTagged = isTagged(player);
-        int duration = Math.max(1, plugin.getConfig().getInt("combat-tag.duration-seconds", 15));
+        int duration = Math.max(1, plugin.getConfig().getInt("combat-tag.duration-seconds", 25));
         taggedUntil.put(player.getUniqueId(), System.currentTimeMillis() + duration * 1000L);
         if (!wasTagged) {
             plugin.msg(player, plugin.getConfig().getString("combat-tag.tagged-message",
                     "&cTu es en combat pendant &e{time}s&c.").replace("{time}", String.valueOf(duration)));
-            if (plugin.homes() != null) {
-                plugin.homes().cancelWarmup(player, "&cTéléportation annulée : tu es en combat.");
-            }
-            if (plugin.warps() != null) {
-                plugin.warps().cancelWarmup(player, "&cTéléportation annulée : tu es en combat.");
+            if (plugin.teleports() != null) {
+                plugin.teleports().cancel(player, "&cTéléportation annulée : tu es en combat.");
             }
             if (plugin.tpa() != null) {
                 plugin.tpa().cancelFor(player, true);
@@ -138,6 +164,14 @@ public class CombatTagManager implements Listener {
 
     private boolean enabled() {
         return plugin.getConfig().getBoolean("combat-tag.enabled", true);
+    }
+
+    private boolean inStaffMode(Player player) {
+        return plugin.staff() != null && plugin.staff().isStaff(player);
+    }
+
+    private boolean commandBypass(Player player) {
+        return inStaffMode(player) || player.hasPermission("draftmc.combattag.bypass");
     }
 
     private void tick() {
@@ -175,16 +209,77 @@ public class CombatTagManager implements Listener {
         if (!enabled() || !(event.getEntity() instanceof Player)) {
             return;
         }
-        Entity damager = event.getDamager();
-        boolean pearlOrArrow = damager instanceof Arrow || damager instanceof EnderPearl;
-        if (event.isCancelled() && !pearlOrArrow) {
-            return;
-        }
         Player victim = (Player) event.getEntity();
-        Player attacker = attackerOf(damager);
-        if (attacker == null || attacker.equals(victim)) {
+        Player attacker = attackerOf(event.getDamager());
+        if (attacker == null) {
             return;
         }
+        boolean projectile = event.getDamager() instanceof Projectile;
+        if (attacker.equals(victim)) {
+            if (projectile) {
+                tag(victim);
+            }
+            return;
+        }
+        if (event.isCancelled() && !projectile && event.getDamage() <= 0.0) {
+            return;
+        }
+        tagPair(attacker, victim);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onProjectileLaunch(ProjectileLaunchEvent event) {
+        Projectile projectile = event.getEntity();
+        Player shooter = shooterOf(projectile);
+        if (shooter != null) {
+            projectile.setMetadata("draftmc-shooter",
+                    new FixedMetadataValue(plugin, shooter.getUniqueId().toString()));
+        }
+        if (!enabled() || shooter == null) {
+            return;
+        }
+        if (projectile instanceof EnderPearl) {
+            tag(shooter);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onPearlInteract(PlayerInteractEvent event) {
+        if (!enabled()) {
+            return;
+        }
+        Action action = event.getAction();
+        if (action != Action.RIGHT_CLICK_AIR && action != Action.RIGHT_CLICK_BLOCK) {
+            return;
+        }
+        ItemStack item = event.getItem();
+        if (item == null) {
+            item = event.getPlayer().getItemInHand();
+        }
+        if (item == null || item.getType() != Material.ENDER_PEARL) {
+            return;
+        }
+        tag(event.getPlayer());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onSplash(PotionSplashEvent event) {
+        if (!enabled()) {
+            return;
+        }
+        ProjectileSource shooter = event.getPotion().getShooter();
+        if (!(shooter instanceof Player)) {
+            return;
+        }
+        Player thrower = (Player) shooter;
+        for (LivingEntity entity : event.getAffectedEntities()) {
+            if (entity instanceof Player && !entity.equals(thrower) && event.getIntensity(entity) > 0.0) {
+                tagPair(thrower, (Player) entity);
+            }
+        }
+    }
+
+    private void tagPair(Player attacker, Player victim) {
         if (plugin.getConfig().getBoolean("combat-tag.ignore-faction", true)
                 && plugin.factions() != null && plugin.factions().sameFaction(attacker, victim)) {
             return;
@@ -193,29 +288,33 @@ public class CombatTagManager implements Listener {
         tag(victim);
     }
 
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onPearlThrow(ProjectileLaunchEvent event) {
-        if (!enabled() || !(event.getEntity() instanceof EnderPearl)) {
-            return;
-        }
-        if (!(event.getEntity().getShooter() instanceof Player)) {
-            return;
-        }
-        tag((Player) event.getEntity().getShooter());
-    }
-
     private Player attackerOf(Entity entity) {
         if (entity instanceof Player) {
             return (Player) entity;
         }
         if (entity instanceof Projectile) {
-            Object shooter = ((Projectile) entity).getShooter();
-            if (shooter instanceof Player) {
-                return (Player) shooter;
+            Player shooter = shooterOf((Projectile) entity);
+            if (shooter != null) {
+                return shooter;
             }
         }
         if (plugin.factions() != null) {
             return plugin.factions().damager(entity);
+        }
+        return null;
+    }
+
+    private Player shooterOf(Projectile projectile) {
+        ProjectileSource source = projectile.getShooter();
+        if (source instanceof Player) {
+            return (Player) source;
+        }
+        if (projectile.hasMetadata("draftmc-shooter") && !projectile.getMetadata("draftmc-shooter").isEmpty()) {
+            try {
+                UUID id = UUID.fromString(projectile.getMetadata("draftmc-shooter").get(0).asString());
+                return Bukkit.getPlayer(id);
+            } catch (Exception ignored) {
+            }
         }
         return null;
     }
@@ -236,7 +335,7 @@ public class CombatTagManager implements Listener {
         if (!plugin.getConfig().getBoolean("combat-tag.combat-log", true)) {
             return;
         }
-        if (player.hasPermission("draftmc.combattag.bypass")) {
+        if (commandBypass(player)) {
             return;
         }
         player.setHealth(0.0);
@@ -248,7 +347,7 @@ public class CombatTagManager implements Listener {
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onCommand(PlayerCommandPreprocessEvent event) {
         Player player = event.getPlayer();
-        if (!enabled() || !isTagged(player) || player.hasPermission("draftmc.combattag.bypass")) {
+        if (!enabled() || !isTagged(player) || commandBypass(player)) {
             return;
         }
         String raw = event.getMessage().substring(1).trim();

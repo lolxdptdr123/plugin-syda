@@ -549,6 +549,29 @@ public class TotemManager {
         return player.getLocation().distanceSquared(loc) <= (double) radius * (double) radius;
     }
 
+    public boolean inAntiPunchZone(Player player) {
+        if (player == null) {
+            return false;
+        }
+        Totem totem = getActive();
+        if (totem == null || totem.getLocation() == null) {
+            return false;
+        }
+        if (totem.getStatus() != TotemStatus.STARTED && totem.getStatus() != TotemStatus.STARTING) {
+            return false;
+        }
+        Location loc = totem.getLocation();
+        if (loc.getWorld() == null || player.getWorld() == null
+                || !player.getWorld().getName().equalsIgnoreCase(loc.getWorld().getName())) {
+            return false;
+        }
+        int radius = Math.max(0, plugin.getConfig().getInt("anti-punch.radius", 10));
+        Location at = player.getLocation();
+        double dx = at.getX() - loc.getX();
+        double dz = at.getZ() - loc.getZ();
+        return dx * dx + dz * dz <= (double) radius * (double) radius;
+    }
+
     public void startMapEffects() {
         stopMapEffects();
         if (!plugin.getConfig().getBoolean("effects.fire-resistance", true)

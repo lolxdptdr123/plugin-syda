@@ -47,12 +47,14 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
             "promote", "demote", "rank", "leader", "show", "who", "list", "desc", "motd", "rename",
             "open", "close", "chest", "upgrade", "perm", "fly", "home", "sethome", "delhome",
             "claim", "unclaim", "unclaimall", "map", "enemy", "neutral",
-            "chat", "c", "rally", "top"
+            "chat", "c", "rally", "top", "logs", "menu", "mission", "missions", "prestige",
+            "acces", "access", "warp", "warps", "setwarp", "delwarp"
     );
 
     private final Draftmc plugin;
     private final YamlFile file;
     private final FactionMenus menus;
+    private final FactionExtras extras;
     private final FactionListener protection;
     private final FactionRallyManager rally;
     private LunarWaypointHook lunar;
@@ -64,12 +66,14 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
         this.plugin = plugin;
         this.file = new YamlFile(plugin, "factions.yml");
         this.menus = new FactionMenus(plugin, this);
+        this.extras = new FactionExtras(plugin, this);
         this.protection = new FactionListener(plugin, this);
         this.rally = new FactionRallyManager(plugin, this, file);
         this.lunar = new LunarWaypointHook(plugin, this, rally);
         this.rally.setLunarHook(lunar);
         this.lunarFeatures = new LunarClientFeatures(plugin, this);
         Bukkit.getPluginManager().registerEvents(menus, plugin);
+        Bukkit.getPluginManager().registerEvents(extras, plugin);
         Bukkit.getPluginManager().registerEvents(protection, plugin);
         Bukkit.getPluginManager().registerEvents(rally, plugin);
         Bukkit.getPluginManager().registerEvents(lunar, plugin);
@@ -84,6 +88,14 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
 
     public FactionMenus menus() {
         return menus;
+    }
+
+    public FactionExtras extras() {
+        return extras;
+    }
+
+    public YamlFile store() {
+        return file;
     }
 
     public FactionRallyManager rally() {
@@ -204,7 +216,7 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
     public int maxMembers(String fac) {
         List<Integer> amounts = upgradeInts("members", "amounts", Arrays.asList(10, 15, 20, 30));
         int level = Math.min(upgradeLevel(fac, "members"), amounts.size() - 1);
-        return amounts.get(Math.max(0, level));
+        return amounts.get(Math.max(0, level)) + extras.extraMembers(fac);
     }
 
     public int extraPower(String fac) {
@@ -388,6 +400,18 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
         String owner = claimAt(location);
         if (owner == null) {
             return true;
+        }
+        if (extras.accessAllows(player, location, perm)) {
+            return true;
+        }
+        if (extras.inPrivateZone(location) && !owner.equalsIgnoreCase(factionOf(player))) {
+            return false;
+        }
+        if (extras.inPrivateZone(location) && owner.equalsIgnoreCase(factionOf(player))) {
+            return extras.accessAllows(player, location, perm)
+                    || rankOf(player) == FactionRank.LEADER
+                    || rankOf(player) == FactionRank.COLEADER
+                    || hasPerm(player, FactionPerm.ACCESS);
         }
         String fac = factionOf(player);
         if (owner.equalsIgnoreCase(fac)) {
@@ -573,6 +597,18 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
             setOpen(player, false);
         } else if (sub.equals("chest")) {
             openChest(player);
+        } else if (sub.equals("logs")) {
+            extras.openLogs(player);
+        } else if (sub.equals("menu")) {
+            extras.openMenu(player);
+        } else if (sub.equals("mission") || sub.equals("missions")) {
+            extras.openMissions(player);
+        } else if (sub.equals("prestige")) {
+            extras.openPrestige(player);
+        } else if (sub.equals("acces") || sub.equals("access")) {
+            extras.handleAccess(player, args);
+        } else if (extras.handleWarp(player, args)) {
+            return true;
         } else if (sub.equals("upgrade")) {
             menus.openUpgrade(player);
         } else if (sub.equals("perm") || sub.equals("perms")) {
@@ -801,6 +837,12 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
         plugin.msg(player, "&e/f claim/unclaim/map/home/rally");
         plugin.msg(player, "&e/f rally &8- &7Waypoint rally (&e/f rally del &7pour supprimer)");
         plugin.msg(player, "&e/f enemy/neutral <faction>");
+        plugin.msg(player, "&e/f menu &8- &7Classements, prestige, perms, missions");
+        plugin.msg(player, "&e/f logs &8- &7Logs, claims, zones, coffre, warps");
+        plugin.msg(player, "&e/f prestige &8- &7Prestiges de faction");
+        plugin.msg(player, "&e/f mission &8- &7Missions de prestige");
+        plugin.msg(player, "&e/f acces &8- &7Zones privées");
+        plugin.msg(player, "&e/f warp &8- &7Warps faction");
         plugin.msg(player, "&e/f upgrade &8- &7Menu des améliorations");
         plugin.msg(player, "&e/f perm &8- &7Menu des permissions");
         plugin.msg(player, "&e/f chest, /f fly, /f chat, /f list, /f top");
@@ -881,6 +923,19 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
         }
     }
 
+    public void addFarmPoints(Player player, int amount) {
+        extras.addPoints(factionOf(player), "farm", amount);
+    }
+
+    public void addPvpPoints(Player player, int amount) {
+        extras.addPoints(factionOf(player), "pvp", amount);
+        extras.addMission(factionOf(player), "pvp_kills", amount);
+    }
+
+    public void addMissionProgress(Player player, String id, int amount) {
+        extras.addMission(factionOf(player), id, amount);
+    }
+
     private void invite(Player player, String targetName) {
         String fac = requireFac(player);
         if (fac == null) return;
@@ -903,6 +958,7 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
         }
         file.get().set("factions." + fac + ".invites", invites);
         file.save();
+        extras.addLog(fac, "roster", player.getName() + " a invité " + target.getName());
         plugin.msg(player, "&aInvitation envoyée à &e" + target.getName());
         Chat.sendClick(target,
                 plugin.prefix() + "&e" + player.getName() + " &7t'invite dans &6" + displayName(fac) + "&7.",
@@ -960,6 +1016,7 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
         file.save();
         plugin.data().setString(player.getUniqueId(), "faction", id);
         setPower(player.getUniqueId(), plugin.getConfig().getDouble("factions.power.start", 10));
+        extras.addLog(id, "roster", player.getName() + " a rejoint la faction");
         plugin.msg(player, "&aTu as rejoint &e" + displayName(id));
         notifyMembers(id, "&e" + player.getName() + " &7a rejoint la faction.");
     }
@@ -986,6 +1043,7 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
             plugin.msg(player, "&cTu ne peux pas expulser ce grade.");
             return;
         }
+        extras.addLog(fac, "roster", player.getName() + " a kick " + plugin.data().nameOf(uuid));
         removeMember(fac, uuid, "&cTu as été expulsé de &e" + displayName(fac));
         plugin.msg(player, "&e" + plugin.data().nameOf(uuid) + " &7a été expulsé.");
     }
@@ -997,6 +1055,7 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
             plugin.msg(player, "&cTransfère le lead (&e/f leader&c) ou dissous (&e/f disband&c).");
             return;
         }
+        extras.addLog(fac, "roster", player.getName() + " a quitté la faction");
         removeMember(fac, player.getUniqueId(), "&cTu as quitté la faction.");
         notifyMembers(fac, "&e" + player.getName() + " &7a quitté la faction.");
     }
@@ -1076,6 +1135,7 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
     private void applyRank(Player player, String fac, UUID uuid, FactionRank next) {
         file.get().set("factions." + fac + ".ranks." + uuid.toString(), next.name());
         file.save();
+        extras.addLog(fac, "promote", player.getName() + " a promu " + plugin.data().nameOf(uuid) + " " + next.display());
         plugin.msg(player, "&e" + plugin.data().nameOf(uuid) + " &7est maintenant &e" + next.display());
         Player online = Bukkit.getPlayer(uuid);
         if (online != null) {
@@ -1266,7 +1326,7 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
         plugin.msg(player, open ? "&aFaction ouverte (join sans invite)." : "&eFaction fermée.");
     }
 
-    private void openChest(Player player) {
+    public void openChest(Player player) {
         String fac = requireFac(player);
         if (fac == null) return;
         if (!hasPerm(player, FactionPerm.CHEST)) {
@@ -1370,12 +1430,6 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
     }
 
     private void home(Player player) {
-        if (plugin.combat() != null && plugin.combat().denyIfTagged(player)) {
-            return;
-        }
-        if (plugin.denyTpCooldown(player)) {
-            return;
-        }
         String fac = requireFac(player);
         if (fac == null) return;
         if (!hasPerm(player, FactionPerm.HOME)) {
@@ -1387,9 +1441,7 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
             plugin.msg(player, "&cAucun home défini. &e/f sethome");
             return;
         }
-        player.teleport(loc);
-        plugin.startTpCooldown(player);
-        plugin.msg(player, "&aTéléporté au home faction.");
+        plugin.teleports().request(player, loc, "&aTéléporté au home faction.");
     }
 
     private void sethome(Player player) {
@@ -1448,6 +1500,8 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
         }
         file.get().set("claims." + claimKey(chunk), fac);
         file.save();
+        extras.addLog(fac, "claim", player.getName() + " a claim " + chunk.getWorld().getName()
+                + " " + chunk.getX() + "," + chunk.getZ());
         plugin.msg(player, "&aChunk claim &7(" + chunk.getX() + ", " + chunk.getZ() + ")");
     }
 
@@ -1461,6 +1515,7 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
         if (all) {
             int n = removeClaims(fac);
             file.save();
+            extras.addLog(fac, "claim", player.getName() + " a unclaim all (" + n + ")");
             plugin.msg(player, "&e" + n + " claims retirés.");
             return;
         }
@@ -1469,8 +1524,11 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
             plugin.msg(player, "&cCe chunk n'est pas à toi.");
             return;
         }
-        file.get().set("claims." + claimKey(player.getLocation().getChunk()), null);
+        Chunk chunk = player.getLocation().getChunk();
+        file.get().set("claims." + claimKey(chunk), null);
         file.save();
+        extras.addLog(fac, "claim", player.getName() + " a unclaim " + chunk.getWorld().getName()
+                + " " + chunk.getX() + "," + chunk.getZ());
         plugin.msg(player, "&eChunk unclaim.");
     }
 
@@ -1787,7 +1845,7 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
     }
 
     static class ChestHolder implements InventoryHolder {
-        private final String fac;
+        final String fac;
 
         ChestHolder(String fac) {
             this.fac = fac;

@@ -108,21 +108,10 @@ async function pollEvents() {
       return;
     }
     for (const post of json.pending) {
-      const lines = Array.isArray(post.lines) ? post.lines : [];
-      await channel.send({
-        embeds: [
-          {
-            title: post.title || "Event",
-            description: post.description || undefined,
-            color: post.color || 0xf39c12,
-            fields: lines.length
-              ? [{ name: post.field || "Classement", value: lines.join("\n").slice(0, 1024) }]
-              : [],
-            footer: { text: post.footer || "Draftmc" },
-            timestamp: new Date().toISOString(),
-          },
-        ],
-      }).catch((err) => console.warn("Event Discord:", err.message));
+      const content = post.content
+        || [post.title, "", post.field || ":crossed_swords: Résultats", "", ...(Array.isArray(post.lines) ? post.lines : [])]
+            .join("\n");
+      await channel.send({ content: String(content).slice(0, 2000) }).catch((err) => console.warn("Event Discord:", err.message));
     }
   } catch (err) {
     console.warn("Events plugin:", err.message);

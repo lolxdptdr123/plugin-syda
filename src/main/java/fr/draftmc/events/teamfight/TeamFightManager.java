@@ -14,6 +14,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -36,6 +37,7 @@ public class TeamFightManager {
     private TeamFightState state = TeamFightState.WAITING;
     private final List<TfMatch> queue = new ArrayList<TfMatch>();
     private final List<TfTeam> roundWinners = new ArrayList<TfTeam>();
+    private final List<TfTeam> eliminatedOrder = new ArrayList<TfTeam>();
     private TfMatch current;
     private TfTeam tournamentWinner;
     private BukkitTask task;
@@ -152,6 +154,7 @@ public class TeamFightManager {
         }
         queue.clear();
         roundWinners.clear();
+        eliminatedOrder.clear();
         queue.addAll(buildRound(ready, roundName(ready.size())));
         plugin.getScoreboard().start();
         startNextMatch();
@@ -396,6 +399,7 @@ public class TeamFightManager {
         }
         state = TeamFightState.FIGHTING;
         startEffectsTask();
+        tagFighters();
         plugin.broadcastRaw(plugin.msg("fight-start")
                 .replace("{teamA}", current.getTeamA().getName())
                 .replace("{teamB}", current.getTeamB().getName()));
@@ -440,6 +444,9 @@ public class TeamFightManager {
         TfTeam loser = current.opponent(winner);
         if (loser != null) {
             loser.setTournamentOut(true);
+            if (!eliminatedOrder.contains(loser)) {
+                eliminatedOrder.add(loser);
+            }
             plugin.broadcast("team-out", loser, null, 0);
         }
         plugin.broadcastRaw(plugin.msg("match-over").replace("{winner}", winner.getName()));
@@ -482,41 +489,79 @@ public class TeamFightManager {
         cancelTask();
         state = TeamFightState.ENDED;
         plugin.getScoreboard().stop();
+        List<TfTeam> ranking = tournamentRanking();
         if (tournamentWinner != null) {
             plugin.broadcastRaw(plugin.msg("tournament-over").replace("{winner}", tournamentWinner.getName()));
-            EventHub hub = plugin.getHost().events();
-            if (hub != null) {
-                Player leader = Bukkit.getPlayer(tournamentWinner.getLeader());
-                String factionId = tournamentWinner.getFactionId();
-                if (factionId == null && leader != null) {
-                    factionId = plugin.getEventFactionHook().getFactionId(leader);
+        }
+        plugin.broadcastRanking(ranking);
+        EventHub hub = plugin.getHost().events();
+        if (hub != null) {
+            List<Map.Entry<String, Integer>> discord = new ArrayList<Map.Entry<String, Integer>>();
+            int place = 1;
+            for (int i = 0; i < ranking.size() && place <= 3; i++) {
+                TfTeam team = ranking.get(i);
+                int reward = plugin.rankingPoints(place);
+                String factionId = team.getFactionId();
+                if (factionId == null) {
+                    Player leader = Bukkit.getPlayer(team.getLeader());
+                    if (leader != null) {
+                        factionId = plugin.getEventFactionHook().getFactionId(leader);
+                    }
                 }
                 if (factionId != null) {
-                    hub.awardTopPoints(EventType.TEAMFIGHT, factionId);
-                    String facName = plugin.getEventFactionHook().getFactionDisplayName(factionId);
-                    hub.announceDiscordWinner(EventType.TEAMFIGHT, tournamentWinner.getName(), facName, -1);
+                    if (reward > 0) {
+                        hub.awardTopPoints(EventType.TEAMFIGHT, factionId, reward);
+                    }
+                    discord.add(new AbstractMap.SimpleEntry<String, Integer>(factionId, reward));
                 }
-                hub.clearActive(EventType.TEAMFIGHT, null);
+                place++;
             }
+            if (!discord.isEmpty()) {
+                hub.announceDiscordRanking(EventType.TEAMFIGHT, "", discord, 3);
+            }
+            hub.clearActive(EventType.TEAMFIGHT, null);
         }
         cleanupFight(true);
         state = TeamFightState.WAITING;
         reset();
     }
 
+    private List<TfTeam> tournamentRanking() {
+        List<TfTeam> ranking = new ArrayList<TfTeam>();
+        if (tournamentWinner != null) {
+            ranking.add(tournamentWinner);
+        }
+        for (int i = eliminatedOrder.size() - 1; i >= 0; i--) {
+            TfTeam team = eliminatedOrder.get(i);
+            if (team != null && !ranking.contains(team)) {
+                ranking.add(team);
+            }
+        }
+        return ranking;
+    }
+
     private void broadcastRecap(TfMatch match) {
+        TfTeam winner = match.getWinner();
+        TfTeam loser = match.opponent(winner);
         Bukkit.broadcastMessage(CC.color("&8&m------------------------------"));
         Bukkit.broadcastMessage(CC.color("        &6TEAMFIGHT TERMINE"));
         Bukkit.broadcastMessage(CC.color("&8&m------------------------------"));
-        Bukkit.broadcastMessage(CC.color("&6Vainqueur : &a" + match.getWinner().getName()));
-        Bukkit.broadcastMessage("");
-        recapTeam("&b", match.getTeamA());
-        Bukkit.broadcastMessage("");
-        recapTeam("&c", match.getTeamB());
+        if (winner != null) {
+            Bukkit.broadcastMessage(CC.color("&6Vainqueur : &a" + winner.getName()));
+            Bukkit.broadcastMessage("");
+            recapTeam("&a", winner);
+        }
+        if (loser != null) {
+            Bukkit.broadcastMessage("");
+            recapTeam("&c", loser);
+        }
         Bukkit.broadcastMessage(CC.color("&8&m------------------------------"));
     }
 
     private void recapTeam(String color, TfTeam team) {
+        if (team == null) {
+            return;
+        }
         Bukkit.broadcastMessage(CC.color(color + team.getName().toUpperCase(Locale.ROOT)));
         for (UUID uuid : team.getMembers()) {
             if (!fighters.contains(uuid) && !stats.containsKey(uuid)) {
@@ -525,18 +570,8 @@ public class TeamFightManager {
             FightStats st = statsOf(uuid);
             Player player = Bukkit.getPlayer(uuid);
             String name = player != null ? player.getName() : Bukkit.getOfflinePlayer(uuid).getName();
-            Bukkit.broadcastMessage(CC.color("&f" + name + "   &7→ &e" + st.getHits()
+            Bukkit.broadcastMessage(CC.color(color + name + "   &7→ &e" + st.getHits()
                     + " hits &8| &b" + st.getPotions() + " potions"));
-            if (!st.getPotionsByType().isEmpty()) {
-                StringBuilder types = new StringBuilder();
-                for (java.util.Map.Entry<String, Integer> potion : st.getPotionsByType().entrySet()) {
-                    if (types.length() > 0) {
-                        types.append("&7, ");
-                    }
-                    types.append("&7").append(potion.getKey()).append(" &f").append(potion.getValue());
-                }
-                Bukkit.broadcastMessage(CC.color("  " + types.toString()));
-            }
         }
     }
 
@@ -556,6 +591,9 @@ public class TeamFightManager {
             }
             plugin.getKit().clear(player);
             player.setGameMode(GameMode.SURVIVAL);
+            if (plugin.getHost().combat() != null) {
+                plugin.getHost().combat().untag(player.getUniqueId(), false);
+            }
             if (wait != null) {
                 player.teleport(wait);
             }
@@ -740,8 +778,22 @@ public class TeamFightManager {
         deadThisFight.clear();
         queue.clear();
         roundWinners.clear();
+        eliminatedOrder.clear();
         current = null;
         tournamentWinner = null;
+    }
+
+    public boolean commandsRestricted(Player player) {
+        if (player == null) {
+            return false;
+        }
+        if (state != TeamFightState.FIGHTING && state != TeamFightState.COUNTDOWN) {
+            return false;
+        }
+        if (isFighter(player.getUniqueId()) && !isDeadThisFight(player.getUniqueId())) {
+            return true;
+        }
+        return insideArena(player.getLocation());
     }
 
     private void cancelTask() {
@@ -766,10 +818,30 @@ public class TeamFightManager {
                     Player player = Bukkit.getPlayer(uuid);
                     if (player != null && player.isOnline()) {
                         plugin.getKit().applyArenaEffects(player);
+                        tagPlayer(player);
                     }
                 }
             }
         }, 20L, 40L);
+    }
+
+    private void tagFighters() {
+        for (UUID uuid : fighters) {
+            if (deadThisFight.contains(uuid)) {
+                continue;
+            }
+            Player player = Bukkit.getPlayer(uuid);
+            if (player != null && player.isOnline()) {
+                tagPlayer(player);
+            }
+        }
+    }
+
+    private void tagPlayer(Player player) {
+        if (player == null || plugin.getHost().combat() == null) {
+            return;
+        }
+        plugin.getHost().combat().tag(player);
     }
 
     private void cancelEffectsTask() {

@@ -5,26 +5,46 @@ import fr.draftmc.anticommand.AntiCommandListener;
 import fr.draftmc.atouts.AtoutManager;
 import fr.draftmc.classement.ClassementManager;
 import fr.draftmc.core.AdminCommand;
+import fr.draftmc.core.AdminGui;
 import fr.draftmc.core.CoreCommands;
 import fr.draftmc.core.DeathInventoryManager;
+import fr.draftmc.core.PingCommand;
 import fr.draftmc.core.ScoreboardManager;
+import fr.draftmc.core.TeleportWarmup;
 import fr.draftmc.data.DataManager;
 import fr.draftmc.economy.EconomyHook;
+import fr.draftmc.economy.PayCommand;
 import fr.draftmc.factions.FactionManager;
 import fr.draftmc.grades.GradeCommandManager;
 import fr.draftmc.grades.GradeManager;
+import fr.draftmc.grades.StaffRankSetup;
+import fr.draftmc.help.HelpCommand;
+import fr.draftmc.hub.HubCommand;
+import fr.draftmc.hub.SpawnCommand;
+import fr.draftmc.collection.CollectionManager;
+import fr.draftmc.playtime.PlaytimeCommand;
+import fr.draftmc.quests.QuestManager;
+import fr.draftmc.outpost.OutpostManager;
+import fr.draftmc.social.MsgCommand;
+import fr.draftmc.social.YtCommand;
+import fr.draftmc.economy.BaltopCommand;
 import fr.draftmc.items.BannedItemManager;
 import fr.draftmc.items.ItemManager;
 import fr.draftmc.kits.KitManager;
+import fr.draftmc.lag.ClearLagManager;
 import fr.draftmc.placeholders.DraftmcPlaceholders;
 import fr.draftmc.portals.PortalManager;
 import fr.draftmc.randomtp.RandomTpCommand;
+import fr.draftmc.staff.FlyCommand;
 import fr.draftmc.staff.FreezeManager;
+import fr.draftmc.staff.ModerationManager;
 import fr.draftmc.staff.ReportManager;
+import fr.draftmc.staff.StaffLogManager;
 import fr.draftmc.staff.StaffManager;
 import fr.draftmc.stats.StatsManager;
 import fr.draftmc.tags.TagManager;
 import fr.draftmc.tokens.TokenManager;
+import fr.draftmc.tournament.TournamentPlugin;
 import fr.draftmc.rankup.RankUpManager;
 import fr.draftmc.shop.ShopManager;
 import fr.draftmc.discord.DiscordLinkManager;
@@ -44,6 +64,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -66,6 +87,7 @@ public class Draftmc extends JavaPlugin {
     private ItemManager items;
     private BannedItemManager bannedItems;
     private StaffManager staff;
+    private StaffLogManager staffLogs;
     private FreezeManager freeze;
     private TagManager tags;
     private GradeManager grades;
@@ -79,9 +101,12 @@ public class Draftmc extends JavaPlugin {
     private EventHub events;
     private DeathBanPlugin deathban;
     private CombatTagManager combat;
+    private TeleportWarmup teleports;
     private HomeManager homes;
     private WarpManager warps;
     private TpaManager tpa;
+    private TournamentPlugin tournament;
+    private ClearLagManager clearLag;
     private FileConfiguration itemsConfig;
 
     public static Draftmc get() {
@@ -94,7 +119,9 @@ public class Draftmc extends JavaPlugin {
         saveDefaultConfig();
         reloadConfig();
         ensureConfigSections("rankup", "grade-commands", "grade-perks", "discord-link", "sell-prices", "banned-items",
-                "combat-tag", "tpa", "enderpearl", "homes", "teleport", "anti-cleanup", "warps");
+                "combat-tag", "tpa", "enderpearl", "homes", "teleport", "anti-cleanup", "warps",
+                "help-gui", "admin-gui", "playtime-rewards", "quests", "collections", "outposts", "yt-menu", "hub", "baltop",
+                "faction-prestige", "faction-missions", "factions", "staff", "clear-lag", "spawn", "pay", "staff-ranks", "staff-logs", "scoreboard", "join-quit");
         saveResourceIfMissing("items.yml");
         saveResourceIfMissing("kits.yml");
         reloadItems();
@@ -110,9 +137,12 @@ public class Draftmc extends JavaPlugin {
         this.staff = new StaffManager(this);
         this.staff.logPendingCrashRecoveries();
         ReportManager reports = new ReportManager(this);
+        this.staffLogs = new StaffLogManager(this);
         this.freeze = new FreezeManager(this);
+        ModerationManager moderation = new ModerationManager(this);
         this.tags = new TagManager(this);
         this.grades = new GradeManager(this);
+        new StaffRankSetup(this).setupIfNeeded();
         GradeCommandManager gradeCommands = new GradeCommandManager(this);
         this.factions = new FactionManager(this);
         CoreCommands core = new CoreCommands(this);
@@ -123,6 +153,7 @@ public class Draftmc extends JavaPlugin {
         this.rankup = new RankUpManager(this);
         this.kits = new KitManager(this);
         this.combat = new CombatTagManager(this);
+        this.teleports = new TeleportWarmup(this);
         this.homes = new HomeManager(this);
         this.warps = new WarpManager(this);
         this.tpa = new TpaManager(this);
@@ -130,6 +161,18 @@ public class Draftmc extends JavaPlugin {
         this.discord = new DiscordLinkManager(this);
         this.events = new EventHub(this);
         this.deathban = new DeathBanPlugin(this);
+        this.tournament = new TournamentPlugin(this);
+        this.clearLag = new ClearLagManager(this);
+        AdminGui adminGui = new AdminGui(this);
+        HelpCommand help = new HelpCommand(this);
+        PlaytimeCommand ptr = new PlaytimeCommand(this);
+        CollectionManager collections = new CollectionManager(this);
+        QuestManager quests = new QuestManager(this);
+        OutpostManager outposts = new OutpostManager(this);
+        YtCommand yt = new YtCommand(this);
+        MsgCommand msg = new MsgCommand(this);
+        HubCommand hub = new HubCommand(this);
+        BaltopCommand baltop = new BaltopCommand(this);
 
         Bukkit.getPluginManager().registerEvents(new AntiCleanupListener(this), this);
         Bukkit.getPluginManager().registerEvents(new AntiCommandListener(this), this);
@@ -140,7 +183,9 @@ public class Draftmc extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(bannedItems, this);
         Bukkit.getPluginManager().registerEvents(staff, this);
         Bukkit.getPluginManager().registerEvents(reports, this);
+        Bukkit.getPluginManager().registerEvents(staffLogs, this);
         Bukkit.getPluginManager().registerEvents(freeze, this);
+        Bukkit.getPluginManager().registerEvents(moderation, this);
         Bukkit.getPluginManager().registerEvents(tags, this);
         Bukkit.getPluginManager().registerEvents(gradeCommands, this);
         Bukkit.getPluginManager().registerEvents(factions, this);
@@ -151,14 +196,23 @@ public class Draftmc extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(rankup, this);
         Bukkit.getPluginManager().registerEvents(kits, this);
         Bukkit.getPluginManager().registerEvents(combat, this);
-        Bukkit.getPluginManager().registerEvents(homes, this);
+        Bukkit.getPluginManager().registerEvents(teleports, this);
         Bukkit.getPluginManager().registerEvents(warps, this);
         Bukkit.getPluginManager().registerEvents(tpa, this);
         Bukkit.getPluginManager().registerEvents(new EnderPearlCooldown(this), this);
         Bukkit.getPluginManager().registerEvents(hdv, this);
         Bukkit.getPluginManager().registerEvents(discord, this);
+        Bukkit.getPluginManager().registerEvents(adminGui, this);
+        Bukkit.getPluginManager().registerEvents(help, this);
+        Bukkit.getPluginManager().registerEvents(ptr, this);
+        Bukkit.getPluginManager().registerEvents(collections, this);
+        Bukkit.getPluginManager().registerEvents(quests, this);
+        Bukkit.getPluginManager().registerEvents(outposts, this);
+        Bukkit.getPluginManager().registerEvents(yt, this);
+        Bukkit.getPluginManager().registerEvents(msg, this);
 
-        cmd("draftmc", new AdminCommand(this));
+        cmd("draftmc", new AdminCommand(this, adminGui));
+        cmd("admin", new AdminCommand(this, adminGui));
         cmd("atouts", atouts);
         cmd("classement", classement);
         cmd("stats", stats);
@@ -179,10 +233,18 @@ public class Draftmc extends JavaPlugin {
         cmd("cps", staff);
         cmd("report", reports);
         cmd("reports", reports);
+        cmd("adminlogs", staffLogs);
         cmd("freeze", freeze);
+        cmd("mute", moderation);
+        cmd("unmute", moderation);
+        cmd("unban", moderation);
+        cmd("tempban", moderation);
+        cmd("ban", moderation);
+        cmd("clearlag", clearLag);
         cmd("tags", tags);
         cmd("tokens", tokens);
         cmd("money", economy);
+        cmd("pay", new PayCommand(this));
         cmd("f", factions);
         cmd("voteparty", voteParty);
         cmd("portal", portals);
@@ -190,6 +252,20 @@ public class Draftmc extends JavaPlugin {
         cmd("banitem", bannedItems);
         cmd("boutique", shop);
         cmd("shop", shop);
+        cmd("help", help);
+        cmd("ptr", ptr);
+        cmd("collection", collections);
+        cmd("quete", quests);
+        cmd("outpost", outposts);
+        cmd("yt", yt);
+        cmd("msg", msg);
+        cmd("r", msg);
+        cmd("hub", hub);
+        cmd("spawn", new SpawnCommand(this));
+        cmd("ping", new PingCommand(this));
+        cmd("ct", combat);
+        cmd("fly", new FlyCommand(this));
+        cmd("baltop", baltop);
         cmd("rankup", rankup);
         cmd("deathinv", deathInventory);
         cmd("feed", gradeCommands);
@@ -246,14 +322,23 @@ public class Draftmc extends JavaPlugin {
         if (events != null) {
             events.disable();
         }
+        if (tournament != null) {
+            tournament.disable();
+        }
         if (deathban != null) {
             deathban.disable();
         }
         if (discord != null) {
             discord.shutdown();
         }
+        if (staffLogs != null) {
+            staffLogs.shutdown();
+        }
         if (freeze != null) {
             freeze.shutdown();
+        }
+        if (clearLag != null) {
+            clearLag.shutdown();
         }
         if (scoreboard != null) {
             scoreboard.disable();
@@ -287,7 +372,9 @@ public class Draftmc extends JavaPlugin {
     public void reloadAll() {
         reloadConfig();
         ensureConfigSections("rankup", "grade-commands", "grade-perks", "discord-link", "sell-prices", "banned-items",
-                "combat-tag", "tpa", "enderpearl", "homes", "teleport", "anti-cleanup", "warps");
+                "combat-tag", "tpa", "enderpearl", "homes", "teleport", "anti-cleanup", "warps",
+                "help-gui", "admin-gui", "playtime-rewards", "quests", "collections", "outposts", "yt-menu", "hub", "baltop",
+                "faction-prestige", "faction-missions", "factions", "staff", "clear-lag", "spawn", "pay", "staff-ranks", "staff-logs", "scoreboard", "join-quit");
         reloadItems();
         if (kits != null) {
             kits.reload();
@@ -304,6 +391,9 @@ public class Draftmc extends JavaPlugin {
         if (deathban != null) {
             deathban.getConfigManager().reload();
             deathban.getBanManager().load();
+        }
+        if (clearLag != null) {
+            clearLag.start();
         }
     }
 
@@ -333,7 +423,9 @@ public class Draftmc extends JavaPlugin {
                         changed |= mergeStringList(defaults, "combat-tag.blocked-subcommands");
                     }
                     if ("discord-link".equals(section) || "anti-cleanup".equals(section) || "teleport".equals(section)
-                            || "homes".equals(section) || "warps".equals(section)) {
+                            || "homes".equals(section) || "warps".equals(section) || "factions".equals(section)
+                            || "staff".equals(section) || "rankup".equals(section) || "scoreboard".equals(section)
+                            || "staff-logs".equals(section)) {
                         changed |= mergeMissingLeaves(defaults, section);
                     }
                     continue;
@@ -474,6 +566,34 @@ public class Draftmc extends JavaPlugin {
     public void reloadItems() {
         File file = new File(getDataFolder(), "items.yml");
         this.itemsConfig = YamlConfiguration.loadConfiguration(file);
+        InputStream stream = getResource("items.yml");
+        if (stream == null) {
+            return;
+        }
+        try {
+            YamlConfiguration defaults = YamlConfiguration.loadConfiguration(
+                    new InputStreamReader(stream, StandardCharsets.UTF_8));
+            ConfigurationSection defItems = defaults.getConfigurationSection("items");
+            if (defItems == null) {
+                return;
+            }
+            boolean changed = false;
+            for (String id : defItems.getKeys(false)) {
+                if (!itemsConfig.isConfigurationSection("items." + id)) {
+                    itemsConfig.set("items." + id, defItems.get(id));
+                    changed = true;
+                }
+            }
+            if (changed) {
+                itemsConfig.save(file);
+            }
+        } catch (Exception ignored) {
+        } finally {
+            try {
+                stream.close();
+            } catch (Exception ignored) {
+            }
+        }
     }
 
     public void msg(CommandSender sender, String message) {
@@ -522,10 +642,12 @@ public class Draftmc extends JavaPlugin {
     public KitManager kits() { return kits; }
     public DiscordLinkManager discord() { return discord; }
     public EventHub events() { return events; }
+    public TournamentPlugin tournament() { return tournament; }
     public DeathBanPlugin deathban() { return deathban; }
     public StaffManager staff() { return staff; }
     public FreezeManager freeze() { return freeze; }
     public CombatTagManager combat() { return combat; }
+    public TeleportWarmup teleports() { return teleports; }
     public HomeManager homes() { return homes; }
     public WarpManager warps() { return warps; }
     public TpaManager tpa() { return tpa; }

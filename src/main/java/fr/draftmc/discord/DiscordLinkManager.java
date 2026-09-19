@@ -421,10 +421,12 @@ public class DiscordLinkManager implements CommandExecutor, Listener {
         }
         final EventPost post = new EventPost(
                 title,
-                subtitle,
+                "",
                 lines,
                 color,
-                plugin.getConfig().getString("discord.events.field", "Classement"),
+                subtitle == null || subtitle.isEmpty()
+                        ? plugin.getConfig().getString("discord.events.results", ":crossed_swords: Résultats")
+                        : subtitle,
                 plugin.getConfig().getString("discord.events.footer", "Draftmc"));
         final String webhook = plugin.getConfig().getString("discord.webhook-url", "");
         if (webhook != null && webhook.startsWith("https://discord.com/api/webhooks/")) {
@@ -484,7 +486,7 @@ public class DiscordLinkManager implements CommandExecutor, Listener {
             conn.setReadTimeout(8000);
             conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
             conn.setRequestProperty("User-Agent", "Draftmc");
-            byte[] body = ("{\"embeds\":[" + post.toEmbedJson() + "]}").getBytes(StandardCharsets.UTF_8);
+            byte[] body = ("{\"content\":\"" + escape(post.messageBody()) + "\"}").getBytes(StandardCharsets.UTF_8);
             conn.setFixedLengthStreamingMode(body.length);
             OutputStream out = conn.getOutputStream();
             out.write(body);
@@ -518,7 +520,7 @@ public class DiscordLinkManager implements CommandExecutor, Listener {
         if (text == null) {
             return "";
         }
-        return text.replace("\\", "\\\\").replace("\"", "\\\"");
+        return text.replace("\\", "\\\\").replace("\"", "\\\"").replace("\r", "").replace("\n", "\\n");
     }
 
     @EventHandler
@@ -575,9 +577,32 @@ public class DiscordLinkManager implements CommandExecutor, Listener {
             this.footer = footer == null || footer.isEmpty() ? "Draftmc" : footer;
         }
 
+        private String messageBody() {
+            StringBuilder sb = new StringBuilder();
+            sb.append(title);
+            sb.append("\n\n");
+            sb.append(field);
+            sb.append("\n\n");
+            if (lines.isEmpty()) {
+                sb.append("Aucun score.");
+            } else {
+                for (int i = 0; i < lines.size(); i++) {
+                    if (i > 0) {
+                        sb.append('\n');
+                    }
+                    sb.append(lines.get(i));
+                }
+            }
+            if (sb.length() > 2000) {
+                sb.setLength(2000);
+            }
+            return sb.toString();
+        }
+
         private String toJson() {
             StringBuilder sb = new StringBuilder();
-            sb.append("{\"title\":\"").append(escape(title)).append('"');
+            sb.append("{\"content\":\"").append(escape(messageBody())).append('"');
+            sb.append(",\"title\":\"").append(escape(title)).append('"');
             sb.append(",\"description\":\"").append(escape(subtitle)).append('"');
             sb.append(",\"color\":").append(color);
             sb.append(",\"field\":\"").append(escape(field)).append('"');
@@ -591,28 +616,6 @@ public class DiscordLinkManager implements CommandExecutor, Listener {
             }
             sb.append("]}");
             return sb.toString();
-        }
-
-        private String toEmbedJson() {
-            StringBuilder value = new StringBuilder();
-            if (lines.isEmpty()) {
-                value.append("Aucun score.");
-            } else {
-                for (int i = 0; i < lines.size(); i++) {
-                    if (i > 0) {
-                        value.append("\\n");
-                    }
-                    value.append(escape(lines.get(i)));
-                }
-            }
-            if (value.length() > 1000) {
-                value.setLength(1000);
-            }
-            String desc = subtitle.isEmpty() ? "" : ",\"description\":\"" + escape(subtitle) + "\"";
-            return "{\"title\":\"" + escape(title) + "\"" + desc
-                    + ",\"color\":" + color
-                    + ",\"fields\":[{\"name\":\"" + escape(field) + "\",\"value\":\"" + value + "\"}]"
-                    + ",\"footer\":{\"text\":\"" + escape(footer) + "\"}}";
         }
     }
 }

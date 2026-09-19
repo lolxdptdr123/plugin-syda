@@ -11,6 +11,7 @@ import fr.draftmc.events.masterkill.MasterKillPlugin;
 import fr.draftmc.events.masterkill.model.MasterKillState;
 import fr.draftmc.events.koth.KothPlugin;
 import fr.draftmc.events.koth.KothZone;
+import fr.draftmc.events.largage.LargagePlugin;
 import fr.draftmc.events.teamfight.TeamFightPlugin;
 import fr.draftmc.events.teamfight.TeamFightState;
 import fr.draftmc.events.totem.Totem;
@@ -25,6 +26,7 @@ import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -58,8 +60,10 @@ public class EventHub {
     private final TotemPlugin totem;
     private final KothPlugin koth;
     private final TeamFightPlugin teamfight;
+    private final LargagePlugin largage;
     private FileConfiguration catalog;
     private final Map<EventType, String> activeMaps = new EnumMap<EventType, String>(EventType.class);
+    private EventScheduler scheduler;
 
     public EventHub(Draftmc plugin) {
         this.plugin = plugin;
@@ -71,6 +75,12 @@ public class EventHub {
         this.totem = new TotemPlugin(plugin);
         this.koth = new KothPlugin(plugin);
         this.teamfight = new TeamFightPlugin(plugin);
+        this.largage = new LargagePlugin(plugin);
+        this.scheduler = new EventScheduler(plugin);
+    }
+
+    public FileConfiguration catalog() {
+        return catalog;
     }
 
     private void loadCatalog() {
@@ -79,18 +89,39 @@ public class EventHub {
             plugin.saveResource("events.yml", false);
         }
         this.catalog = YamlConfiguration.loadConfiguration(file);
-        if (!catalog.isConfigurationSection("schedule")) {
-            java.io.InputStream stream = plugin.getResource("events.yml");
-            if (stream != null) {
-                YamlConfiguration defaults = YamlConfiguration.loadConfiguration(
-                        new java.io.InputStreamReader(stream, java.nio.charset.StandardCharsets.UTF_8));
-                if (defaults.isConfigurationSection("schedule")) {
-                    catalog.set("schedule", defaults.get("schedule"));
-                    try {
-                        catalog.save(file);
-                    } catch (Exception ignored) {
+        fillMissingSchedule(file);
+    }
+
+    private void fillMissingSchedule(File file) {
+        java.io.InputStream stream = plugin.getResource("events.yml");
+        if (stream == null) {
+            return;
+        }
+        try {
+            YamlConfiguration defaults = YamlConfiguration.loadConfiguration(
+                    new java.io.InputStreamReader(stream, java.nio.charset.StandardCharsets.UTF_8));
+            boolean changed = false;
+            if (!catalog.isConfigurationSection("schedule") && defaults.isConfigurationSection("schedule")) {
+                catalog.set("schedule", defaults.get("schedule"));
+                changed = true;
+            } else {
+                String[] days = {"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"};
+                for (int i = 0; i < days.length; i++) {
+                    String path = "schedule." + days[i];
+                    if (scheduleSlots(days[i]).isEmpty() && defaults.contains(path)) {
+                        catalog.set(path, defaults.get(path));
+                        changed = true;
                     }
                 }
+            }
+            if (changed) {
+                catalog.save(file);
+            }
+        } catch (Exception ignored) {
+        } finally {
+            try {
+                stream.close();
+            } catch (Exception ignored) {
             }
         }
     }
@@ -117,10 +148,19 @@ public class EventHub {
         if (teamfight != null) {
             teamfight.disable();
         }
+        if (largage != null) {
+            largage.disable();
+        }
+        if (scheduler != null) {
+            scheduler.shutdown();
+        }
     }
 
     public void reload() {
         loadCatalog();
+        if (scheduler != null) {
+            scheduler.start();
+        }
         if (conquest != null && conquest.getConquestManager() != null) {
             conquest.getConquestManager().reload();
         }
@@ -145,6 +185,9 @@ public class EventHub {
                 teamfight.getKit().load();
             }
         }
+        if (largage != null) {
+            largage.reloadConfig();
+        }
     }
 
     public String prefix() {
@@ -157,35 +200,19 @@ public class EventHub {
 
     public List<String> scheduleLore(String day) {
         List<String> lore = new ArrayList<String>();
-        String path = "schedule." + day;
-        List<java.util.Map<?, ?>> maps = catalog.getMapList(path);
-        if (maps != null && !maps.isEmpty()) {
-            for (java.util.Map<?, ?> entry : maps) {
-                if (entry == null) {
-                    continue;
-                }
-                Object event = entry.get("event");
-                Object map = entry.get("map");
-                Object time = entry.get("time");
-                if (event == null && map == null) {
-                    continue;
-                }
-                String eventName = event == null ? "?" : String.valueOf(event);
-                String mapName = map == null || String.valueOf(map).isEmpty() ? "" : String.valueOf(map);
-                String timeText = time == null || String.valueOf(time).isEmpty() ? "" : String.valueOf(time);
-                StringBuilder line = new StringBuilder("&8» ");
-                if (!timeText.isEmpty()) {
-                    line.append("&e").append(timeText).append(" ");
-                }
-                line.append("&6").append(eventName);
-                if (!mapName.isEmpty()) {
-                    line.append(" &7- &f").append(mapName);
-                }
-                lore.add(line.toString());
+        List<Slot> slots = scheduleSlots(day);
+        for (int i = 0; i < slots.size(); i++) {
+            Slot slot = slots.get(i);
+            StringBuilder line = new StringBuilder("&8» &e");
+            line.append(formatClock(slot.hour, slot.minute));
+            line.append(" &6").append(slot.displayName());
+            if (slot.map != null && !slot.map.isEmpty()) {
+                line.append(" &7- &f").append(slot.map);
             }
+            lore.add(line.toString());
         }
         if (lore.isEmpty()) {
-            List<String> lines = catalog.getStringList(path);
+            List<String> lines = catalog.getStringList("schedule." + day);
             for (String line : lines) {
                 if (line != null && !line.isEmpty()) {
                     lore.add(line);
@@ -231,34 +258,46 @@ public class EventHub {
         }
     }
 
+    public int rankingPointsFor(EventType type, int place) {
+        if (type == null || place < 1) {
+            return 0;
+        }
+        switch (type) {
+            case KOTH:
+                return koth == null ? 0 : koth.rankingPoints(place);
+            case TEAMFIGHT:
+                return teamfight == null ? 0 : teamfight.rankingPoints(place);
+            case TOTEM_GEANT:
+                return totem == null ? 0 : totem.rankingPoints(place);
+            default:
+                return place == 1 ? topPointsFor(type) : 0;
+        }
+    }
+
     public void announceDiscord(EventType type, String subtitle, List<String> lines) {
         if (plugin.discord() == null || type == null) {
             return;
         }
-        String map = subtitle == null ? "" : subtitle;
         FileConfiguration cfg = plugin.getConfig();
-        String title = cfg.getString("discord.events.title", "{event} termine")
+        String map = discordMapLabel(type, subtitle);
+        String headerKey = map.isEmpty() ? "discord.events.header-no-map" : "discord.events.header";
+        String headerDefault = map.isEmpty()
+                ? ":loudspeaker: | {event}"
+                : ":loudspeaker: | {event} - {map}";
+        String title = cfg.getString(headerKey, headerDefault)
                 .replace("{event}", type.display())
                 .replace("{map}", map);
+        String results = cfg.getString("discord.events.results", ":crossed_swords: Résultats");
         List<String> all = new ArrayList<String>();
         if (lines != null) {
             all.addAll(lines);
         }
-        List<String> extra = cfg.getStringList("discord.events.extra." + type.id());
-        if (extra != null) {
-            for (String line : extra) {
-                if (line == null || line.isEmpty()) {
-                    continue;
-                }
-                all.add(line.replace("{event}", type.display()).replace("{map}", map));
-            }
-        }
-        plugin.discord().postEventResult(title, map, all, discordColor(type));
+        plugin.discord().postEventResult(title, results, all, discordColor(type));
     }
 
     public void announceDiscordRanking(EventType type, String subtitle,
             List<Map.Entry<String, Integer>> ranking, int limit) {
-        String tpl = plugin.getConfig().getString("discord.events.ranking", "{place}. {name} — {score} pts");
+        String tpl = plugin.getConfig().getString("discord.events.result-line", "{medal} • {name} - {score}");
         List<String> lines = new ArrayList<String>();
         int place = 1;
         if (ranking != null) {
@@ -269,10 +308,11 @@ public class EventHub {
                 String name = plugin.factions() == null
                         ? entry.getKey()
                         : plugin.factions().displayName(entry.getKey());
-                lines.add(tpl
-                        .replace("{place}", String.valueOf(place))
-                        .replace("{name}", name)
-                        .replace("{score}", String.valueOf(entry.getValue())));
+                int pts = rankingPointsFor(type, place);
+                if (pts <= 0) {
+                    break;
+                }
+                lines.add(discordResultLine(tpl, place, name, pts));
                 place++;
             }
         }
@@ -283,17 +323,52 @@ public class EventHub {
     }
 
     public void announceDiscordWinner(EventType type, String subtitle, String winnerName, int score) {
-        List<String> lines = new ArrayList<String>();
         String name = winnerName == null || winnerName.isEmpty() ? "?" : winnerName;
-        if (score >= 0) {
-            lines.add(plugin.getConfig().getString("discord.events.winner", "1. {name} — {score} pts")
-                    .replace("{name}", name)
-                    .replace("{score}", String.valueOf(score)));
-        } else {
-            lines.add(plugin.getConfig().getString("discord.events.winner-no-score", "1. {name}")
-                    .replace("{name}", name));
+        int pts = rankingPointsFor(type, 1);
+        if (pts <= 0 && score > 0) {
+            pts = score;
         }
+        String tpl = plugin.getConfig().getString("discord.events.result-line", "{medal} • {name} - {score}");
+        List<String> lines = new ArrayList<String>();
+        lines.add(discordResultLine(tpl, 1, name, pts));
         announceDiscord(type, subtitle, lines);
+    }
+
+    private String discordResultLine(String tpl, int place, String name, int score) {
+        String line = tpl == null || tpl.isEmpty() ? "{medal} • {name} - {score}" : tpl;
+        return line
+                .replace("{medal}", discordMedal(place))
+                .replace("{place}", String.valueOf(place))
+                .replace("{name}", CC.strip(name == null ? "?" : name))
+                .replace("{score}", String.valueOf(Math.max(0, score)));
+    }
+
+    private static String discordMedal(int place) {
+        if (place == 1) {
+            return ":first_place:";
+        }
+        if (place == 2) {
+            return ":second_place:";
+        }
+        if (place == 3) {
+            return ":third_place:";
+        }
+        return ":black_small_square:";
+    }
+
+    private String discordMapLabel(EventType type, String subtitle) {
+        String id = subtitle == null ? "" : subtitle.trim();
+        if (id.isEmpty() && type != null) {
+            String active = activeMaps.get(type);
+            if (active != null) {
+                id = active;
+            }
+        }
+        if (id.isEmpty()) {
+            return "";
+        }
+        String display = mapDisplay(type, id);
+        return CC.strip(display == null ? id : display);
     }
 
     private static int discordColor(EventType type) {
@@ -314,6 +389,8 @@ public class EventHub {
                 return 0xF39C12;
             case TEAMFIGHT:
                 return 0x3498DB;
+            case LARGAGE:
+                return 0xF1C40F;
             default:
                 return 0x95A5A6;
         }
@@ -411,6 +488,8 @@ public class EventHub {
                 return label(koth.getKothManager().isRunning() ? "RUNNING" : "WAITING");
             case TEAMFIGHT:
                 return label(teamfight.getManager().getState().name());
+            case LARGAGE:
+                return label(largage.getManager().running() ? "RUNNING" : "WAITING");
             default:
                 return "?";
         }
@@ -434,6 +513,8 @@ public class EventHub {
                 return koth.getKothManager().isRunning();
             case TEAMFIGHT:
                 return teamfight.getManager().isBusy();
+            case LARGAGE:
+                return largage.getManager().running();
             default:
                 return false;
         }
@@ -524,6 +605,15 @@ public class EventHub {
                     return StartResult.NEED_TEAMS;
                 }
                 return teamfight.getManager().launch() ? StartResult.LAUNCHED : StartResult.FAILED;
+            case LARGAGE:
+                if (largage.getManager().running()) {
+                    return StartResult.ALREADY_RUNNING;
+                }
+                if (!largage.getManager().start()) {
+                    return StartResult.FAILED;
+                }
+                activeMaps.put(type, map);
+                return StartResult.STARTED;
             default:
                 return StartResult.FAILED;
         }
@@ -564,6 +654,9 @@ public class EventHub {
                 break;
             case TEAMFIGHT:
                 ok = teamfight.getManager().stop();
+                break;
+            case LARGAGE:
+                ok = largage.getManager().stop(true);
                 break;
             default:
                 break;
@@ -631,6 +724,8 @@ public class EventHub {
                 break;
             case TEAMFIGHT:
                 break;
+            case LARGAGE:
+                break;
             default:
                 break;
         }
@@ -688,6 +783,8 @@ public class EventHub {
                 return koth.getConfig();
             case TEAMFIGHT:
                 return teamfight.getConfig();
+            case LARGAGE:
+                return largage.getConfig();
             default:
                 return null;
         }
@@ -741,10 +838,269 @@ public class EventHub {
         return teamfight;
     }
 
+    public LargagePlugin largage() {
+        return largage;
+    }
+
     private Totem activeTotem(boolean giant) {
         if (totem.getTotemManager().isGiantMode() != giant) {
             return null;
         }
         return totem.getTotemManager().getActive();
+    }
+
+    public Upcoming nextUpcoming() {
+        Calendar now = Calendar.getInstance();
+        long nowMs = now.getTimeInMillis();
+        Upcoming best = null;
+        String[] days = {"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"};
+        for (int offset = 0; offset < 8; offset++) {
+            Calendar dayCal = Calendar.getInstance();
+            dayCal.add(Calendar.DAY_OF_YEAR, offset);
+            int dayIndex = (dayCal.get(Calendar.DAY_OF_WEEK) + 5) % 7;
+            List<Slot> slots = scheduleSlots(days[dayIndex]);
+            for (int i = 0; i < slots.size(); i++) {
+                Slot slot = slots.get(i);
+                if (!slot.auto) {
+                    continue;
+                }
+                Calendar at = (Calendar) dayCal.clone();
+                at.set(Calendar.HOUR_OF_DAY, slot.hour);
+                at.set(Calendar.MINUTE, slot.minute);
+                at.set(Calendar.SECOND, 0);
+                at.set(Calendar.MILLISECOND, 0);
+                long atMs = at.getTimeInMillis();
+                if (atMs <= nowMs) {
+                    continue;
+                }
+                if (best == null || atMs < best.atMillis) {
+                    best = new Upcoming(upcomingLabel(slot), atMs);
+                }
+            }
+        }
+        return best;
+    }
+
+    private String upcomingLabel(Slot slot) {
+        String event = slot.displayName();
+        String map = mapLabel(slot);
+        if (map == null || map.isEmpty()) {
+            return event;
+        }
+        return event + " &7(" + map + ")";
+    }
+
+    private String mapLabel(Slot slot) {
+        if (slot.map == null || slot.map.trim().isEmpty()) {
+            return "";
+        }
+        EventType type = EventType.from(slot.event);
+        if (type != null) {
+            String display = mapDisplay(type, slot.map);
+            if (display != null && !display.trim().isEmpty()) {
+                return display;
+            }
+        }
+        return slot.map;
+    }
+
+    public List<Slot> scheduleSlots(String day) {
+        List<Slot> out = new ArrayList<Slot>();
+        if (catalog == null || day == null) {
+            return out;
+        }
+        String path = "schedule." + day;
+        List<?> raw = catalog.getList(path);
+        if (raw != null) {
+            for (int i = 0; i < raw.size(); i++) {
+                Slot slot = slotFrom(raw.get(i));
+                if (slot != null) {
+                    out.add(slot);
+                }
+            }
+        }
+        if (out.isEmpty()) {
+            List<Map<?, ?>> maps = catalog.getMapList(path);
+            for (int i = 0; i < maps.size(); i++) {
+                Slot slot = slotFrom(maps.get(i));
+                if (slot != null) {
+                    out.add(slot);
+                }
+            }
+        }
+        if (out.isEmpty() && catalog.isConfigurationSection(path)) {
+            ConfigurationSection section = catalog.getConfigurationSection(path);
+            for (String key : section.getKeys(false)) {
+                Slot slot = slotFrom(section.get(key));
+                if (slot != null) {
+                    out.add(slot);
+                }
+            }
+        }
+        return out;
+    }
+
+    private Slot slotFrom(Object raw) {
+        if (raw instanceof Slot) {
+            return (Slot) raw;
+        }
+        String event = null;
+        String map = "default";
+        Object timeObj = null;
+        boolean auto = true;
+        if (raw instanceof Map<?, ?>) {
+            Map<?, ?> mapRaw = (Map<?, ?>) raw;
+            event = stringify(mapGet(mapRaw, "event"));
+            String parsedMap = stringify(mapGet(mapRaw, "map"));
+            if (!parsedMap.isEmpty()) {
+                map = parsedMap;
+            }
+            timeObj = mapGet(mapRaw, "time");
+            Object autoObj = mapGet(mapRaw, "auto");
+            if (autoObj instanceof Boolean) {
+                auto = ((Boolean) autoObj).booleanValue();
+            }
+        } else if (raw instanceof ConfigurationSection) {
+            ConfigurationSection sec = (ConfigurationSection) raw;
+            event = stringify(sec.get("event"));
+            String parsedMap = stringify(sec.get("map"));
+            if (!parsedMap.isEmpty()) {
+                map = parsedMap;
+            }
+            timeObj = sec.get("time");
+            if (sec.contains("auto")) {
+                auto = sec.getBoolean("auto");
+            }
+        } else {
+            return null;
+        }
+        int[] clock = parseClock(timeObj);
+        if (clock == null || event.isEmpty()) {
+            return null;
+        }
+        return new Slot(event, map, clock[0], clock[1], auto);
+    }
+
+    private Object mapGet(Map<?, ?> map, String key) {
+        if (map.containsKey(key)) {
+            return map.get(key);
+        }
+        for (Map.Entry<?, ?> entry : map.entrySet()) {
+            if (entry.getKey() != null && key.equalsIgnoreCase(String.valueOf(entry.getKey()))) {
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+
+    private String stringify(Object value) {
+        return value == null ? "" : String.valueOf(value).trim();
+    }
+
+    private int[] parseClock(Object raw) {
+        if (raw == null) {
+            return null;
+        }
+        if (raw instanceof Calendar) {
+            Calendar cal = (Calendar) raw;
+            return new int[]{cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE)};
+        }
+        if (raw instanceof java.util.Date) {
+            Calendar cal = Calendar.getInstance();
+            cal.setTime((java.util.Date) raw);
+            return new int[]{cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE)};
+        }
+        if (raw instanceof Number) {
+            int value = ((Number) raw).intValue();
+            if (value >= 0 && value < 24) {
+                return new int[]{value, 0};
+            }
+            if (value >= 24 && value < 24 * 60) {
+                return new int[]{value / 60, value % 60};
+            }
+            if (value >= 1000 && value <= 2359) {
+                int hour = value / 100;
+                int minute = value % 100;
+                if (hour < 24 && minute < 60) {
+                    return new int[]{hour, minute};
+                }
+            }
+            return null;
+        }
+        String text = String.valueOf(raw).trim().toLowerCase(Locale.ROOT).replace('h', ':');
+        if (text.matches("\\d+")) {
+            return parseClock(Integer.valueOf(text));
+        }
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(\\d{1,2})\\D+(\\d{1,2})").matcher(text);
+        if (matcher.find()) {
+            int hour = Integer.parseInt(matcher.group(1));
+            int minute = Integer.parseInt(matcher.group(2));
+            if (hour >= 0 && hour < 24 && minute >= 0 && minute < 60) {
+                return new int[]{hour, minute};
+            }
+        }
+        matcher = java.util.regex.Pattern.compile("^(\\d{1,2})$").matcher(text);
+        if (matcher.find()) {
+            int hour = Integer.parseInt(matcher.group(1));
+            if (hour >= 0 && hour < 24) {
+                return new int[]{hour, 0};
+            }
+        }
+        return null;
+    }
+
+    public static String formatClock(int hour, int minute) {
+        return String.format(Locale.ROOT, "%02d:%02d", hour, minute);
+    }
+
+    public static String formatUntil(long atMillis) {
+        long sec = Math.max(0L, (atMillis - System.currentTimeMillis()) / 1000L);
+        long days = sec / 86400L;
+        sec %= 86400L;
+        long hours = sec / 3600L;
+        sec %= 3600L;
+        long minutes = sec / 60L;
+        sec %= 60L;
+        if (days > 0L) {
+            return days + "j " + hours + "h";
+        }
+        if (hours > 0L) {
+            return hours + "h " + minutes + "m";
+        }
+        if (minutes > 0L) {
+            return minutes + "m " + sec + "s";
+        }
+        return sec + "s";
+    }
+
+    public static final class Slot {
+        public final String event;
+        public final String map;
+        public final int hour;
+        public final int minute;
+        public final boolean auto;
+
+        public Slot(String event, String map, int hour, int minute, boolean auto) {
+            this.event = event;
+            this.map = map;
+            this.hour = hour;
+            this.minute = minute;
+            this.auto = auto;
+        }
+
+        public String displayName() {
+            EventType type = EventType.from(event);
+            return type != null ? type.display() : event;
+        }
+    }
+
+    public static final class Upcoming {
+        public final String name;
+        public final long atMillis;
+
+        public Upcoming(String name, long atMillis) {
+            this.name = name;
+            this.atMillis = atMillis;
+        }
     }
 }

@@ -16,11 +16,12 @@
 #   - item vanilla    : material: GOLDEN_APPLE
 #   - potion          : potion-type + level + splash
 #
-# ENCHANTEMENTS (sur armes/armures) :
+# ENCHANTEMENTS (sur armes/armures/arcs) :
 #   enchants:
-#     PROTECTION: 4        # Protection IV (alias)
-#     UNBREAKING: 3         # Solidite III (alias)
-#   Noms 1.8 aussi acceptes : PROTECTION_ENVIRONMENTAL, DURABILITY, SHARPNESS...
+#     PROTECTION: 4
+#     UNBREAKING: 3
+#     POWER: 3
+#     INFINITY: 1          # ou ARROW_INFINITE: 1 (Infinity 1.8)
 #
 # POTIONS (level 2 = niveau II) :
 #   potion-type: INSTANT_HEAL   (soin)
@@ -34,23 +35,36 @@
 # ============================================================
 
 gui:
-  title: "&8Kits"
+  title: "&8Mes kits"
   size: 54
-  slots:
+  # Vitre cyan (bordure + colonne centrale) et gris (fond)
+  border-data: 3
+  inner-data: 7
+  # Kits de grades a gauche
+  grade-slots:
     - 10
     - 11
     - 12
-    - 13
-    - 14
-    - 15
-    - 16
     - 19
     - 20
     - 21
-    - 22
+    - 28
+    - 29
+    - 30
+    - 37
+    - 38
+    - 39
+  # Kits boutique / autres a droite
+  kit-slots:
+    - 14
+    - 15
+    - 16
     - 23
     - 24
     - 25
+    - 32
+    - 33
+    - 34
 
 messages:
   purchased: "&aKit &e%kit% &adébloqué. Utilise &e/kit &apour le récupérer."
@@ -59,7 +73,7 @@ messages:
 kits:
   PVP:
     name: "&c&lKit PvP"
-    material: DIAMOND_SWORD
+    material: DIAMOND_CHESTPLATE
     cooldown-seconds: 86400
     lore:
       - "&7Equipement PvP de base."
@@ -91,6 +105,15 @@ kits:
           SHARPNESS: 5
           UNBREAKING: 3
           FIRE_ASPECT: 2
+      - material: BOW
+        amount: 1
+        enchants:
+          ARROW_DAMAGE: 3
+          ARROW_INFINITE: 1
+          DURABILITY: 3
+      - material: ARROW
+        amount: 1
+        stack: true
       - material: GOLDEN_APPLE
         amount: 8
         stack: true
@@ -112,7 +135,7 @@ kits:
 
   MINER:
     name: "&e&lKit Mineur"
-    material: DIAMOND_PICKAXE
+    material: CHEST
     cooldown-seconds: 43200
     lore:
       - "&7Outils pour miner."
@@ -149,7 +172,8 @@ kits:
 
   CHEVALIER:
     name: "&2&lKit Chevalier"
-    material: GOLD_HELMET
+    material: WOOL
+    data: 13
     min-grade: chevalier
     cooldown-seconds: 86400
     lore:
@@ -187,7 +211,8 @@ kits:
 
   MARQUIS:
     name: "&3&lKit Marquis"
-    material: DIAMOND_HELMET
+    material: WOOL
+    data: 9
     min-grade: marquis
     cooldown-seconds: 86400
     lore:
@@ -230,7 +255,8 @@ kits:
 
   SEIGNEUR:
     name: "&e&lKit Seigneur"
-    material: GOLD_CHESTPLATE
+    material: WOOL
+    data: 5
     min-grade: seigneur
     cooldown-seconds: 86400
     lore:
@@ -268,7 +294,8 @@ kits:
 
   EMPEREUR:
     name: "&6&lKit Empereur"
-    material: DIAMOND_CHESTPLATE
+    material: WOOL
+    data: 1
     min-grade: empereur
     cooldown-seconds: 86400
     lore:
@@ -307,7 +334,8 @@ kits:
 
   SUPREME:
     name: "&5&lKit Supreme"
-    material: NETHER_STAR
+    material: WOOL
+    data: 10
     min-grade: supreme
     cooldown-seconds: 86400
     lore:

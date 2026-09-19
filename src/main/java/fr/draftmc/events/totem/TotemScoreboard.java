@@ -16,9 +16,9 @@ import java.util.Map;
 
 public class TotemScoreboard {
     private static final String SEPARATOR = "&f&m--------------------";
-    private static final String ICON_TOP = "\u258C\u258C";
-    private static final String ICON_BROKEN = "\u25A1";
-    private static final String ICON_INTACT = "\u25A0";
+    /** Plus gros glyphe carré dispo en 1.8 (bloc plein). */
+    private static final String SQUARE = "\u2588";
+    private static final String HEX = "0123456789abcdef";
 
     private final TotemPlugin plugin;
     private BukkitTask task;
@@ -45,11 +45,13 @@ public class TotemScoreboard {
             task.cancel();
             task = null;
         }
-        Scoreboard main = Bukkit.getScoreboardManager().getMainScoreboard();
         for (Player player : Bukkit.getOnlinePlayers()) {
             Scoreboard board = player.getScoreboard();
             if (board != null && board.getObjective("totem") != null) {
-                player.setScoreboard(main);
+                Objective obj = board.getObjective("totem");
+                if (obj != null) {
+                    obj.unregister();
+                }
             }
         }
     }
@@ -63,6 +65,9 @@ public class TotemScoreboard {
                 plugin.getHost().getConfig().getString("scoreboard.title", "&c✺ &6Draftmc.fr &c✺"));
         List<String> lines = buildLines(totem);
         for (Player player : Bukkit.getOnlinePlayers()) {
+            if (inTournament(player)) {
+                continue;
+            }
             update(player, title, lines);
         }
     }
@@ -145,55 +150,107 @@ public class TotemScoreboard {
     }
 
     /**
-     * Du sommet du totem (Y le plus haut) vers la base. Celui qui casse
-     * le bloc du haut reste en haut de la liste, meme s'il casse en dernier.
+     * Intact : █ blanc | XX
+     * Cassé : █ gris | pseudo
      */
     private void addBlocRows(List<String> lines, Totem totem) {
         int size = totem.getSize();
-        int topIndex = size - 1;
-        for (int i = topIndex; i >= 0; i--) {
+        String empty = plugin.getConfig().getString("scoreboard.empty-block", "XX");
+        for (int i = size - 1; i >= 0; i--) {
             String breaker = totem.getBreakerAt(i);
             if (breaker == null || breaker.isEmpty()) {
-                lines.add(CC.color("&f" + ICON_INTACT));
-            } else if (i == topIndex) {
-                lines.add(CC.color("&7" + ICON_TOP + " &8| &f" + breaker));
+                lines.add(CC.color("&f&l" + SQUARE + " &8| &7" + empty));
             } else {
-                lines.add(CC.color("&f" + ICON_BROKEN + " &8| &7" + breaker));
+                lines.add(CC.color("&7&l" + SQUARE + " &8| &f" + clip(breaker, 14)));
             }
         }
     }
 
+    private String clip(String name, int max) {
+        if (name == null) {
+            return "";
+        }
+        return name.length() > max ? name.substring(0, max) : name;
+    }
+
     private void update(Player player, String title, List<String> lines) {
-        Scoreboard board = Bukkit.getScoreboardManager().getNewScoreboard();
-        Objective obj = board.registerNewObjective("totem", "dummy");
-        obj.setDisplaySlot(DisplaySlot.SIDEBAR);
+        Scoreboard board = player.getScoreboard();
+        boolean created = false;
+        if (board == null || board == Bukkit.getScoreboardManager().getMainScoreboard()
+                || board.getObjective("totem") == null) {
+            board = Bukkit.getScoreboardManager().getNewScoreboard();
+            created = true;
+        }
+        Objective obj = board.getObjective("totem");
+        if (obj == null) {
+            Objective sidebar = board.getObjective(DisplaySlot.SIDEBAR);
+            if (sidebar != null) {
+                sidebar.unregister();
+            }
+            obj = board.registerNewObjective("totem", "dummy");
+            obj.setDisplaySlot(DisplaySlot.SIDEBAR);
+        }
         obj.setDisplayName(truncate(CC.color(title), 32));
+        wipeOldLines(board);
 
         int score = lines.size();
         int index = 0;
         for (String rawLine : lines) {
-            String entry = invisibleEntry(index++);
+            String entry = uniqueEntry(index++);
             String[] parts = splitPreservingColor(rawLine, 16);
-            Team lineTeam = board.registerNewTeam("l" + index);
-            lineTeam.addEntry(entry);
+            String teamName = "l" + index;
+            Team lineTeam = board.getTeam(teamName);
+            if (lineTeam == null) {
+                lineTeam = board.registerNewTeam(teamName);
+            }
+            for (String old : new ArrayList<String>(lineTeam.getEntries())) {
+                if (!old.equals(entry)) {
+                    lineTeam.removeEntry(old);
+                    board.resetScores(old);
+                }
+            }
+            if (!lineTeam.hasEntry(entry)) {
+                lineTeam.addEntry(entry);
+            }
             lineTeam.setPrefix(parts[0]);
             lineTeam.setSuffix(parts[1]);
             obj.getScore(entry).setScore(score);
             score--;
         }
+        for (int extra = lines.size() + 1; extra <= 15; extra++) {
+            board.resetScores(uniqueEntry(extra - 1));
+            Team leftover = board.getTeam("l" + extra);
+            if (leftover != null) {
+                leftover.unregister();
+            }
+        }
         decorate(board, player);
-        player.setScoreboard(board);
+        if (created) {
+            player.setScoreboard(board);
+        }
     }
 
-    private String invisibleEntry(int index) {
+    private boolean inTournament(Player player) {
+        return plugin.getHost().tournament() != null
+                && plugin.getHost().tournament().manager().isParticipant(player.getUniqueId());
+    }
+
+    private void wipeOldLines(Scoreboard board) {
         ChatColor[] colors = ChatColor.values();
-        StringBuilder sb = new StringBuilder();
-        int n = index;
-        do {
-            sb.append(ChatColor.COLOR_CHAR).append(colors[n % colors.length].getChar());
-            n /= colors.length;
-        } while (n > 0);
-        return sb.toString();
+        for (int i = 0; i < colors.length; i++) {
+            board.resetScores("" + ChatColor.COLOR_CHAR + colors[i].getChar());
+        }
+        for (int i = 0; i < 16; i++) {
+            board.resetScores(uniqueEntry(i));
+            board.resetScores("" + ChatColor.COLOR_CHAR + HEX.charAt(i));
+        }
+    }
+
+    private String uniqueEntry(int index) {
+        return ChatColor.RESET.toString()
+                + ChatColor.COLOR_CHAR + HEX.charAt(index % 16)
+                + ChatColor.COLOR_CHAR + HEX.charAt((index / 16) % 16)
+                + ChatColor.RESET;
     }
 
     private String[] splitPreservingColor(String text, int limit) {
@@ -202,6 +259,9 @@ public class TotemScoreboard {
         }
         int splitIndex = limit;
         if (splitIndex < text.length() && Character.isLowSurrogate(text.charAt(splitIndex))) {
+            splitIndex--;
+        }
+        if (splitIndex < text.length() && Character.isHighSurrogate(text.charAt(splitIndex))) {
             splitIndex--;
         }
         if (splitIndex > 0 && text.charAt(splitIndex - 1) == ChatColor.COLOR_CHAR) {

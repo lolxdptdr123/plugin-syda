@@ -87,26 +87,46 @@ public class TeamFightScoreboard {
     }
 
     private void update(Player player, String title, List<String> lines) {
-        Scoreboard board = Bukkit.getScoreboardManager().getNewScoreboard();
-        Objective obj = board.registerNewObjective("teamfight", "dummy");
-        obj.setDisplaySlot(DisplaySlot.SIDEBAR);
+        Scoreboard board = player.getScoreboard();
+        if (board == null || board == Bukkit.getScoreboardManager().getMainScoreboard()
+                || board.getObjective("teamfight") == null) {
+            board = Bukkit.getScoreboardManager().getNewScoreboard();
+            player.setScoreboard(board);
+        }
+        Objective obj = board.getObjective("teamfight");
+        if (obj == null) {
+            obj = board.registerNewObjective("teamfight", "dummy");
+            obj.setDisplaySlot(DisplaySlot.SIDEBAR);
+        }
         obj.setDisplayName(truncate(CC.color(title), 32));
         int score = lines.size();
         int index = 0;
         for (String rawLine : lines) {
             String entry = invisibleEntry(index++);
             String[] parts = splitPreservingColor(rawLine, 16);
-            Team lineTeam = board.registerNewTeam("l" + index);
-            lineTeam.addEntry(entry);
+            String teamName = "l" + index;
+            Team lineTeam = board.getTeam(teamName);
+            if (lineTeam == null) {
+                lineTeam = board.registerNewTeam(teamName);
+            }
+            if (!lineTeam.hasEntry(entry)) {
+                lineTeam.addEntry(entry);
+            }
             lineTeam.setPrefix(parts[0]);
             lineTeam.setSuffix(parts[1]);
             obj.getScore(entry).setScore(score);
             score--;
         }
+        for (int extra = lines.size() + 1; extra <= 15; extra++) {
+            board.resetScores(invisibleEntry(extra - 1));
+            Team leftover = board.getTeam("l" + extra);
+            if (leftover != null) {
+                leftover.unregister();
+            }
+        }
         if (plugin.getHost().scoreboard() != null) {
             plugin.getHost().scoreboard().decorate(board, player);
         }
-        player.setScoreboard(board);
     }
 
     private String invisibleEntry(int index) {

@@ -117,16 +117,20 @@ public class FactionListener implements Listener {
         }
         Player victim = (Player) event.getEntity();
         Player damager = factions.damager(event.getDamager());
-        if (damager == null) {
+        if (damager == null || damager.equals(victim)) {
             return;
         }
         if (!plugin.getConfig().getBoolean("factions.friendly-fire", false)
                 && factions.sameFaction(damager, victim)) {
+            if (plugin.tournament() != null && plugin.tournament().manager() != null
+                    && plugin.tournament().manager().allowFactionFriendlyFire(damager, victim)) {
+                return;
+            }
             event.setCancelled(true);
         }
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onChat(AsyncPlayerChatEvent event) {
         factions.handleChat(event);
     }

@@ -1,0 +1,141 @@
+# Tournoi PvP Draftmc
+# /tournament ...  |  /status
+# Plusieurs arenes = plusieurs fights en parallele (1 fight / arene).
+
+prefix: "&8[&6Tournoi&8] &7"
+winner-tokens: 200
+countdown-seconds: 5
+cleanup-radius: 80
+cancel-ally-damage: true
+prevent-item-drop: true
+freeze-countdown: true
+
+restore:
+  health: 20
+  food: 20
+  saturation: 20
+  clear-inventory: true
+  clear-effects: true
+  gamemode: SURVIVAL
+  teleport: warp
+  warp: tournois
+
+# Coordonnees de sortie (prioritaires sur le warp). /tournament setlobby
+lobby: ""
+
+effects:
+  enabled: true
+  radius: 80
+  speed: 1
+  strength: 0
+  fire-resistance: true
+
+defaults:
+  team-size: 1
+  teams: 8
+  loser-bracket: false
+
+kit:
+  enabled: true
+  items:
+    - material: DIAMOND_HELMET
+      slot: helmet
+      enchantments:
+        - PROTECTION_ENVIRONMENTAL:4
+        - DURABILITY:3
+    - material: DIAMOND_CHESTPLATE
+      slot: chestplate
+      enchantments:
+        - PROTECTION_ENVIRONMENTAL:4
+        - DURABILITY:3
+    - material: DIAMOND_LEGGINGS
+      slot: leggings
+      enchantments:
+        - PROTECTION_ENVIRONMENTAL:4
+        - DURABILITY:3
+    - material: DIAMOND_BOOTS
+      slot: boots
+      enchantments:
+        - PROTECTION_ENVIRONMENTAL:4
+        - DURABILITY:3
+    - material: DIAMOND_SWORD
+      slot: hand
+      enchantments:
+        - DAMAGE_ALL:5
+        - DURABILITY:3
+        - FIRE_ASPECT:2
+    - material: BOW
+      enchantments:
+        - ARROW_DAMAGE:3
+        - ARROW_INFINITE:1
+    - material: ARROW
+      amount: 1
+    - material: GOLDEN_APPLE
+      amount: 8
+    - material: COOKED_BEEF
+      amount: 16
+    - material: POTION
+      potion-type: INSTANT_HEAL
+      potion-level: 2
+      splash: true
+      amount: 16
+
+messages:
+  created: "&aTournoi &e{name} &acréé &8(&7size &f{size}&7, LB &f{lb}&8)"
+  create-usage: "&e/tournament create <nom> <teamsize> <oui/non>"
+  create-ask-size: "&eTaille d'équipe ? &7(1 = 1v1, 2 = 2v2...) &8| &ccancel"
+  create-ask-lb: "&eLoser bracket ? &aoui &7/ &cnon"
+  create-cancelled: "&cCréation annulée."
+  create-invalid: "&cValeur invalide."
+  deleted: "&cTournoi &e{name} &csupprimé."
+  not-found: "&cTournoi introuvable."
+  already-exists: "&cCe nom existe déjà."
+  started: "&aLe tournoi &e{name} &adémarre !"
+  signup: "&aInscriptions ouvertes pour &e{name} &8(&7{size}v{size}&7, LB &f{lb}&8) &e/tournament team create"
+  launched: "&aLes fights du tournoi &e{name} &adémarrent !"
+  already-signup: "&cDes inscriptions sont déjà ouvertes."
+  not-signup: "&cAucune inscription en cours. &e/tournament start <nom>"
+  stopped: "&cTournoi &e{name} &carrêté."
+  already-running: "&cUn tournoi est déjà en cours."
+  not-running: "&cAucun tournoi en cours."
+  no-teams: "&cAucune équipe avec un joueur en ligne."
+  not-enough-arenas: "&cAucune arène configurée (spawn1 + spawn2)."
+  config-set: "&a{key} de &e{name} &a= &f{value}"
+  team-created: "&aÉquipe &e{team} &acréée."
+  team-added: "&a{player} &7ajouté à &e{team}&7."
+  team-removed: "&e{player} &7retiré de &e{team}&7."
+  already-in-team: "&cTu es déjà dans une équipe."
+  need-team: "&cCrée une équipe : &e/tournament team create <nom>"
+  not-leader: "&cSeul le chef d'équipe peut faire ça."
+  target-in-team: "&e{player} &cest déjà dans une équipe."
+  invite-self: "&cTu ne peux pas t'inviter toi-même."
+  invite-sent: "&aInvitation envoyée à &e{player}&a."
+  invite-received: "&e{leader} &7t'invite dans &6{team}&7."
+  invite-accepted: "&aTu as rejoint &e{team}&a."
+  invite-denied: "&7Invitations refusées."
+  no-invite: "&cAucune invitation."
+  team-full: "&cÉquipe complète (&e{size}&c joueurs)."
+  member-joined: "&e{player} &7a rejoint &6{team}&7."
+  member-left: "&e{player} &7a quitté &6{team}&7."
+  left-team: "&7Tu as quitté &e{team}&7."
+  team-disbanded: "&cL'équipe &e{team} &ca été dissoute."
+  kicked: "&cTu as été expulsé de &e{team}&c."
+  lobby-set: "&aPoint de TP (morts / fin de fight) enregistré."
+  arena-created: "&aArène &e{arena} &acréée. Définis spawn1, spawn2 et spectator."
+  arena-deleted: "&cArène &e{arena} &csupprimée."
+  arena-spawn: "&a{which} de &e{arena} &adéfini."
+  match-start: "&e{a} &7vs &e{b} &8(&7{arena}&8)"
+  match-win: "&a{winner} &7gagne contre &c{loser}&7 !"
+  eliminated: "&c{team} &7est éliminée."
+  losers: "&e{team} &7 bascule dans le Loser Bracket."
+  champion: "&6&l{team} &agagne le tournoi ! &7(+{tokens} tokens / joueur)"
+  bye: "&e{team} &7passe au tour suivant (bye)."
+  no-status: "&7Aucun tournoi en cours."
+  status-header: "&8&m-----&r &6Tournoi &e{name} &8&m-----"
+  status-waiting: "&7En attente : &f{team}"
+  status-fight: "&cEn fight : &f{team} &7vs &e{opponent} &8({arena})"
+  status-empty: "&7Plus aucune équipe restante."
+
+arenas: {}
+teams: {}
+tournaments: {}

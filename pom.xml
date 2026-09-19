@@ -60,6 +60,13 @@
                 <version>${spigot.version}</version>
                 <scope>provided</scope>
             </dependency>
+            <!-- spigot-api 1.8.8 demande bungeecord-chat:1.8-SNAPSHOT, retiré des dépôts.
+                 1.16-R0.4 est sur Maven Central et garde HoverEvent(BaseComponent[]). -->
+            <dependency>
+                <groupId>net.md-5</groupId>
+                <artifactId>bungeecord-chat</artifactId>
+                <version>1.16-R0.4</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -71,6 +78,18 @@
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot-api</artifactId>
             <version>${spigot.version}</version>
+            <scope>provided</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>net.md-5</groupId>
+                    <artifactId>bungeecord-chat</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>net.md-5</groupId>
+            <artifactId>bungeecord-chat</artifactId>
+            <version>1.16-R0.4</version>
             <scope>provided</scope>
         </dependency>
 

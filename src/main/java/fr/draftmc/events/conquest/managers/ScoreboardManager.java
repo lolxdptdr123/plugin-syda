@@ -1,27 +1,20 @@
 package fr.draftmc.events.conquest.managers;
 
 import fr.draftmc.events.conquest.ConquestPlugin;
+import fr.draftmc.events.conquest.model.ConquestState;
 import fr.draftmc.events.conquest.model.Zone;
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
-import org.bukkit.scoreboard.DisplaySlot;
-import org.bukkit.scoreboard.Objective;
-import org.bukkit.scoreboard.Scoreboard;
 
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
 /**
- * Sidebar live : etat de chaque zone (proprietaire courant, verrouillage)
- * et total de points de la faction du joueur. Rafraichi chaque seconde.
- *
- * NOTE 1.8 : chaque ligne de scoreboard est en realite un "faux joueur"
- * limite a 16 caracteres visibles - les lignes sont tronquees en
- * consequence (limitation du protocole, pas du plugin).
+ * Plus de sidebar separee : les lignes sont injectees dans le scoreboard Draftmc.
  */
 public class ScoreboardManager {
 
@@ -34,8 +27,6 @@ public class ScoreboardManager {
 
     public void start() {
         stop();
-        if (!plugin.getConfig().getBoolean("scoreboard.enabled", true)) return;
-        task = Bukkit.getScheduler().runTaskTimer(plugin.getHost(), this::tick, 0L, 20L);
     }
 
     public void stop() {
@@ -43,72 +34,77 @@ public class ScoreboardManager {
             task.cancel();
             task = null;
         }
-        Scoreboard main = Bukkit.getScoreboardManager().getMainScoreboard();
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            player.setScoreboard(main);
-        }
     }
 
-    private void tick() {
-        String title = plugin.getConfig().getString("scoreboard.title", "&6&lCONQUEST");
-        int pointsToWin = plugin.getConfig().getInt("general.points-to-win", 100);
+    public boolean active() {
+        ConquestState state = plugin.getConquestManager().getState();
+        return state == ConquestState.RUNNING || state == ConquestState.STARTING;
+    }
 
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            String factionId = plugin.getEventFactionHook().getFactionId(player);
-            int total = plugin.getConquestManager().getFactionTotal(factionId);
+    public List<String> linesFor(Player player) {
+        List<String> lines = new ArrayList<String>();
+        ConquestManager mgr = plugin.getConquestManager();
+        if (!active()) {
+            return lines;
+        }
+        if (mgr.getState() == ConquestState.STARTING) {
+            lines.add(ChatColor.GOLD + "Conquest " + ChatColor.YELLOW + mgr.getCountdownSecondsLeft() + "s");
+        } else {
+            lines.add(ChatColor.GOLD + "Conquest");
+        }
+        addTopLines(lines);
+        String factionId = plugin.getEventFactionHook().getFactionId(player);
+        addZoneGrid(lines, factionId);
+        return lines;
+    }
 
-            List<String> lines = new ArrayList<>();
-            lines.add(ChatColor.GRAY + "Objectif: " + pointsToWin + "pts");
-            lines.add(" ");
-
-            for (Zone zone : plugin.getZoneManager().getZones().values()) {
-                lines.add(buildZoneLine(zone, factionId));
+    private void addTopLines(List<String> lines) {
+        List<Map.Entry<String, Integer>> ranked = new ArrayList<Map.Entry<String, Integer>>(
+                plugin.getConquestManager().getAllTotals().entrySet());
+        Collections.sort(ranked, new Comparator<Map.Entry<String, Integer>>() {
+            @Override
+            public int compare(Map.Entry<String, Integer> a, Map.Entry<String, Integer> b) {
+                return b.getValue().intValue() - a.getValue().intValue();
             }
-
-            lines.add("  ");
-            lines.add(ChatColor.GOLD + "Total: " + total + "/" + pointsToWin);
-
-            update(player, title, lines);
+        });
+        for (int i = 0; i < 3; i++) {
+            if (i < ranked.size()) {
+                Map.Entry<String, Integer> entry = ranked.get(i);
+                String name = plugin.getEventFactionHook().getFactionDisplayName(entry.getKey());
+                name = ChatColor.stripColor(name);
+                if (name.length() > 8) {
+                    name = name.substring(0, 8);
+                }
+                lines.add(ChatColor.YELLOW + "#" + (i + 1) + " " + ChatColor.WHITE + name
+                        + ChatColor.GRAY + " " + entry.getValue());
+            } else {
+                lines.add(ChatColor.GRAY + "#" + (i + 1) + " -");
+            }
         }
     }
 
-    /** N'affiche QUE les points de la faction du joueur qui regarde ce scoreboard, jamais ceux des autres factions. */
-    private String buildZoneLine(Zone zone, String viewerFactionId) {
+    private void addZoneGrid(List<String> lines, String factionId) {
         int max = plugin.getConfig().getInt("general.zone-max-points", 25);
-        int myPoints = zone.getPoints(viewerFactionId);
-
-        return zone.getDisplayName() + ChatColor.GRAY + " " + myPoints + "/" + max;
-    }
-
-    private void update(Player player, String title, List<String> lines) {
-        Scoreboard board = Bukkit.getScoreboardManager().getNewScoreboard();
-        Objective obj = board.registerNewObjective("conquest", "dummy");
-        obj.setDisplaySlot(DisplaySlot.SIDEBAR);
-        obj.setDisplayName(truncate(ChatColor.translateAlternateColorCodes('&', title), 32));
-
-        Set<String> used = new HashSet<>();
-        int score = lines.size();
-        for (String rawLine : lines) {
-            String entry = truncate(rawLine, 16);
-            while (used.contains(entry)) {
-                entry = entry + ChatColor.RESET;
-                if (entry.length() > 16) entry = entry.substring(0, 16);
+        List<Zone> zones = new ArrayList<Zone>(plugin.getZoneManager().getZones().values());
+        if (zones.size() == 4) {
+            lines.add(cell(zones.get(0), factionId, max) + ChatColor.DARK_GRAY + " | "
+                    + cell(zones.get(2), factionId, max));
+            lines.add(cell(zones.get(1), factionId, max) + ChatColor.DARK_GRAY + " | "
+                    + cell(zones.get(3), factionId, max));
+            return;
+        }
+        for (int i = 0; i < zones.size(); i += 2) {
+            String left = cell(zones.get(i), factionId, max);
+            if (i + 1 < zones.size()) {
+                lines.add(left + ChatColor.DARK_GRAY + " | " + cell(zones.get(i + 1), factionId, max));
+            } else {
+                lines.add(left);
             }
-            used.add(entry);
-            obj.getScore(entry).setScore(score);
-            score--;
         }
-        decorate(board, player);
-        player.setScoreboard(board);
     }
 
-    private String truncate(String s, int max) {
-        return s.length() > max ? s.substring(0, max) : s;
-    }
-
-    private void decorate(Scoreboard board, Player player) {
-        if (plugin.getHost().scoreboard() != null) {
-            plugin.getHost().scoreboard().decorate(board, player);
-        }
+    private String cell(Zone zone, String factionId, int max) {
+        int pts = zone.getPoints(factionId);
+        return zone.getColor() + zone.getName() + ChatColor.GRAY + " " + pts + "/" + max;
     }
 }

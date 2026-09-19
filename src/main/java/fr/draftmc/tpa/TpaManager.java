@@ -83,14 +83,10 @@ public class TpaManager implements CommandExecutor, TabCompleter, Listener {
             plugin.msg(from, "&cCe joueur est en combat.");
             return;
         }
-        if (plugin.denyTpCooldown(from)) {
-            return;
-        }
         int expire = Math.max(5, plugin.getConfig().getInt("tpa.expire-seconds", 60));
         TpaRequest request = new TpaRequest(from.getUniqueId(), here,
                 System.currentTimeMillis() + expire * 1000L);
         incoming.put(target.getUniqueId(), request);
-        plugin.startTpCooldown(from);
         if (here) {
             plugin.msg(from, "&aDemande envoyée à &e" + target.getName() + "&a pour qu'il vienne à toi.");
             plugin.msg(target, "&e" + from.getName() + " &7veut que tu te téléportes à lui.");
@@ -127,12 +123,17 @@ public class TpaManager implements CommandExecutor, TabCompleter, Listener {
             incoming.put(player.getUniqueId(), request);
             return;
         }
-        plugin.data().setString(moving.getUniqueId(), "back_location",
-                fr.draftmc.util.Locations.serialize(moving.getLocation()));
-        moving.teleport(dest);
-        plugin.startTpCooldown(moving);
-        plugin.msg(moving, "&aTéléporté vers &e" + dest.getName() + "&a.");
-        plugin.msg(dest, "&e" + moving.getName() + " &as'est téléporté.");
+        final Player destPlayer = dest;
+        plugin.teleports().request(moving, dest.getLocation(),
+                "&aTéléporté vers &e" + dest.getName() + "&a.",
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        if (destPlayer.isOnline()) {
+                            plugin.msg(destPlayer, "&e" + moving.getName() + " &as'est téléporté.");
+                        }
+                    }
+                });
     }
 
     private void deny(Player player) {

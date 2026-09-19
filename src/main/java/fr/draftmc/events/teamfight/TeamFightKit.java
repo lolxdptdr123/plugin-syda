@@ -1,5 +1,6 @@
 package fr.draftmc.events.teamfight;
 
+import fr.draftmc.util.CC;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.enchantments.Enchantment;
@@ -15,6 +16,7 @@ import org.bukkit.potion.PotionType;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class TeamFightKit {
@@ -34,10 +36,10 @@ public class TeamFightKit {
             return;
         }
         for (Object obj : rawItems) {
-            if (!(obj instanceof Map)) {
+            Map<String, Object> map = asMap(obj);
+            if (map == null) {
                 continue;
             }
-            Map<String, Object> map = (Map<String, Object>) obj;
             try {
                 Material material = Material.valueOf(String.valueOf(map.get("material")));
                 int amount = toInt(map.get("amount"), 1);
@@ -47,7 +49,9 @@ public class TeamFightKit {
                         ? String.valueOf(map.get("potion-type")).toUpperCase() : null;
                 int potionLevel = toInt(map.get("potion-level"), 1);
                 boolean splash = map.get("splash") instanceof Boolean && ((Boolean) map.get("splash")).booleanValue();
-                items.add(new KitItem(material, amount, slot, enchantments, potionType, potionLevel, splash));
+                String name = map.get("name") != null ? String.valueOf(map.get("name")) : null;
+                List<String> lore = readLore(map.get("lore"));
+                items.add(new KitItem(material, amount, slot, enchantments, potionType, potionLevel, splash, name, lore));
             } catch (IllegalArgumentException e) {
                 plugin.getLogger().warning("[TeamFight] Materiau de kit ignore : " + map.get("material"));
             }
@@ -93,6 +97,7 @@ public class TeamFightKit {
                 player.updateInventory();
             }
         }
+        ensureBowInfinity(player);
         applyArenaEffects(player);
     }
 
@@ -149,6 +154,7 @@ public class TeamFightKit {
 
     public void saveFrom(Player player) {
         PlayerInventory inv = player.getInventory();
+        plugin.getConfig().set("kit.use-saved", true);
         plugin.getConfig().set("kit.saved", null);
         ConfigurationSection section = plugin.getConfig().createSection("kit.saved");
         for (int i = 0; i < 36; i++) {
@@ -173,6 +179,9 @@ public class TeamFightKit {
     }
 
     private boolean giveSaved(Player player) {
+        if (!plugin.getConfig().getBoolean("kit.use-saved", false)) {
+            return false;
+        }
         ConfigurationSection section = plugin.getConfig().getConfigurationSection("kit.saved");
         if (section == null) {
             return false;
@@ -216,6 +225,7 @@ public class TeamFightKit {
                             stack.setItemMeta(potionMeta);
                         }
                     }
+                    applyName(stack, item);
                     stacks.add(stack);
                 }
             } catch (IllegalArgumentException e) {
@@ -226,18 +236,148 @@ public class TeamFightKit {
         ItemStack stack = new ItemStack(item.material, item.amount);
         if (item.enchantments != null) {
             for (Object encObj : item.enchantments) {
-                if (!(encObj instanceof Map)) {
+                Map<String, Object> enc = asMap(encObj);
+                if (enc == null || enc.get("type") == null) {
                     continue;
                 }
-                Map<String, Object> enc = (Map<String, Object>) encObj;
-                Enchantment enchantment = Enchantment.getByName(String.valueOf(enc.get("type")).toUpperCase());
+                Enchantment enchantment = enchantmentOf(String.valueOf(enc.get("type")));
                 if (enchantment != null) {
                     stack.addUnsafeEnchantment(enchantment, toInt(enc.get("level"), 1));
+                } else {
+                    plugin.getLogger().warning("[TeamFight] Enchant ignore : " + enc.get("type"));
                 }
             }
         }
+        applyName(stack, item);
         stacks.add(stack);
         return stacks;
+    }
+
+    private void applyName(ItemStack stack, KitItem item) {
+        if (stack == null || item == null) {
+            return;
+        }
+        if ((item.name == null || item.name.isEmpty()) && (item.lore == null || item.lore.isEmpty())) {
+            return;
+        }
+        ItemMeta meta = stack.getItemMeta();
+        if (meta == null) {
+            return;
+        }
+        if (item.name != null && !item.name.isEmpty()) {
+            meta.setDisplayName(CC.color(item.name));
+        }
+        if (item.lore != null && !item.lore.isEmpty()) {
+            List<String> colored = new ArrayList<String>();
+            for (int i = 0; i < item.lore.size(); i++) {
+                colored.add(CC.color(item.lore.get(i)));
+            }
+            meta.setLore(colored);
+        }
+        stack.setItemMeta(meta);
+    }
+
+    private Enchantment enchantmentOf(String raw) {
+        if (raw == null || raw.isEmpty()) {
+            return null;
+        }
+        String key = raw.toUpperCase(Locale.ROOT).replace(" ", "_");
+        if ("INFINITY".equals(key) || "ARROW_INFINITY".equals(key) || "INFINI".equals(key)
+                || key.contains("INFIN")) {
+            return infinityEnchant();
+        }
+        if ("PUNCH".equals(key)) {
+            key = "ARROW_KNOCKBACK";
+        } else if ("POWER".equals(key)) {
+            key = "ARROW_DAMAGE";
+        } else if ("FLAME".equals(key)) {
+            key = "ARROW_FIRE";
+        } else if ("UNBREAKING".equals(key)) {
+            key = "DURABILITY";
+        } else if ("SHARPNESS".equals(key)) {
+            key = "DAMAGE_ALL";
+        } else if ("PROTECTION".equals(key) || "PROT".equals(key)) {
+            key = "PROTECTION_ENVIRONMENTAL";
+        }
+        Enchantment byName = Enchantment.getByName(key);
+        if (byName != null) {
+            return byName;
+        }
+        for (Enchantment enchantment : Enchantment.values()) {
+            if (enchantment.getName() != null && enchantment.getName().equalsIgnoreCase(key)) {
+                return enchantment;
+            }
+        }
+        return null;
+    }
+
+    private void ensureBowInfinity(Player player) {
+        if (player == null) {
+            return;
+        }
+        PlayerInventory inv = player.getInventory();
+        ItemStack[] contents = inv.getContents();
+        if (contents != null) {
+            for (int i = 0; i < contents.length; i++) {
+                applyBowInfinity(contents[i]);
+            }
+        }
+        applyBowInfinity(inv.getItemInHand());
+        player.updateInventory();
+    }
+
+    private void applyBowInfinity(ItemStack stack) {
+        if (stack == null || stack.getType() != Material.BOW) {
+            return;
+        }
+        Enchantment infinity = infinityEnchant();
+        if (infinity == null) {
+            return;
+        }
+        stack.addUnsafeEnchantment(infinity, 1);
+        ItemMeta meta = stack.getItemMeta();
+        if (meta != null) {
+            meta.addEnchant(infinity, 1, true);
+            stack.setItemMeta(meta);
+        }
+    }
+
+    private Enchantment infinityEnchant() {
+        Enchantment byField = Enchantment.ARROW_INFINITE;
+        if (byField != null) {
+            return byField;
+        }
+        Enchantment byName = Enchantment.getByName("ARROW_INFINITE");
+        if (byName != null) {
+            return byName;
+        }
+        return Enchantment.getByName("INFINITY");
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> asMap(Object obj) {
+        if (obj instanceof Map) {
+            return (Map<String, Object>) obj;
+        }
+        if (obj instanceof ConfigurationSection) {
+            return ((ConfigurationSection) obj).getValues(false);
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> readLore(Object raw) {
+        List<String> lore = new ArrayList<String>();
+        if (!(raw instanceof List)) {
+            return lore;
+        }
+        List<?> list = (List<?>) raw;
+        for (int i = 0; i < list.size(); i++) {
+            if (list.get(i) != null) {
+                lore.add(String.valueOf(list.get(i)));
+            }
+        }
+        return lore;
     }
 
     private int toInt(Object o, int def) {
@@ -259,9 +399,11 @@ public class TeamFightKit {
         final String potionType;
         final int potionLevel;
         final boolean splash;
+        final String name;
+        final List<String> lore;
 
         KitItem(Material material, int amount, String slot, List<?> enchantments,
-                String potionType, int potionLevel, boolean splash) {
+                String potionType, int potionLevel, boolean splash, String name, List<String> lore) {
             this.material = material;
             this.amount = amount;
             this.slot = slot;
@@ -269,6 +411,8 @@ public class TeamFightKit {
             this.potionType = potionType;
             this.potionLevel = potionLevel;
             this.splash = splash;
+            this.name = name;
+            this.lore = lore;
         }
     }
 }

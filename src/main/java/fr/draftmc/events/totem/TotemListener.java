@@ -5,14 +5,18 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
+import org.bukkit.entity.ThrownPotion;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.PotionSplashEvent;
+import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.PotionMeta;
@@ -80,6 +84,63 @@ public class TotemListener implements Listener {
         }
         ItemStack hand = player.getItemInHand();
         return hand != null && hand.getType() == required;
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onEnemyPunch(EntityDamageByEntityEvent event) {
+        if (!plugin.getConfig().getBoolean("anti-punch.enabled", true)) {
+            return;
+        }
+        if (!(event.getEntity() instanceof Player)) {
+            return;
+        }
+        Player victim = (Player) event.getEntity();
+        if (!(event.getDamager() instanceof Projectile) || event.getDamager() instanceof ThrownPotion) {
+            return;
+        }
+        Player attacker = attackerOf(event.getDamager());
+        if (attacker == null || attacker.getUniqueId().equals(victim.getUniqueId())) {
+            return;
+        }
+        if (!plugin.getTotemManager().inAntiPunchZone(victim)
+                && !plugin.getTotemManager().inAntiPunchZone(attacker)) {
+            return;
+        }
+        event.setCancelled(true);
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onEnemyRod(PlayerFishEvent event) {
+        if (!plugin.getConfig().getBoolean("anti-punch.enabled", true)) {
+            return;
+        }
+        if (event.getState() != PlayerFishEvent.State.CAUGHT_ENTITY
+                || !(event.getCaught() instanceof Player)) {
+            return;
+        }
+        Player victim = (Player) event.getCaught();
+        Player attacker = event.getPlayer();
+        if (attacker.getUniqueId().equals(victim.getUniqueId())) {
+            return;
+        }
+        if (!plugin.getTotemManager().inAntiPunchZone(victim)
+                && !plugin.getTotemManager().inAntiPunchZone(attacker)) {
+            return;
+        }
+        event.setCancelled(true);
+    }
+
+    private Player attackerOf(org.bukkit.entity.Entity entity) {
+        if (entity instanceof Player) {
+            return (Player) entity;
+        }
+        if (entity instanceof Projectile) {
+            Object shooter = ((Projectile) entity).getShooter();
+            if (shooter instanceof Player) {
+                return (Player) shooter;
+            }
+        }
+        return null;
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)

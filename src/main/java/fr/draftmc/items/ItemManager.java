@@ -647,6 +647,11 @@ public class ItemManager implements Listener, CommandExecutor {
 
                 event.setCancelled(true);
                 useOrb(player, sid, sec);
+            } else if (sec != null &&
+                    "TOP_POINTS".equals(sec.getString("ability"))) {
+
+                event.setCancelled(true);
+                useTopPoints(player, event.getItem(), sec);
             }
         }
     }
@@ -719,5 +724,28 @@ public class ItemManager implements Listener, CommandExecutor {
                 player,
                 "&aOrbe utilisée !"
         );
+    }
+
+    private void useTopPoints(Player player, ItemStack item, ConfigurationSection sec) {
+        if (plugin.factions() == null) {
+            plugin.msg(player, "&cSystème de factions indisponible.");
+            return;
+        }
+        String fac = plugin.factions().factionOf(player);
+        if (fac == null || fac.isEmpty()) {
+            plugin.msg(player, "&cTu dois être dans une faction pour utiliser ça.");
+            return;
+        }
+        int amount = Math.max(1, sec.getInt("points", 1));
+        if (item != null && item.getAmount() > 1) {
+            item.setAmount(item.getAmount() - 1);
+        } else {
+            player.setItemInHand(null);
+        }
+        plugin.factions().addTopPoints(fac, amount);
+        String name = plugin.factions().displayName(fac);
+        plugin.msg(player, "&a+" + amount + " point(s) classement pour &e" + name + "&a.");
+        Bukkit.broadcastMessage(plugin.prefix() + org.bukkit.ChatColor.translateAlternateColorCodes('&',
+                "&e" + player.getName() + " &7ajoute &6" + amount + " pt(s) classement &7à &e" + name + "&7."));
     }
 }

@@ -1,6 +1,4 @@
 package fr.draftmc.events.conquest.managers;
-import fr.draftmc.util.NmsTitles;
-
 import fr.draftmc.events.conquest.ConquestPlugin;
 import fr.draftmc.events.conquest.model.ConquestState;
 import fr.draftmc.events.conquest.model.Zone;
@@ -177,7 +175,6 @@ public class CaptureManager {
         plugin.getMessageManager().broadcast("capture-point", placeholders);
 
         playSound(captor, plugin.getConfig().getString("sounds.on-zone-point", "LEVEL_UP"));
-        sendZoneCapturedTitle(zone, factionName);
 
         if (justReachedMax) {
             // Cette faction precise a atteint SON plafond sur CETTE zone :
@@ -193,21 +190,6 @@ public class CaptureManager {
         plugin.getConquestManager().checkVictory();
         plugin.getStorageManager().saveAsync();
         return justReachedMax;
-    }
-
-    private void sendZoneCapturedTitle(Zone zone, String factionName) {
-        if (!plugin.getConfig().getBoolean("titles.enabled", true)) return;
-
-        String title = plugin.getConfig().getString("titles.zone-captured.title", "&6{zone}")
-                .replace("{zone}", zone.getDisplayName() + ChatColor.RESET);
-        String subtitle = plugin.getConfig().getString("titles.zone-captured.subtitle", "&7capturee par &f{faction}")
-                .replace("{faction}", factionName);
-        title = ChatColor.translateAlternateColorCodes('&', title);
-        subtitle = ChatColor.translateAlternateColorCodes('&', subtitle);
-
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            NmsTitles.send(p, title, subtitle, 10, 40, 10);
-        }
     }
 
     // ================= Entree/sortie de zone (appele par les listeners) =================

@@ -38,7 +38,6 @@ public class RankUpManager implements CommandExecutor, Listener {
         DEFAULT_COSTS.put("seigneur", 500000.0);
         DEFAULT_COSTS.put("empereur", 1500000.0);
         DEFAULT_COSTS.put("supreme", 5000000.0);
-        DEFAULT_COSTS.put("star", 15000000.0);
     }
 
     private final Draftmc plugin;
@@ -81,7 +80,7 @@ public class RankUpManager implements CommandExecutor, Listener {
 
     private List<String> defaultLadder() {
         return new ArrayList<String>(java.util.Arrays.asList(
-                "default", "chevalier", "marquis", "seigneur", "empereur", "supreme", "star"
+                "default", "chevalier", "marquis", "seigneur", "empereur", "supreme"
         ));
     }
 
@@ -107,17 +106,32 @@ public class RankUpManager implements CommandExecutor, Listener {
     }
 
     public String currentRank(Player player) {
-        String group = normalizeGroup(plugin.grades().group(player));
-        if (ladderIndex(group) >= 0) {
-            return group;
-        }
-        // Groupe hors ladder → début de la progression (évite "grade max" à tort)
         List<String> ladder = ladder();
-        return ladder.isEmpty() ? "default" : ladder.get(0);
+        String best = ladder.isEmpty() ? "default" : ladder.get(0);
+        int bestIndex = 0;
+        if (plugin.grades() != null) {
+            for (String group : plugin.grades().allGroups(player)) {
+                String normalized = normalizeGroup(group);
+                if (plugin.grades().isStaffGroup(normalized)) {
+                    continue;
+                }
+                int index = ladderIndex(normalized);
+                if (index > bestIndex) {
+                    bestIndex = index;
+                    best = ladder.get(index);
+                }
+            }
+        }
+        return best;
     }
 
     public String nextRank(Player player) {
         return nextRank(currentRank(player));
+    }
+
+    public boolean isPurchasable(String rank) {
+        String key = normalizeGroup(rank);
+        return plugin.getConfig().getBoolean("rankup.ranks." + key + ".purchasable", true);
     }
 
     public String nextRank(String current) {
@@ -129,7 +143,11 @@ public class RankUpManager implements CommandExecutor, Listener {
         if (index + 1 >= ladder.size()) {
             return null;
         }
-        return ladder.get(index + 1);
+        String next = ladder.get(index + 1);
+        if (!isPurchasable(next)) {
+            return null;
+        }
+        return next;
     }
 
     public String previousRank(String rank) {
@@ -193,6 +211,9 @@ public class RankUpManager implements CommandExecutor, Listener {
         if (targetIndex <= 0) {
             return false;
         }
+        if (!isPurchasable(targetRank)) {
+            return false;
+        }
         int currentIndex = ladderIndex(currentRank(player));
         if (currentIndex < 0) {
             currentIndex = 0;
@@ -242,19 +263,46 @@ public class RankUpManager implements CommandExecutor, Listener {
 
     public boolean setGroup(Player player, String group) {
         group = normalizeGroup(group);
+        if (plugin.grades() != null && plugin.grades().isStaffGroup(group)) {
+            return false;
+        }
         if (Bukkit.getPluginManager().getPlugin("LuckPerms") != null) {
-            return Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + player.getName() + " parent set " + group);
+            List<String> ladder = ladder();
+            for (int i = 0; i < ladder.size(); i++) {
+                String rank = ladder.get(i);
+                if ("default".equals(rank) || rank.equals(group)) {
+                    continue;
+                }
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(),
+                        "lp user " + player.getName() + " parent remove " + rank);
+            }
+            if (!"default".equals(group)) {
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(),
+                        "lp user " + player.getName() + " parent add " + group);
+            }
+            return true;
         }
         if (vaultPerm == null) {
             hookVault();
         }
         if (vaultPerm != null && vaultPerm.hasGroupSupport()) {
             try {
-                String current = vaultPerm.getPrimaryGroup(player);
-                if (current != null && !current.isEmpty() && !current.equalsIgnoreCase(group)) {
-                    vaultPerm.playerRemoveGroup(player, current);
+                String[] groups = vaultPerm.getPlayerGroups(player);
+                if (groups != null) {
+                    for (int i = 0; i < groups.length; i++) {
+                        String current = normalizeGroup(groups[i]);
+                        if (plugin.grades() != null && plugin.grades().isStaffGroup(current)) {
+                            continue;
+                        }
+                        if (ladderIndex(current) >= 0 && !current.equals(group) && !"default".equals(current)) {
+                            vaultPerm.playerRemoveGroup(player, groups[i]);
+                        }
+                    }
                 }
-                return vaultPerm.playerAddGroup(player, group);
+                if (!"default".equals(group)) {
+                    return vaultPerm.playerAddGroup(player, group);
+                }
+                return true;
             } catch (Throwable ignored) {
             }
         }
@@ -274,6 +322,10 @@ public class RankUpManager implements CommandExecutor, Listener {
         targetRank = normalizeGroup(targetRank);
         if (!isEnabled()) {
             plugin.msg(player, "&cLe système de rankup est désactivé.");
+            return false;
+        }
+        if (!isPurchasable(targetRank)) {
+            plugin.msg(player, "&cCe grade n'est pas achetable.");
             return false;
         }
         if (!canRankUpTo(player, targetRank)) {
@@ -453,7 +505,7 @@ public class RankUpManager implements CommandExecutor, Listener {
         holder.inventory = inv;
         fill(inv);
 
-        List<String> ladder = ladder();
+        List<String> ranks = shopRanks();
         List<Integer> slots = plugin.getConfig().getIntegerList("rankup.gui.slots");
         if (slots == null || slots.isEmpty()) {
             slots = java.util.Arrays.asList(10, 12, 14, 16, 21, 23, 25, 31, 33);
@@ -462,10 +514,9 @@ public class RankUpManager implements CommandExecutor, Listener {
         String current = currentRank(player);
         int currentIndex = ladderIndex(current);
 
-        for (int i = 1; i < ladder.size() && i - 1 < slots.size(); i++) {
-            String rank = ladder.get(i);
-            int slot = slots.get(i - 1);
-            inv.setItem(slot, rankIcon(player, rank, currentIndex, i));
+        for (int i = 0; i < ranks.size() && i < slots.size(); i++) {
+            String rank = ranks.get(i);
+            inv.setItem(slots.get(i), rankIcon(player, rank, currentIndex, ladderIndex(rank)));
         }
 
         inv.setItem(4, new ItemBuilder(Material.BOOK)
@@ -508,6 +559,9 @@ public class RankUpManager implements CommandExecutor, Listener {
             if (material == null) {
                 material = Material.EMERALD;
             }
+        } else if (!isPurchasable(rank)) {
+            lore.add("&cNon achetable");
+            material = Material.BARRIER;
         } else if (currentIndex + 1 == rankIndex) {
             lore.add("&eClique pour rankup !");
         } else {
@@ -543,18 +597,18 @@ public class RankUpManager implements CommandExecutor, Listener {
             return;
         }
 
-        List<String> ladder = ladder();
+        List<String> ranks = shopRanks();
         List<Integer> slots = plugin.getConfig().getIntegerList("rankup.gui.slots");
         if (slots == null || slots.isEmpty()) {
             slots = java.util.Arrays.asList(10, 12, 14, 16, 21, 23, 25, 31, 33);
         }
 
         int index = slots.indexOf(slot);
-        if (index < 0 || index + 1 >= ladder.size()) {
+        if (index < 0 || index >= ranks.size()) {
             return;
         }
 
-        String targetRank = ladder.get(index + 1);
+        String targetRank = ranks.get(index);
         if (rankUpTo(player, targetRank)) {
             openGui(player);
         }
@@ -644,6 +698,18 @@ public class RankUpManager implements CommandExecutor, Listener {
             return "Joueurs proches";
         }
         return "";
+    }
+
+    private List<String> shopRanks() {
+        List<String> out = new ArrayList<String>();
+        List<String> ladder = ladder();
+        for (int i = 1; i < ladder.size(); i++) {
+            String rank = ladder.get(i);
+            if (isPurchasable(rank)) {
+                out.add(rank);
+            }
+        }
+        return out;
     }
 
     private void fill(Inventory inv) {

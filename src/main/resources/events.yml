@@ -14,6 +14,7 @@ top-points:
   battleroyal: 10
   masterkill: 10
   teamfight: 15
+  largage: 1
   member-message: "&aVotre faction a reçu &e{points} points PVP !"
 
 types:
@@ -74,26 +75,39 @@ types:
       default:
         display: Default
         world: world
+  largage:
+    display: "&6Largage"
+    maps:
+      default:
+        display: Default
+        world: world
 
 # Planning affiche dans /event (blocs de fer, un par jour).
-# event = nom affiche, map = nom de la map, time = horaire affiche
+# auto-start: lance l'event tout seul a l'heure indiquee.
+# auto: false sur une ligne pour ne pas la lancer automatiquement.
 schedule:
+  auto-start: true
   gui-title: "&8Events de la semaine"
   monday:
-    - {event: Conquest, map: Default, time: "18:00"}
-    - {event: KOTH Geant, map: Default, time: "21:00"}
+    - {event: Totem, map: Default, time: "19:00"}
+    - {event: Domination, map: Default, time: "21:00"}
   tuesday:
-    - {event: Domination, map: Default, time: "18:00"}
+    - {event: Totem, map: Default, time: "19:00"}
+    - {event: Koth Géant, map: Default, time: "21:00"}
   wednesday:
-    - {event: Totem, map: Default, time: "18:00"}
-    - {event: KOTH Geant, map: Default, time: "21:00"}
-  thursday:
-    - {event: MasterKill, map: Default, time: "18:00"}
-  friday:
-    - {event: Battleroyal, map: Default, time: "18:00"}
-  saturday:
-    - {event: TeamFight, map: Default, time: "18:00"}
+    - {event: Totem Géant, map: Default, time: "19:00"}
     - {event: Conquest, map: Default, time: "21:00"}
+  thursday:
+    - {event: Totem, map: Default, time: "19:00"}
+    - {event: Koth Géant, map: Default, time: "21:00"}
+  friday:
+    - {event: Totem, map: Default, time: "19:00"}
+    - {event: Koth Géant, map: Default, time: "21:00"}
+  saturday:
+    - {event: Totem, map: Default, time: "16:00"}
+    - {event: TeamFight, map: Default, time: "17:30"}
+    - {event: Domination, map: Default, time: "21:00"}
   sunday:
-    - {event: KOTH Geant, map: Default, time: "21:00"}
-    - {event: Totem, map: Default, time: "18:00"}
+    - {event: Totem Géant, map: Default, time: "16:00"}
+    - {event: Battleroyal, map: Default, time: "17:30"}
+    - {event: Koth Géant, map: Default, time: "21:00"}

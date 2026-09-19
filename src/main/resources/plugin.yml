@@ -9,6 +9,12 @@ commands:
   draftmc:
     description: Commande admin du plugin
     aliases: [dmc]
+  admin:
+    description: Menu sysadmin (staff + admin)
+    aliases: [sysadmin, dadmin]
+  adminlogs:
+    description: Logs des commandes staff (admin/owner)
+    aliases: [alogs, stafflogs]
     permission: draftmc.admin
   atouts:
     description: Menu des atouts
@@ -62,7 +68,7 @@ commands:
   sc:
     description: Chat staff
     aliases: [staffchat]
-    permission: draftmc.staff
+    permission: draftmc.staff.chat
   cps:
     description: Voir les CPS d'un joueur
     permission: draftmc.staff
@@ -70,6 +76,41 @@ commands:
     description: Gèle/dégèle un joueur (immobilisation totale)
     aliases: [gel]
     permission: draftmc.staff.freeze
+  mute:
+    description: Mute un joueur pendant une duree
+    permission: draftmc.staff.mute
+  unmute:
+    description: Retire le mute d'un joueur
+    permission: draftmc.staff.mute
+  unban:
+    description: Retire le ban d'un joueur
+    aliases: [pardon]
+    permission: draftmc.staff.unban
+  tempban:
+    description: Ban un joueur pendant une duree
+    aliases: [tban]
+    permission: draftmc.staff.ban
+  ban:
+    description: Ban definitif d'un joueur
+    permission: draftmc.staff.ban
+  pay:
+    description: Envoie de l'argent a un joueur
+  ping:
+    description: Affiche ton ping
+  ct:
+    description: Temps de combat tag restant
+    aliases: [combattag]
+  msg:
+    description: Message privé
+    aliases: [m, tell, whisper, w, t, message, pm]
+  r:
+    description: Répondre au dernier message privé
+    aliases: [reply]
+  spawn:
+    description: Teleportation au spawn
+  fly:
+    description: Active/desactive le fly (admin)
+    permission: draftmc.admin
   tags:
     description: Menu des tags (/tags create pour le staff)
     aliases: [tag]
@@ -94,6 +135,30 @@ commands:
     permission: draftmc.items.give
   boutique:
     description: Boutique Draftmc - achats avec des tokens
+    aliases: [vip]
+  help:
+    description: Menu d'aide interactif
+    aliases: [aide]
+  ptr:
+    description: Recompenses de temps de jeu
+    aliases: [playtime]
+  collection:
+    description: Collections des caisses
+    aliases: [collections]
+  quete:
+    description: Quetes joueur
+    aliases: [quetes, quest, quests]
+  outpost:
+    description: Outposts
+    aliases: [outposts]
+  yt:
+    description: Createurs de contenu
+    aliases: [youtube, streamer]
+  hub:
+    description: Teleportation au hub
+  baltop:
+    description: Classement des plus riches
+    aliases: [balancetop, moneytop]
   shop:
     description: Shop Draftmc - achats avec l'argent
     aliases: [magasin]
@@ -101,8 +166,7 @@ commands:
     description: Monte de grade avec ton argent
     aliases: [grade, grades]
   deathinv:
-    description: Consulte l'inventaire d'un joueur tue
-    permission: draftmc.staff
+    description: Consulte le stuff fige du tueur
   feed:
     description: Nourrit le joueur (grade requis)
   pv:
@@ -210,7 +274,10 @@ commands:
   teamfight:
     description: Event TeamFight 8v8
     aliases: [tf, 8v8]
-    permission: teamfight.admin
+  largage:
+    description: Event Largage (coffres aux positions configurées)
+    aliases: [airdrop, drop]
+    permission: largage.admin
   deathban:
     description: Ban d'un monde pour une duree
     aliases: [db]
@@ -218,6 +285,15 @@ commands:
   event:
     description: Planning des events Draftmc
     aliases: [events]
+  tournament:
+    description: Tournoi PvP
+    aliases: [tournoi, tourney]
+  status:
+    description: Status du tournoi en cours
+  clearlag:
+    description: Nettoyage des entites (auto toutes les 5 min)
+    aliases: [clag, lagg]
+    permission: draftmc.admin
 
 permissions:
   draftmc.admin:
@@ -230,16 +306,47 @@ permissions:
       totem.admin: true
       koth.admin: true
       teamfight.admin: true
+      largage.admin: true
+      draftmc.tournament.admin: true
       deathban.admin: true
       deathban.bypass.ban: true
       deathban.bypass.teleport: true
       deathban.bypass.commands: true
       draftmc.event: true
       draftmc.faction.top: true
+      draftmc.staff: true
+      draftmc.staff.chat: true
+      draftmc.staff.mute: true
+      draftmc.staff.freeze: true
+      draftmc.staff.ban: true
+      draftmc.staff.unban: true
+      draftmc.adminlogs: true
+      draftmc.gradecommands.bypass: true
+  draftmc.adminlogs:
+    default: false
+    description: Consulter les logs de commandes du staff
   draftmc.staff:
     default: op
+  draftmc.staff.chat:
+    default: op
+    description: /sc chat staff
   draftmc.staff.freeze:
     default: op
+  draftmc.staff.mute:
+    default: op
+    description: /mute et /unmute
+  draftmc.staff.unban:
+    default: op
+    description: /unban
+  draftmc.staff.ban:
+    default: op
+    description: /tempban
+  draftmc.mute.bypass:
+    default: op
+    description: Ne peut pas etre mute
+  draftmc.ban.bypass:
+    default: op
+    description: Ne peut pas etre banni via /tempban
   draftmc.bypass.commands:
     default: op
   draftmc.banitem.bypass:
@@ -296,6 +403,9 @@ permissions:
     default: op
   teamfight.admin:
     default: op
+  draftmc.tournament.admin:
+    default: op
+    description: Commandes admin du tournoi
   deathban.admin:
     default: op
   deathban.bypass.ban:
@@ -317,8 +427,8 @@ permissions:
     default: op
     description: Gerer le F Top (/f top add, remove, reset)
   draftmc.combattag.bypass:
-    default: op
-    description: Ignore le combat tag
+    default: false
+    description: Ignore le blocage des commandes du combat tag (le tag s'applique quand meme)
   draftmc.enderpearl.bypass:
     default: op
     description: Ignore le cooldown des enderpearls

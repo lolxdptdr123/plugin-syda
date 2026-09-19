@@ -9,30 +9,35 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Sauvegarde le stuff du tueur au moment du kill et affiche un lien cliquable
- * [InventoryView] dans le chat pour le consulter plus tard.
- * Utilise /tellraw (JSON) — compatible Spigot 1.8.8 sans dépendance BungeeCord.
+ * Fige le stuff du tueur au coup fatal. InventoryView n'affiche jamais
+ * l'inventaire live ensuite.
  */
 public class DeathInventoryManager implements Listener, CommandExecutor {
     private static final String PREVIEW_PREFIX = CC.color("&8Stuff de ");
 
     private final Draftmc plugin;
     private final Map<Integer, DeathSnapshot> snapshots = new HashMap<Integer, DeathSnapshot>();
+    private final Map<UUID, CapturedInventory> pendingByVictim = new HashMap<UUID, CapturedInventory>();
     private final AtomicInteger nextId = new AtomicInteger(1);
 
     public DeathInventoryManager(Draftmc plugin) {
@@ -50,6 +55,23 @@ public class DeathInventoryManager implements Listener, CommandExecutor {
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onLethalHit(EntityDamageByEntityEvent event) {
+        if (!isEnabled() || !(event.getEntity() instanceof Player)) {
+            return;
+        }
+        Player victim = (Player) event.getEntity();
+        Player killer = attackerOf(event);
+        if (killer == null || killer.equals(victim)) {
+            return;
+        }
+        double remaining = victim.getHealth() - event.getFinalDamage();
+        if (remaining > 0.0) {
+            return;
+        }
+        pendingByVictim.put(victim.getUniqueId(), CapturedInventory.from(killer));
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onDeath(PlayerDeathEvent event) {
         if (!isEnabled()) {
             return;
@@ -58,12 +80,18 @@ public class DeathInventoryManager implements Listener, CommandExecutor {
         Player victim = event.getEntity();
         Player killer = victim.getKiller();
         if (killer == null || killer.equals(victim)) {
+            pendingByVictim.remove(victim.getUniqueId());
             return;
+        }
+
+        CapturedInventory frozen = pendingByVictim.remove(victim.getUniqueId());
+        if (frozen == null) {
+            frozen = CapturedInventory.from(killer);
         }
 
         int id = nextId.getAndIncrement();
         long expireAt = System.currentTimeMillis() + getExpireMillis();
-        DeathSnapshot snapshot = new DeathSnapshot(id, killer.getName(), CapturedInventory.from(killer), expireAt);
+        DeathSnapshot snapshot = new DeathSnapshot(id, killer.getName(), frozen, expireAt);
         snapshots.put(id, snapshot);
 
         if (plugin.getConfig().getBoolean("core.death-inventory.replace-vanilla-message", true)) {
@@ -73,9 +101,22 @@ public class DeathInventoryManager implements Listener, CommandExecutor {
         sendDeathMessage(killer, victim, snapshot);
     }
 
+    private Player attackerOf(EntityDamageByEntityEvent event) {
+        if (event.getDamager() instanceof Player) {
+            return (Player) event.getDamager();
+        }
+        if (event.getDamager() instanceof Projectile) {
+            Object shooter = ((Projectile) event.getDamager()).getShooter();
+            if (shooter instanceof Player) {
+                return (Player) shooter;
+            }
+        }
+        return null;
+    }
+
     private void sendDeathMessage(Player killer, Player victim, DeathSnapshot snapshot) {
         try {
-            String weaponSuffix = weaponSuffix(killer);
+            String weaponSuffix = weaponSuffix(snapshot.inventory.hand);
             String line = plugin.getConfig().getString("core.death-inventory.message",
                     "&e%victim% &7a ete tue par &c%killer%%weapon%&7.");
             line = line.replace("%victim%", victim.getName())
@@ -122,11 +163,10 @@ public class DeathInventoryManager implements Listener, CommandExecutor {
                 .replace("\r", "");
     }
 
-    private String weaponSuffix(Player killer) {
+    private String weaponSuffix(ItemStack weapon) {
         if (!plugin.getConfig().getBoolean("core.death-inventory.show-weapon", true)) {
             return "";
         }
-        ItemStack weapon = killer.getItemInHand();
         if (weapon == null || weapon.getType() == Material.AIR) {
             return "";
         }
@@ -185,10 +225,22 @@ public class DeathInventoryManager implements Listener, CommandExecutor {
 
     @EventHandler
     public void onPreviewClick(InventoryClickEvent event) {
-        String title = event.getView().getTitle();
-        if (title != null && title.startsWith(PREVIEW_PREFIX)) {
+        if (event.getInventory().getHolder() instanceof DeathInvHolder
+                || isPreviewTitle(event.getView().getTitle())) {
             event.setCancelled(true);
         }
+    }
+
+    @EventHandler
+    public void onPreviewDrag(InventoryDragEvent event) {
+        if (event.getInventory().getHolder() instanceof DeathInvHolder
+                || isPreviewTitle(event.getView().getTitle())) {
+            event.setCancelled(true);
+        }
+    }
+
+    private boolean isPreviewTitle(String title) {
+        return title != null && title.startsWith(PREVIEW_PREFIX);
     }
 
     private long getExpireMillis() {
@@ -205,26 +257,40 @@ public class DeathInventoryManager implements Listener, CommandExecutor {
         }
     }
 
+    private static ItemStack copyItem(ItemStack src) {
+        if (src == null || src.getType() == Material.AIR) {
+            return null;
+        }
+        return new ItemStack(src);
+    }
+
+    private static ItemStack[] copyArray(ItemStack[] src, int max) {
+        ItemStack[] out = new ItemStack[max];
+        if (src == null) {
+            return out;
+        }
+        for (int i = 0; i < max && i < src.length; i++) {
+            out[i] = copyItem(src[i]);
+        }
+        return out;
+    }
+
     private static final class CapturedInventory {
         private final ItemStack[] contents;
         private final ItemStack[] armor;
+        private final ItemStack hand;
 
-        private CapturedInventory(ItemStack[] contents, ItemStack[] armor) {
+        private CapturedInventory(ItemStack[] contents, ItemStack[] armor, ItemStack hand) {
             this.contents = contents;
             this.armor = armor;
+            this.hand = hand;
         }
 
         static CapturedInventory from(Player player) {
-            return new CapturedInventory(cloneArray(player.getInventory().getContents(), 36),
-                    cloneArray(player.getInventory().getArmorContents(), 4));
-        }
-
-        private static ItemStack[] cloneArray(ItemStack[] src, int max) {
-            ItemStack[] out = new ItemStack[max];
-            for (int i = 0; i < max && i < src.length; i++) {
-                out[i] = src[i] == null ? null : src[i].clone();
-            }
-            return out;
+            return new CapturedInventory(
+                    copyArray(player.getInventory().getContents(), 36),
+                    copyArray(player.getInventory().getArmorContents(), 4),
+                    copyItem(player.getItemInHand()));
         }
     }
 
@@ -246,12 +312,23 @@ public class DeathInventoryManager implements Listener, CommandExecutor {
         }
 
         Inventory buildInventory() {
-            Inventory preview = Bukkit.createInventory(null, 54, PREVIEW_PREFIX + ownerName);
-            preview.setContents(inventory.contents);
-            for (int i = 0; i < inventory.armor.length; i++) {
-                preview.setItem(45 + i, inventory.armor[i]);
+            Inventory preview = Bukkit.createInventory(new DeathInvHolder(), 54, PREVIEW_PREFIX + ownerName);
+            ItemStack[] contents = copyArray(inventory.contents, 36);
+            for (int i = 0; i < contents.length; i++) {
+                preview.setItem(i, contents[i]);
+            }
+            ItemStack[] armor = copyArray(inventory.armor, 4);
+            for (int i = 0; i < armor.length; i++) {
+                preview.setItem(45 + i, armor[i]);
             }
             return preview;
+        }
+    }
+
+    private static final class DeathInvHolder implements InventoryHolder {
+        @Override
+        public Inventory getInventory() {
+            return null;
         }
     }
 }

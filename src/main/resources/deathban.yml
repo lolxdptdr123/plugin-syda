@@ -20,6 +20,11 @@ allowed-commands:
   - msg
   - tell
   - w
+  - m
+  - t
+  - whisper
+  - message
+  - pm
   - r
   - reply
   - report

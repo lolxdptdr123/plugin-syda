@@ -2,6 +2,13 @@
 
 prefix: "&8[&6Draftmc&8] &7"
 
+# Connexion : le message vanilla ("a rejoint la partie") est masqué.
+# welcome = messages perso envoyés au joueur (vide = aucun). %player%
+join-quit:
+  hide-join-message: true
+  hide-quit-message: false
+  welcome: []
+
 anti-cleanup:
   enabled: true
   duration-seconds: 30
@@ -12,18 +19,26 @@ anti-cleanup:
 
 teleport:
   command-cooldown-seconds: 5
+  delay-seconds: 5
+  cancel-on-move: true
+  cancel-on-damage: true
   cooldown-message: "&cAttends encore &e{time}s &cavant une téléportation."
+  warmup-message: "&7Téléportation dans &e{time}s&7. &8Ne bouge pas."
+  cancel-move-message: "&cTéléportation annulée : tu as bougé."
+  cancel-damage-message: "&cTéléportation annulée : tu as pris des dégâts."
 
 # Combat tag : tag PvP, blocage des teleports, mort si deconnexion.
 combat-tag:
   enabled: true
-  duration-seconds: 15
+  duration-seconds: 25
   combat-log: true
   actionbar: true
   ignore-faction: true
   message: "&cTu es en combat encore &e{time}s&c."
   tagged-message: "&cTu es en combat pendant &e{time}s&c."
   untagged-message: "&aTu n'es plus en combat."
+  ct-message: "&cTu es en combat encore &e{time}s&c."
+  ct-not-tagged: "&aTu n'es pas en combat."
   log-broadcast: "&c{player} s'est déconnecté en combat."
   blocked-commands:
     - home
@@ -98,6 +113,42 @@ warps:
   warmup-message: "&7Téléportation dans &e{time}s&7. &8Ne bouge pas."
   cancel-move-message: "&cTéléportation annulée : tu as bougé."
   cancel-damage-message: "&cTéléportation annulée : tu as pris des dégâts."
+  default-category: autres
+  gui:
+    title: "&8Warps"
+    categories:
+      events:
+        name: "&c&lEvents"
+        title: "&8Warps » Events"
+        material: DIAMOND_SWORD
+        slot: 20
+        lore:
+          - "&7Warps des events"
+          - "&7{count} warp(s)"
+      utilitaires:
+        name: "&a&lUtilitaires"
+        title: "&8Warps » Utilitaires"
+        material: COMPASS
+        slot: 22
+        lore:
+          - "&7Warps utiles (mine, farm...)"
+          - "&7{count} warp(s)"
+      pvp:
+        name: "&4&lPvP"
+        title: "&8Warps » PvP"
+        material: IRON_SWORD
+        slot: 24
+        lore:
+          - "&7Zones PvP"
+          - "&7{count} warp(s)"
+      autres:
+        name: "&7&lAutres"
+        title: "&8Warps » Autres"
+        material: CHEST
+        slot: 31
+        lore:
+          - "&7Autres warps"
+          - "&7{count} warp(s)"
 
 anti-command:
   enabled: true
@@ -214,6 +265,7 @@ rankup:
         - "&7Grade Discord Supreme"
         - "&e/kit supreme"
         - "&e/pv 1-2 &7/invsee &7/f fly"
+        - "&e/ec <joueur> &7(lecture seule)"
         - "&e/sell all"
         - "&e/repair &72min &8| &e/repair all &71h"
         - "&712 sethomes &8| &715 ventes HDV"
@@ -221,6 +273,7 @@ rankup:
     star:
       cost: 15000000
       currency: money
+      purchasable: false
       advantages:
         - "&7Préfixe &dStar Pseudo"
         - "&7Grade Discord Star"
@@ -294,7 +347,7 @@ grade-commands:
       enabled: true
       min-grade: empereur
       cooldown-seconds: 0
-      description: Enderchest
+      description: Enderchest (/ec <joueur> en lecture seule au Supreme)
     pv:
       enabled: true
       min-grade: empereur
@@ -436,7 +489,6 @@ boutique:
         - RANKUP_SEIGNEUR
         - RANKUP_EMPEREUR
         - RANKUP_SUPREME
-        - RANKUP_STAR
 
     kits:
       name: "&6&lKits"
@@ -1314,7 +1366,6 @@ shop:
         - RANKUP_SEIGNEUR
         - RANKUP_EMPEREUR
         - RANKUP_SUPREME
-        - RANKUP_STAR
 
     kits:
       name: "&6&lKits"
@@ -1649,6 +1700,8 @@ core:
     reward: 50.0
     cooldown-seconds: 60
     use-vault: true
+    # /b <joueur> — laisse vide pour ne rien diffuser.
+    broadcast: "&e%player% &7souhaite la bienvenue à &a%target%&7 !"
   explosion-durability:
     enabled: true
     default-hits: 1
@@ -1675,6 +1728,10 @@ scoreboard:
   # Nom du grade affiché dans le scoreboard (%grade%), par groupe de permission
   # (LuckPerms/PermissionsEx). La clé est le nom du groupe en minuscule.
   grades:
+    owner: "&4Owner"
+    admin: "&cAdmin"
+    modo: "&1Modo"
+    helper: "&aHelper"
     star: "Star"
     supreme: "&5Supreme"
     empereur: "&6Empereur"
@@ -1689,6 +1746,10 @@ scoreboard:
   # clair -> "Star Pseudo" tout en violet). Le groupe "default" affiche le grade
   # Joueur dans le chat et le tab.
   grade-colors:
+    owner: "&4"
+    admin: "&c"
+    modo: "&1"
+    helper: "&a"
     default: "&7"
     star: "&d"
     supreme: "&5"
@@ -1698,6 +1759,30 @@ scoreboard:
     chevalier: "&2"
     vip: "&a"
     mvp: "&b"
+  # Faction a cote du pseudo au-dessus de la tete (vert allie / rouge ennemi).
+  nametag-faction: true
+  nametag-faction-suffix: " {faction}"
+  # Ne pas afficher la faction dans le tab (grade + pseudo seulement).
+  tab-hide-faction: true
+  # Ordre du tab (le premier est tout en haut).
+  tab-order:
+    - owner
+    - admin
+    - modo
+    - helper
+    - star
+    - supreme
+    - empereur
+    - seigneur
+    - marquis
+    - chevalier
+    - default
+  tab-header-footer: true
+  tab-header:
+    - "&6&lDraftmc"
+  tab-footer:
+    - "&eProchain événement"
+    - "&6%nextevent% &7- &f%nextevent_time%"
   lines:
     - "&f&m--------------------"
     - "&6%player%"
@@ -1709,9 +1794,9 @@ scoreboard:
     - " "
     - "&6Infos"
     - "&fCombat: &c%combat%"
+    - "&fPing: %ping%"
     - "&fPower: &e%power%"
     - "&fFly Claim: &a%flyclaim%"
-    - "  "
     - "&fVotes: &b%votes%"
     - "&f&m--------------------"
 
@@ -1773,6 +1858,31 @@ staff:
     # Les reports sont supprimés automatiquement après ce délai.
     expire-hours: 24
     alert: "&8[&cReport&8] &e%reporter% &7a signalé &c%target% &7» &f%reason%"
+  mute:
+    default-reason: "Aucune raison"
+    blocked-commands:
+      - msg
+      - tell
+      - whisper
+      - w
+      - m
+      - r
+      - reply
+      - message
+      - t
+      - pm
+      - emsg
+      - etell
+      - ewhisper
+  ban:
+    default-reason: "Aucune raison"
+    kick-message: "&cTu es banni.\n&7Durée restante: &e{time}\n&7Raison: &f{reason}"
+  announce:
+    mute: "&c{player} &7a été mute &e{time} &7par &e{staff}&7. &8({reason})"
+    unmute: "&a{player} &7n'est plus mute &7(&e{staff}&7)."
+    ban: "&c{player} &7a été banni définitivement par &e{staff}&7. &8({reason})"
+    tempban: "&c{player} &7a été banni &e{time} &7par &e{staff}&7. &8({reason})"
+    unban: "&a{player} &7n'est plus banni &7(&e{staff}&7)."
 
 tokens:
   starting: 0
@@ -1846,22 +1956,378 @@ factions:
     power:
       amounts: [0, 10, 20, 40]
       costs: [0, 1200, 2500, 5000]
+  warps:
+    base: 1
+  logs:
+    max: 50
+
+help-gui:
+  categories:
+    general:
+      name: "&e&lGénéral"
+      title: "&8Aide » Général"
+      material: BOOK
+      lore:
+        - "&7Commandes de base."
+      commands:
+        - "/help | Menu d'aide | help"
+        - "/ptr | Récompenses de temps de jeu | ptr"
+        - "/stats | Tes statistiques | stats"
+        - "/classement | Classements | classement"
+        - "/kit | Tes kits | kit"
+        - "/tags | Tes tags | tags"
+        - "/atouts | Tes atouts | atouts"
+        - "/discord | Lier Discord | discord"
+        - "/report <joueur> | Signaler un joueur"
+        - "/pay <joueur> <montant> | Envoyer de l'argent"
+        - "/ping | Afficher ton ping"
+        - "/spawn | Aller au spawn"
+    faction:
+      name: "&6&lFaction"
+      title: "&8Aide » Faction"
+      material: BEACON
+      lore:
+        - "&7Commandes de faction."
+      commands:
+        - "/f menu | Menu faction | f menu"
+        - "/f logs | Logs, claims, warps | f logs"
+        - "/f prestige | Prestiges | f prestige"
+        - "/f mission | Missions | f mission"
+        - "/f acces | Zones privées | f acces"
+        - "/f chest | Coffre faction | f chest"
+        - "/f perm | Permissions | f perm"
+        - "/f upgrade | Améliorations | f upgrade"
+        - "/f top | Classement F Top | f top"
+    economie:
+      name: "&a&lÉconomie"
+      title: "&8Aide » Économie"
+      material: GOLD_INGOT
+      lore:
+        - "&7Argent, tokens, boutique."
+      commands:
+        - "/boutique | Boutique tokens | boutique"
+        - "/vip | Alias boutique | boutique"
+        - "/shop | Shop argent | shop"
+        - "/money | Ton argent"
+        - "/tokens | Tes tokens"
+        - "/baltop [page] | Plus riches"
+        - "/hdv | Hôtel des ventes | hdv"
+        - "/rankup | Monter de grade | rankup"
+        - "/collection | Collections caisses | collection"
+        - "/quete | Quêtes | quete"
+    grades:
+      name: "&d&lGrades"
+      title: "&8Aide » Grades"
+      material: DIAMOND
+      lore:
+        - "&7Commandes débloquées par grade."
+      commands:
+        - "/grades | Liste par grade | grades"
+        - "/craft | Table de craft"
+        - "/feed | Se nourrir"
+        - "/ec | Enderchest"
+        - "/ec <joueur> | Voir l'EC (Supreme)"
+        - "/pv | Coffre privé"
+        - "/invsee <joueur> | Inventaire (Supreme)"
+        - "/sell all | Vendre l'inventaire"
+    teleport:
+      name: "&b&lTéléportation"
+      title: "&8Aide » Téléportation"
+      material: ENDER_PEARL
+      lore:
+        - "&7Homes, warps, TPA, hub."
+      commands:
+        - "/hub | Aller au hub | hub"
+        - "/home | Tes homes"
+        - "/sethome | Définir un home"
+        - "/warp | Menu des warps"
+        - "/hub | Hub"
+        - "/tpa <joueur> | Demande de TP"
+        - "/randomtp | Téléportation aléatoire | randomtp"
+    events:
+      name: "&c&lEvents"
+      title: "&8Aide » Events"
+      material: IRON_SWORD
+      lore:
+        - "&7Events et outposts."
+      commands:
+        - "/event | Planning | event"
+        - "/tournament help | Commandes tournoi | tournament help"
+        - "/status | Status du tournoi | status"
+        - "/outpost | Outposts | outpost"
+        - "/yt | Créateurs | yt"
+        - "/teamfight | TeamFight 8v8"
+        - "/totemstats | Stats totem"
+
+playtime-rewards:
+  tiers:
+    t1:
+      name: "&e1 heure"
+      seconds: 3600
+      money: 500
+      tokens: 10
+      lore:
+        - "&a500$ &7+ &610 tokens"
+    t2:
+      name: "&e5 heures"
+      seconds: 18000
+      money: 2500
+      tokens: 40
+      lore:
+        - "&a2 500$ &7+ &640 tokens"
+    t3:
+      name: "&e12 heures"
+      seconds: 43200
+      money: 6000
+      tokens: 80
+      lore:
+        - "&a6 000$ &7+ &680 tokens"
+    t4:
+      name: "&e24 heures"
+      seconds: 86400
+      money: 15000
+      tokens: 150
+      lore:
+        - "&a15 000$ &7+ &6150 tokens"
+    t5:
+      name: "&650 heures"
+      seconds: 180000
+      money: 40000
+      tokens: 300
+      lore:
+        - "&a40 000$ &7+ &6300 tokens"
+
+quests:
+  list:
+    skeletons:
+      name: "&eChasseur de squelettes"
+      description: "Tue 25 squelettes."
+      type: KILL
+      target: SKELETON
+      amount: 25
+      money: 1500
+      tokens: 5
+      material: BONE
+    zombies:
+      name: "&2Chasseur de zombies"
+      description: "Tue 25 zombies."
+      type: KILL
+      target: ZOMBIE
+      amount: 25
+      money: 1500
+      tokens: 5
+      material: ROTTEN_FLESH
+    creepers:
+      name: "&aChasseur de creepers"
+      description: "Tue 15 creepers."
+      type: KILL
+      target: CREEPER
+      amount: 15
+      money: 2000
+      tokens: 8
+      material: SULPHUR
+    cobble:
+      name: "&7Mineur"
+      description: "Casse 200 cobblestone."
+      type: BREAK
+      target: COBBLESTONE
+      amount: 200
+      money: 1000
+      tokens: 5
+      material: COBBLESTONE
+
+collections:
+  crates:
+    commune:
+      name: "&fCaisse Commune"
+      material: CHEST
+      items:
+        i1:
+          name: "&fÉpée Commune"
+          material: IRON_SWORD
+          lore: ["&7Loot de caisse commune"]
+        i2:
+          name: "&fCasque Commun"
+          material: IRON_HELMET
+          lore: ["&7Loot de caisse commune"]
+        i3:
+          name: "&fPomme en or"
+          material: GOLDEN_APPLE
+          lore: ["&7Loot de caisse commune"]
+    rare:
+      name: "&bCaisse Rare"
+      material: ENDER_CHEST
+      items:
+        i1:
+          name: "&bÉpée Rare"
+          material: DIAMOND_SWORD
+          lore: ["&7Loot de caisse rare"]
+        i2:
+          name: "&bPlastron Rare"
+          material: DIAMOND_CHESTPLATE
+          lore: ["&7Loot de caisse rare"]
+        i3:
+          name: "&bPerle"
+          material: ENDER_PEARL
+          lore: ["&7Loot de caisse rare"]
+    legendaire:
+      name: "&6Caisse Légendaire"
+      material: BEACON
+      items:
+        i1:
+          name: "&6Épée Légendaire"
+          material: DIAMOND_SWORD
+          lore: ["&7Loot de caisse légendaire"]
+        i2:
+          name: "&6Pomme de Notch"
+          material: GOLDEN_APPLE
+          lore: ["&7Loot de caisse légendaire"]
+        i3:
+          name: "&6Clé Légendaire"
+          material: TRIPWIRE_HOOK
+          lore: ["&7Loot de caisse légendaire"]
+
+outposts:
+  capture-seconds: 30
+  lock-seconds: 600
+  list:
+    pvp:
+      name: "&c&lOutpost PvP"
+      material: DIAMOND_SWORD
+    farm:
+      name: "&a&lOutpost Farm"
+      material: DIAMOND_HOE
+
+yt-menu:
+  streamer:
+    name: "&d&lStreamer"
+    skull: "MHF_Question"
+    lore:
+      - "&7Deviens streamer partenaire."
+      - "&7Live réguliers + audience."
+      - "&eOuvre un ticket Discord."
+  youtubeur:
+    name: "&c&lYoutubeur"
+    skull: "MHF_ArrowUp"
+    lore:
+      - "&7Contenu YouTube Draftmc."
+      - "&7Vidéos / shorts réguliers."
+      - "&eOuvre un ticket Discord."
+  partenaire:
+    name: "&6&lPartenaire"
+    skull: "MHF_Exclamation"
+    lore:
+      - "&7Partenariat officiel."
+      - "&7Avantages exclusifs."
+      - "&eOuvre un ticket Discord."
+
+hub:
+  location: ""
+  message: "&aTéléporté au hub."
+
+spawn:
+  world: world
+  location: ""
+  # Première connexion au serveur → TP au /spawn (après /spawn set).
+  on-first-join: true
+  # Après un redémarrage, la prochaine connexion → TP au /spawn. Un simple relog sans restart garde la position.
+  on-server-restart: true
+  cooldown-seconds: 5
+  cooldown-message: "&cAttends encore &e{time}s &cavant de refaire /spawn."
+  message: "&aTéléporté au spawn."
+
+pay:
+  min: 1
+
+staff-ranks:
+  auto-setup: true
+  setup-done: false
+  groups:
+    - helper
+    - modo
+    - admin
+    - owner
+
+staff-logs:
+  max-per-staff: 400
+  ignore:
+    - login
+    - register
+    - l
+    - reg
+    - adminlogs
+    - alogs
+    - stafflogs
+
+baltop:
+  page-size: 10
+  header: "&8&m-----&r &6Baltop &8&m-----"
+  line: "&e{rank}. &f{player} &8- &a{money}"
+  footer: "&7Page &e{page}&7/&e{pages} &8- &e/baltop [page]"
+
+faction-prestige:
+  levels:
+    "1":
+      members: 5
+      claims: 8
+      farm-points: 500
+      pvp-points: 25
+      extra-members: 5
+      extra-warps: 1
+      missions: [kill_mobs]
+      lore:
+        - "&7+5 membres"
+        - "&7+1 warp faction"
+    "2":
+      members: 8
+      claims: 16
+      farm-points: 2000
+      pvp-points: 80
+      extra-members: 10
+      extra-warps: 2
+      missions: [kill_mobs, mine_blocks]
+      lore:
+        - "&7+10 membres"
+        - "&7+2 warps faction"
+    "3":
+      members: 12
+      claims: 30
+      farm-points: 8000
+      pvp-points: 200
+      extra-members: 20
+      extra-warps: 3
+      missions: [kill_mobs, mine_blocks, pvp_kills]
+      lore:
+        - "&7+20 membres"
+        - "&7+3 warps faction"
+
+faction-missions:
+  list:
+    kill_mobs:
+      name: "&6Tuer des mobs"
+      description: "La faction tue 250 monstres."
+      amount: 250
+      material: ROTTEN_FLESH
+    mine_blocks:
+      name: "&7Miner des blocs"
+      description: "La faction casse 2000 blocs."
+      amount: 2000
+      material: DIAMOND_PICKAXE
+    pvp_kills:
+      name: "&cKills PvP"
+      description: "La faction fait 50 kills joueurs."
+      amount: 50
+      material: DIAMOND_SWORD
 
 discord:
   enabled: true
-  # Webhook du salon events (Integrations -> Webhooks). Laisse vide si tu
-  # utilises le bot avec EVENTS_CHANNEL_ID (sinon le resultat serait poste 2 fois).
   webhook-url: "https://discord.com/api/webhooks/1543608101461033041/rLijWaaIQuOQ8ipI8eoIq_yzqymPxehSUQD7bOWH1Mkm4-WJRIeGi6FQHmdcY2hpFCmL"
   events:
     enabled: true
-    # Textes des embeds (plugins/Draftmc/config.yml puis /draftmc reload).
-    # {event} = nom de l'event, {map} = map / sous-titre, {place} {name} {score}
-    title: "{event} termine"
-    field: "Classement"
-    footer: "Draftmc"
-    ranking: "{place}. {name} — {score} pts"
-    winner: "1. {name} — {score} pts"
-    winner-no-score: "1. {name}"
+    header: ":loudspeaker: | {event} - {map}"
+    header-no-map: ":loudspeaker: | {event}"
+    results: ":crossed_swords: Résultats"
+    result-line: "{medal} • {name} - {score}"
     empty: "Aucun score."
 
 # Plafonds par grade (le plus haut grade du joueur est utilisé).
@@ -1920,10 +2386,9 @@ discord-link:
   enabled: true
   api-bind: "0.0.0.0"
   api-port: 8765
-  api-secret: "CHANGE_ME"
+  api-secret: "lolxdptdr123"
   code-expire-seconds: 300
-  # Pseudo Discord = pseudo Minecraft du compte lie (%player%).
-  nickname-format: "%player%"
+  nickname-format: "%grade% %player%"
   roles:
     chevalier: "1545119086747586662"
     marquis: "1545119060101169184"
@@ -1958,4 +2423,26 @@ sell-prices:
   ENDER_PEARL: 15.0
   BLAZE_ROD: 12.0
   GHAST_TEAR: 25.0
+
+# Nettoyage auto des drops / fleches / orbes (toutes les 5 minutes).
+clear-lag:
+  enabled: true
+  interval-seconds: 300
+  warn-seconds: [60, 30, 10, 5]
+  warn-message: "&8[&cClearLag&8] &7Nettoyage dans &e{time}&7."
+  clear-message: "&8[&cClearLag&8] &e{count} &7entités supprimées."
+  keep-named-items: true
+  # Vide = tous les mondes. Sinon uniquement ces mondes.
+  worlds: []
+  types:
+    - DROPPED_ITEM
+    - ARROW
+    - EXPERIENCE_ORB
+    - SNOWBALL
+    - EGG
+    - FIREBALL
+    - SMALL_FIREBALL
+    - SPLASH_POTION
+    - THROWN_EXP_BOTTLE
+    - FIREWORK
 

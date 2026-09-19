@@ -183,9 +183,28 @@ public class ShopManager implements Listener, CommandExecutor {
     }
 
     private List<String> getItemIds(ConfigurationSection category) {
+        List<String> raw;
         ConfigurationSection itemSection = category.getConfigurationSection("items");
-        if (itemSection != null) return new ArrayList<String>(itemSection.getKeys(false));
-        return category.getStringList("items");
+        if (itemSection != null) {
+            raw = new ArrayList<String>(itemSection.getKeys(false));
+        } else {
+            raw = category.getStringList("items");
+        }
+        List<String> out = new ArrayList<String>();
+        for (int i = 0; i < raw.size(); i++) {
+            String id = raw.get(i);
+            ConfigurationSection entry = getItemSection(category, "shop", id);
+            if (entry == null) {
+                entry = getItemSection(category, "boutique", id);
+            }
+            if (entry != null && "RANKUP".equalsIgnoreCase(entry.getString("type", ""))
+                    && plugin.rankup() != null
+                    && !plugin.rankup().isPurchasable(entry.getString("rank", id))) {
+                continue;
+            }
+            out.add(id);
+        }
+        return out;
     }
 
     private ConfigurationSection getItemSection(ConfigurationSection category, String base, String id) {
@@ -267,6 +286,12 @@ public class ShopManager implements Listener, CommandExecutor {
     private ItemStack displayEntry(ConfigurationSection sec, String id, boolean money, Player player) {
         String type = sec.getString("type", "ITEM").toUpperCase(Locale.ROOT);
         if ("RANKUP".equals(type)) {
+            String rank = sec.getString("rank", id);
+            if (plugin.rankup() != null && !plugin.rankup().isPurchasable(rank)) {
+                return new ItemBuilder(Material.BARRIER)
+                        .name("&c" + plugin.rankup().displayName(rank))
+                        .lore("&7Ce grade n'est pas achetable.").build();
+            }
             return plugin.rankup().buildShopIcon(player, sec, id, money);
         }
         if ("ATOUT".equals(type)) {
@@ -402,6 +427,11 @@ public class ShopManager implements Listener, CommandExecutor {
     private void buy(Player player, ConfigurationSection entry, String id, boolean money) {
         String type = entry.getString("type", "ITEM").toUpperCase(Locale.ROOT);
         if ("RANKUP".equals(type)) {
+            String rank = entry.getString("rank", id);
+            if (plugin.rankup() != null && !plugin.rankup().isPurchasable(rank)) {
+                plugin.msg(player, "&cCe grade n'est pas achetable.");
+                return;
+            }
             plugin.rankup().buyFromShop(player, entry, money);
             return;
         }

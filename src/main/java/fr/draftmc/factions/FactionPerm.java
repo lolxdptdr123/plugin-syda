@@ -24,7 +24,9 @@ public enum FactionPerm {
     MOTD("MOTD", Material.PAPER, false, false, true, true),
     OPEN("Ouverture", Material.IRON_DOOR, false, false, false, true),
     PERM("Permissions", Material.REDSTONE_TORCH_ON, false, false, false, true),
-    RALLY("Rally", Material.BEACON, false, false, true, true);
+    RALLY("Rally", Material.BEACON, false, false, true, true),
+    WARP("Warps", Material.ENDER_PEARL, false, false, true, true),
+    ACCESS("Zones privées", Material.IRON_FENCE, false, false, false, true);
 
     private final String display;
     private final Material icon;

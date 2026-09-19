@@ -1,12 +1,15 @@
 package fr.draftmc.warps;
 
 import fr.draftmc.Draftmc;
-import fr.draftmc.util.ActionBars;
+import fr.draftmc.gui.GuiHolder;
+import fr.draftmc.gui.Menus;
 import fr.draftmc.util.CC;
+import fr.draftmc.util.ItemBuilder;
 import fr.draftmc.util.Locations;
 import fr.draftmc.util.YamlFile;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -16,23 +19,19 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
-import java.util.UUID;
 
 public class WarpManager implements CommandExecutor, TabCompleter, Listener {
     private final Draftmc plugin;
     private final YamlFile file;
-    private final Map<UUID, Integer> warmups = new HashMap<UUID, Integer>();
-    private final Map<UUID, Location> warmupStart = new HashMap<UUID, Location>();
 
     public WarpManager(Draftmc plugin) {
         this.plugin = plugin;
@@ -67,20 +66,30 @@ public class WarpManager implements CommandExecutor, TabCompleter, Listener {
             return true;
         }
         if ("warps".equals(name)) {
-            list(sender);
+            if (sender instanceof Player) {
+                openMain((Player) sender);
+            } else {
+                list(sender);
+            }
             return true;
         }
         if (!(sender instanceof Player)) {
             sender.sendMessage("§cJoueur uniquement.");
             return true;
         }
-        goWarp((Player) sender, args);
+        Player player = (Player) sender;
+        if (args.length < 1) {
+            openMain(player);
+            return true;
+        }
+        goWarp(player, args);
         return true;
     }
 
     private void setWarp(Player player, String[] args) {
         if (args.length < 1) {
-            plugin.msg(player, "&e/setwarp <nom>");
+            plugin.msg(player, "&e/setwarp <nom> [categorie]");
+            plugin.msg(player, "&7Catégories: &e" + join(categoryIds()));
             return;
         }
         String id = warpName(args[0]);
@@ -88,9 +97,18 @@ public class WarpManager implements CommandExecutor, TabCompleter, Listener {
             plugin.msg(player, "&cNom invalide.");
             return;
         }
-        file.get().set("warps." + id, Locations.serialize(player.getLocation()));
+        String category = args.length >= 2
+                ? args[1].toLowerCase(Locale.ROOT)
+                : plugin.getConfig().getString("warps.default-category", "autres");
+        if (!categoryIds().contains(category)) {
+            plugin.msg(player, "&cCatégorie inconnue. &7" + join(categoryIds()));
+            return;
+        }
+        file.get().set("warps." + id, null);
+        file.get().set("warps." + id + ".location", Locations.serialize(player.getLocation()));
+        file.get().set("warps." + id + ".category", category);
         file.save();
-        plugin.msg(player, "&aWarp &e" + id + " &adéfini.");
+        plugin.msg(player, "&aWarp &e" + id + " &adéfini &7(" + category + "&7).");
     }
 
     private void delWarp(CommandSender sender, String[] args) {
@@ -119,123 +137,28 @@ public class WarpManager implements CommandExecutor, TabCompleter, Listener {
     }
 
     private void goWarp(Player player, String[] args) {
-        if (args.length < 1) {
-            plugin.msg(player, "&e/warp <nom> &7| &e/warps");
-            return;
-        }
-        if (plugin.combat() != null && plugin.combat().denyIfTagged(player)) {
-            return;
-        }
-        if (plugin.denyTpCooldown(player)) {
-            return;
-        }
-        String id = warpName(args[0]);
-        Location loc = locationOf(id);
+        teleportTo(player, warpName(args[0]));
+    }
+
+    public void teleportTo(Player player, String rawId) {
+        final String id = warpName(rawId);
+        final Location loc = locationOf(id);
         if (loc == null) {
             plugin.msg(player, "&cWarp &e" + id + " &cintrouvable. &e/warps");
             return;
         }
-        if (warmups.containsKey(player.getUniqueId())) {
-            plugin.msg(player, "&cUne téléportation est déjà en cours.");
-            return;
-        }
-        int delay = Math.max(0, plugin.getConfig().getInt("warps.teleport-delay-seconds", 5));
-        plugin.startTpCooldown(player);
-        if (delay <= 0) {
-            finishTeleport(player, loc, id);
-            return;
-        }
-        plugin.msg(player, plugin.getConfig().getString("warps.warmup-message",
-                "&7Téléportation dans &e{time}s&7. &8Ne bouge pas.")
-                .replace("{time}", String.valueOf(delay))
-                .replace("{warp}", id));
-        warmupStart.put(player.getUniqueId(), player.getLocation().clone());
-        final int[] left = {delay};
-        int task = Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, new Runnable() {
-            @Override
-            public void run() {
-                if (!player.isOnline()) {
-                    cancelWarmup(player, null);
-                    return;
-                }
-                if (plugin.combat() != null && plugin.combat().isTagged(player)) {
-                    cancelWarmup(player, "&cTéléportation annulée : tu es en combat.");
-                    return;
-                }
-                left[0]--;
-                if (left[0] <= 0) {
-                    cancelWarmup(player, null);
-                    finishTeleport(player, loc, id);
-                    return;
-                }
-                ActionBars.send(player, CC.color("&eTéléportation &7» &f" + left[0] + "s"));
-            }
-        }, 20L, 20L);
-        warmups.put(player.getUniqueId(), task);
+        plugin.teleports().request(player, loc, "&aTéléporté au warp &e" + id + "&a.");
     }
 
-    private void finishTeleport(Player player, Location loc, String id) {
-        plugin.data().setString(player.getUniqueId(), "back_location",
-                Locations.serialize(player.getLocation()));
-        player.teleport(loc);
-        plugin.msg(player, "&aTéléporté au warp &e" + id + "&a.");
-    }
-
-    public void cancelWarmup(Player player, String message) {
-        Integer task = warmups.remove(player.getUniqueId());
-        warmupStart.remove(player.getUniqueId());
-        if (task == null) {
-            return;
-        }
-        Bukkit.getScheduler().cancelTask(task);
-        if (message != null && player.isOnline()) {
-            plugin.msg(player, message);
-        }
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onMove(PlayerMoveEvent event) {
-        Player player = event.getPlayer();
-        Location start = warmupStart.get(player.getUniqueId());
-        if (start == null) {
-            return;
-        }
-        if (!plugin.getConfig().getBoolean("warps.cancel-on-move", true)) {
-            return;
-        }
-        Location to = event.getTo();
-        if (to == null) {
-            return;
-        }
-        if (start.getBlockX() != to.getBlockX()
-                || start.getBlockY() != to.getBlockY()
-                || start.getBlockZ() != to.getBlockZ()) {
-            cancelWarmup(player, plugin.getConfig().getString("warps.cancel-move-message",
-                    "&cTéléportation annulée : tu as bougé."));
-        }
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onDamage(EntityDamageEvent event) {
-        if (!(event.getEntity() instanceof Player)) {
-            return;
-        }
-        if (!plugin.getConfig().getBoolean("warps.cancel-on-damage", true)) {
-            return;
-        }
-        Player player = (Player) event.getEntity();
-        if (warmups.containsKey(player.getUniqueId())) {
-            cancelWarmup(player, plugin.getConfig().getString("warps.cancel-damage-message",
-                    "&cTéléportation annulée : tu as pris des dégâts."));
-        }
-    }
-
-    @EventHandler
-    public void onQuit(PlayerQuitEvent event) {
-        cancelWarmup(event.getPlayer(), null);
+    public Location location(String name) {
+        return locationOf(warpName(name));
     }
 
     private Location locationOf(String id) {
+        ConfigurationSection section = file.get().getConfigurationSection("warps." + id);
+        if (section != null) {
+            return Locations.deserialize(section.getString("location"));
+        }
         return Locations.deserialize(file.get().getString("warps." + id));
     }
 
@@ -268,25 +191,224 @@ public class WarpManager implements CommandExecutor, TabCompleter, Listener {
         return sb.toString();
     }
 
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length != 1) {
-            return Collections.emptyList();
+    private void openMain(Player player) {
+        Inventory inv = Bukkit.createInventory(new GuiHolder("warps"), 54,
+                CC.color(plugin.getConfig().getString("warps.gui.title", "&8Warps")));
+        Menus.fill(inv);
+        for (String category : categoryIds()) {
+            ConfigurationSection sec = plugin.getConfig().getConfigurationSection("warps.gui.categories." + category);
+            int slot = categorySlot(category, sec);
+            Material mat = Material.matchMaterial(sec == null ? defaultMaterial(category) : sec.getString("material", defaultMaterial(category)));
+            if (mat == null) {
+                mat = Material.COMPASS;
+            }
+            int count = warpsIn(category).size();
+            String name = sec == null ? "&e" + category : sec.getString("name", "&e" + category);
+            List<String> lore = sec == null || sec.getStringList("lore").isEmpty()
+                    ? java.util.Arrays.asList("&7" + count + " warp(s)", "&eClique pour ouvrir.")
+                    : withCount(sec.getStringList("lore"), count);
+            inv.setItem(slot, new ItemBuilder(mat)
+                    .name(name)
+                    .lore(lore)
+                    .build());
         }
-        String name = command.getName().toLowerCase(Locale.ROOT);
-        if (!"warp".equals(name) && !"delwarp".equals(name)) {
-            return Collections.emptyList();
+        inv.setItem(49, Menus.close());
+        player.openInventory(inv);
+    }
+
+    private void openCategory(Player player, String category) {
+        ConfigurationSection sec = plugin.getConfig().getConfigurationSection("warps.gui.categories." + category);
+        String title = sec == null ? "&8Warps" : sec.getString("title", sec.getString("name", "&8Warps"));
+        Inventory inv = Bukkit.createInventory(new GuiHolder("warps-cat", category), 54, CC.color(title));
+        Menus.fill(inv);
+        List<String> names = warpsIn(category);
+        int[] slots = {10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31, 32, 33, 34};
+        for (int i = 0; i < names.size() && i < slots.length; i++) {
+            String id = names.get(i);
+            inv.setItem(slots[i], new ItemBuilder(Material.ENDER_PEARL)
+                    .name("&e" + id)
+                    .lore("&7Clique pour te téléporter.").build());
         }
-        if ("delwarp".equals(name) && !isStaff(sender)) {
-            return Collections.emptyList();
+        if (names.isEmpty()) {
+            inv.setItem(22, new ItemBuilder(Material.BARRIER)
+                    .name("&cAucun warp")
+                    .lore("&7Staff: &e/setwarp <nom> " + category).build());
         }
-        String prefix = args[0].toLowerCase(Locale.ROOT);
+        inv.setItem(45, Menus.back());
+        inv.setItem(49, Menus.close());
+        player.openInventory(inv);
+    }
+
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player)) {
+            return;
+        }
+        InventoryHolder holder = event.getView().getTopInventory().getHolder();
+        if (!(holder instanceof GuiHolder)) {
+            return;
+        }
+        GuiHolder gui = (GuiHolder) holder;
+        if (!"warps".equals(gui.menu()) && !"warps-cat".equals(gui.menu())) {
+            return;
+        }
+        event.setCancelled(true);
+        if (event.getRawSlot() < 0 || event.getRawSlot() >= event.getView().getTopInventory().getSize()) {
+            return;
+        }
+        Player player = (Player) event.getWhoClicked();
+        ItemStack clicked = event.getCurrentItem();
+        if (event.getRawSlot() == 49) {
+            player.closeInventory();
+            return;
+        }
+        if ("warps".equals(gui.menu())) {
+            for (String category : categoryIds()) {
+                if (isCategoryClick(event.getRawSlot(), clicked, category)) {
+                    openCategory(player, category);
+                    return;
+                }
+            }
+            return;
+        }
+        if (event.getRawSlot() == 45) {
+            openMain(player);
+            return;
+        }
+        if (clicked == null || clicked.getType() == Material.AIR || clicked.getType() == Material.STAINED_GLASS_PANE) {
+            return;
+        }
+        if (clicked.getType() == Material.BARRIER) {
+            return;
+        }
+        if (!clicked.hasItemMeta() || !clicked.getItemMeta().hasDisplayName()) {
+            return;
+        }
+        String id = warpName(CC.strip(clicked.getItemMeta().getDisplayName()));
+        player.closeInventory();
+        teleportTo(player, id);
+    }
+
+    private boolean isCategoryClick(int slot, ItemStack clicked, String category) {
+        ConfigurationSection sec = plugin.getConfig().getConfigurationSection("warps.gui.categories." + category);
+        if (slot == categorySlot(category, sec)) {
+            return true;
+        }
+        if (clicked == null || !clicked.hasItemMeta() || !clicked.getItemMeta().hasDisplayName()) {
+            return false;
+        }
+        String expected = CC.strip(CC.color(sec == null ? category : sec.getString("name", category)));
+        return expected.equalsIgnoreCase(CC.strip(clicked.getItemMeta().getDisplayName()));
+    }
+
+    private int categorySlot(String category, ConfigurationSection sec) {
+        if (sec != null && sec.contains("slot")) {
+            return sec.getInt("slot");
+        }
+        if ("events".equals(category)) {
+            return 20;
+        }
+        if ("utilitaires".equals(category)) {
+            return 22;
+        }
+        if ("pvp".equals(category)) {
+            return 24;
+        }
+        if ("autres".equals(category)) {
+            return 31;
+        }
+        return 22;
+    }
+
+    private String defaultMaterial(String category) {
+        if ("events".equals(category)) {
+            return "DIAMOND_SWORD";
+        }
+        if ("pvp".equals(category)) {
+            return "IRON_SWORD";
+        }
+        if ("autres".equals(category)) {
+            return "CHEST";
+        }
+        return "COMPASS";
+    }
+
+    private List<String> categoryIds() {
+        ConfigurationSection sec = plugin.getConfig().getConfigurationSection("warps.gui.categories");
+        List<String> ids = new ArrayList<String>();
+        if (sec == null) {
+            ids.add("events");
+            ids.add("utilitaires");
+            ids.add("pvp");
+            ids.add("autres");
+            return ids;
+        }
+        ids.addAll(sec.getKeys(false));
+        return ids;
+    }
+
+    private List<String> warpsIn(String category) {
         List<String> out = new ArrayList<String>();
-        for (String warp : warpNames()) {
-            if (warp.startsWith(prefix)) {
-                out.add(warp);
+        for (String id : warpNames()) {
+            if (categoryOf(id).equalsIgnoreCase(category)) {
+                out.add(id);
             }
         }
         return out;
+    }
+
+    private String categoryOf(String id) {
+        ConfigurationSection section = file.get().getConfigurationSection("warps." + id);
+        if (section != null) {
+            String cat = section.getString("category", "");
+            if (cat != null && !cat.isEmpty()) {
+                return cat.toLowerCase(Locale.ROOT);
+            }
+        }
+        String mapped = plugin.getConfig().getString("warps.category-of." + id);
+        if (mapped != null && !mapped.isEmpty()) {
+            return mapped.toLowerCase(Locale.ROOT);
+        }
+        return plugin.getConfig().getString("warps.default-category", "autres");
+    }
+
+    private List<String> withCount(List<String> lore, int count) {
+        List<String> out = new ArrayList<String>();
+        for (String line : lore) {
+            out.add(line.replace("{count}", String.valueOf(count)));
+        }
+        return out;
+    }
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        String name = command.getName().toLowerCase(Locale.ROOT);
+        if (args.length == 1) {
+            if (!"warp".equals(name) && !"delwarp".equals(name) && !"setwarp".equals(name)) {
+                return Collections.emptyList();
+            }
+            if (("delwarp".equals(name) || "setwarp".equals(name)) && !isStaff(sender)) {
+                return Collections.emptyList();
+            }
+            String prefix = args[0].toLowerCase(Locale.ROOT);
+            List<String> out = new ArrayList<String>();
+            for (String warp : warpNames()) {
+                if (warp.startsWith(prefix)) {
+                    out.add(warp);
+                }
+            }
+            return out;
+        }
+        if (args.length == 2 && "setwarp".equals(name) && isStaff(sender)) {
+            String prefix = args[1].toLowerCase(Locale.ROOT);
+            List<String> out = new ArrayList<String>();
+            for (String cat : categoryIds()) {
+                if (cat.startsWith(prefix)) {
+                    out.add(cat);
+                }
+            }
+            return out;
+        }
+        return Collections.emptyList();
     }
 }

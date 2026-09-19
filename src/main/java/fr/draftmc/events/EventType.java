@@ -10,7 +10,8 @@ public enum EventType {
     TOTEM("totem", "Totem", new String[]{"tot"}),
     TOTEM_GEANT("totemgeant", "Totem Geant", new String[]{"totemg", "gianttotem"}),
     KOTH("koth", "KOTH Geant", new String[]{"kothgeant", "giantkoth", "kothg"}),
-    TEAMFIGHT("teamfight", "TeamFight", new String[]{"tf", "teamf", "8v8"});
+    TEAMFIGHT("teamfight", "TeamFight", new String[]{"tf", "teamf", "8v8"}),
+    LARGAGE("largage", "Largage", new String[]{"airdrop", "drop", "supply"});
 
     private final String id;
     private final String display;

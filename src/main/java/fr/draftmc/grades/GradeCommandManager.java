@@ -1,6 +1,7 @@
 package fr.draftmc.grades;
 
 import fr.draftmc.Draftmc;
+import fr.draftmc.gui.GuiHolder;
 import fr.draftmc.util.CC;
 import fr.draftmc.util.Cooldowns;
 import fr.draftmc.util.Items;
@@ -89,7 +90,11 @@ public class GradeCommandManager implements CommandExecutor, Listener {
         } else if ("pv".equals(key)) {
             openVault(player, section, args);
         } else if ("ec".equals(key)) {
-            player.openInventory(player.getEnderChest());
+            if (args.length >= 1) {
+                viewEnderchest(player, args[0]);
+            } else {
+                player.openInventory(player.getEnderChest());
+            }
         } else if ("refill".equals(key)) {
             refill(player, section);
         } else if ("craft".equals(key)) {
@@ -357,6 +362,10 @@ public class GradeCommandManager implements CommandExecutor, Listener {
         }
         Player viewer = (Player) event.getWhoClicked();
         if (!invseeViewers.contains(viewer.getUniqueId())) {
+            InventoryHolder holder = event.getInventory().getHolder();
+            if (holder instanceof GuiHolder && "ec-view".equals(((GuiHolder) holder).menu())) {
+                event.setCancelled(true);
+            }
             return;
         }
         event.setCancelled(true);
@@ -369,6 +378,10 @@ public class GradeCommandManager implements CommandExecutor, Listener {
             return;
         }
         if (!invseeViewers.contains(event.getWhoClicked().getUniqueId())) {
+            InventoryHolder holder = event.getInventory().getHolder();
+            if (holder instanceof GuiHolder && "ec-view".equals(((GuiHolder) holder).menu())) {
+                event.setCancelled(true);
+            }
             return;
         }
         event.setCancelled(true);
@@ -523,21 +536,12 @@ public class GradeCommandManager implements CommandExecutor, Listener {
     }
 
     private void goBack(Player player) {
-        if (plugin.combat() != null && plugin.combat().denyIfTagged(player)) {
-            return;
-        }
-        if (plugin.denyTpCooldown(player)) {
-            return;
-        }
         Location loc = Locations.deserialize(plugin.data().getString(player.getUniqueId(), "back_location"));
         if (loc == null) {
             plugin.msg(player, "&cAucune position précédente.");
             return;
         }
-        rememberBack(player);
-        player.teleport(loc);
-        plugin.startTpCooldown(player);
-        plugin.msg(player, "&aRetour à ta dernière position.");
+        plugin.teleports().request(player, loc, "&aRetour à ta dernière position.");
     }
 
     private void repairHand(Player player) {
@@ -579,6 +583,25 @@ public class GradeCommandManager implements CommandExecutor, Listener {
         }
         item.setDurability((short) 0);
         return true;
+    }
+
+    private void viewEnderchest(Player player, String name) {
+        if (!plugin.grades().hasMinGrade(player, "supreme") && !player.hasPermission("draftmc.admin")) {
+            plugin.msg(player, "&cSeul le grade Supreme peut voir l'enderchest d'un joueur.");
+            return;
+        }
+        Player target = Bukkit.getPlayer(name);
+        if (target == null) {
+            plugin.msg(player, "&cJoueur hors-ligne.");
+            return;
+        }
+        Inventory inv = Bukkit.createInventory(new GuiHolder("ec-view"), 27, CC.color("&8EC &7" + target.getName()));
+        ItemStack[] contents = target.getEnderChest().getContents();
+        for (int i = 0; i < contents.length && i < inv.getSize(); i++) {
+            inv.setItem(i, contents[i] == null ? null : contents[i].clone());
+        }
+        player.openInventory(inv);
+        plugin.msg(player, "&7Enderchest de &e" + target.getName() + " &8(lecture seule)");
     }
 
     private void invsee(Player player, String[] args) {

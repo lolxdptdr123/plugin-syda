@@ -1,35 +1,22 @@
 package fr.draftmc.homes;
 
 import fr.draftmc.Draftmc;
-import fr.draftmc.util.ActionBars;
-import fr.draftmc.util.CC;
 import fr.draftmc.util.Locations;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
-import org.bukkit.event.Listener;
-import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.UUID;
 
-public class HomeManager implements CommandExecutor, TabCompleter, Listener {
+public class HomeManager implements CommandExecutor, TabCompleter {
     private final Draftmc plugin;
-    private final Map<UUID, Integer> warmups = new HashMap<UUID, Integer>();
-    private final Map<UUID, Location> warmupStart = new HashMap<UUID, Location>();
 
     public HomeManager(Draftmc plugin) {
         this.plugin = plugin;
@@ -89,12 +76,6 @@ public class HomeManager implements CommandExecutor, TabCompleter, Listener {
     }
 
     private void goHome(Player player, String[] args) {
-        if (plugin.combat() != null && plugin.combat().denyIfTagged(player)) {
-            return;
-        }
-        if (plugin.denyTpCooldown(player)) {
-            return;
-        }
         int max = plugin.grades().perks().maxHomes(player);
         if (max <= 0) {
             plugin.msg(player, "&cTon grade n'a pas accès aux homes.");
@@ -106,104 +87,7 @@ public class HomeManager implements CommandExecutor, TabCompleter, Listener {
             plugin.msg(player, "&cHome &e" + homeName + " &cintrouvable. &e/sethome " + homeName);
             return;
         }
-        if (warmups.containsKey(player.getUniqueId())) {
-            plugin.msg(player, "&cUne téléportation est déjà en cours.");
-            return;
-        }
-        int delay = Math.max(0, plugin.getConfig().getInt("homes.teleport-delay-seconds", 5));
-        plugin.startTpCooldown(player);
-        if (delay <= 0) {
-            finishTeleport(player, loc, homeName);
-            return;
-        }
-        plugin.msg(player, plugin.getConfig().getString("homes.warmup-message",
-                "&7Téléportation dans &e{time}s&7. &8Ne bouge pas.")
-                .replace("{time}", String.valueOf(delay))
-                .replace("{home}", homeName));
-        warmupStart.put(player.getUniqueId(), player.getLocation().clone());
-        final int[] left = {delay};
-        int task = Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, new Runnable() {
-            @Override
-            public void run() {
-                if (!player.isOnline()) {
-                    cancelWarmup(player, null);
-                    return;
-                }
-                if (plugin.combat() != null && plugin.combat().isTagged(player)) {
-                    cancelWarmup(player, "&cTéléportation annulée : tu es en combat.");
-                    return;
-                }
-                left[0]--;
-                if (left[0] <= 0) {
-                    cancelWarmup(player, null);
-                    finishTeleport(player, loc, homeName);
-                    return;
-                }
-                ActionBars.send(player, CC.color("&eTéléportation &7» &f" + left[0] + "s"));
-            }
-        }, 20L, 20L);
-        warmups.put(player.getUniqueId(), task);
-    }
-
-    private void finishTeleport(Player player, Location loc, String homeName) {
-        plugin.data().setString(player.getUniqueId(), "back_location",
-                Locations.serialize(player.getLocation()));
-        player.teleport(loc);
-        plugin.msg(player, "&aTéléporté au home &e" + homeName + "&a.");
-    }
-
-    public void cancelWarmup(Player player, String message) {
-        Integer task = warmups.remove(player.getUniqueId());
-        warmupStart.remove(player.getUniqueId());
-        if (task == null) {
-            return;
-        }
-        Bukkit.getScheduler().cancelTask(task);
-        if (message != null && player.isOnline()) {
-            plugin.msg(player, message);
-        }
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onMove(PlayerMoveEvent event) {
-        Player player = event.getPlayer();
-        Location start = warmupStart.get(player.getUniqueId());
-        if (start == null) {
-            return;
-        }
-        if (!plugin.getConfig().getBoolean("homes.cancel-on-move", true)) {
-            return;
-        }
-        Location to = event.getTo();
-        if (to == null) {
-            return;
-        }
-        if (start.getBlockX() != to.getBlockX()
-                || start.getBlockY() != to.getBlockY()
-                || start.getBlockZ() != to.getBlockZ()) {
-            cancelWarmup(player, plugin.getConfig().getString("homes.cancel-move-message",
-                    "&cTéléportation annulée : tu as bougé."));
-        }
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onDamage(EntityDamageEvent event) {
-        if (!(event.getEntity() instanceof Player)) {
-            return;
-        }
-        if (!plugin.getConfig().getBoolean("homes.cancel-on-damage", true)) {
-            return;
-        }
-        Player player = (Player) event.getEntity();
-        if (warmups.containsKey(player.getUniqueId())) {
-            cancelWarmup(player, plugin.getConfig().getString("homes.cancel-damage-message",
-                    "&cTéléportation annulée : tu as pris des dégâts."));
-        }
-    }
-
-    @EventHandler
-    public void onQuit(PlayerQuitEvent event) {
-        cancelWarmup(event.getPlayer(), null);
+        plugin.teleports().request(player, loc, "&aTéléporté au home &e" + homeName + "&a.");
     }
 
     private void listHomes(Player player) {

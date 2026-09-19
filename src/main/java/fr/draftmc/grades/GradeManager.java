@@ -94,7 +94,6 @@ public class GradeManager {
         out.add("seigneur");
         out.add("empereur");
         out.add("supreme");
-        out.add("star");
         return out;
     }
 
@@ -107,11 +106,26 @@ public class GradeManager {
         return highestGradeIndex(player);
     }
 
-    /** Groupe le plus eleve du joueur present dans l'echelle rankup. */
+    /** Groupe affiché (tab / chat) : staff d'abord (owner, admin...), puis ladder rankup. */
     public String highestGroup(Player player) {
+        List<String> tab = tabOrder();
+        if (!tab.isEmpty()) {
+            int bestIndex = Integer.MAX_VALUE;
+            String bestGroup = null;
+            for (String group : allGroups(player)) {
+                int index = tab.indexOf(normalizeGroup(group));
+                if (index >= 0 && index < bestIndex) {
+                    bestIndex = index;
+                    bestGroup = tab.get(index);
+                }
+            }
+            if (bestGroup != null) {
+                return bestGroup;
+            }
+        }
         List<String> ladder = ladder();
         int bestIndex = 0;
-        String bestGroup = ladder.get(0);
+        String bestGroup = ladder.isEmpty() ? "default" : ladder.get(0);
         for (String group : allGroups(player)) {
             int index = ladder.indexOf(normalizeGroup(group));
             if (index > bestIndex) {
@@ -122,11 +136,46 @@ public class GradeManager {
         return bestGroup;
     }
 
+    /** Ordre du tab (index 0 = tout en haut). */
+    public List<String> tabOrder() {
+        List<String> configured = plugin.getConfig().getStringList("scoreboard.tab-order");
+        List<String> out = new ArrayList<String>();
+        if (configured != null) {
+            for (String entry : configured) {
+                out.add(normalizeGroup(entry));
+            }
+        }
+        if (!out.isEmpty()) {
+            return out;
+        }
+        out.add("owner");
+        out.add("admin");
+        out.add("modo");
+        out.add("helper");
+        List<String> ladder = ladder();
+        for (int i = ladder.size() - 1; i >= 0; i--) {
+            String g = ladder.get(i);
+            if (!out.contains(g)) {
+                out.add(g);
+            }
+        }
+        return out;
+    }
+
+    public int tabWeight(Player player) {
+        int index = tabOrder().indexOf(normalizeGroup(highestGroup(player)));
+        return index < 0 ? 99 : index;
+    }
+
     private int highestGradeIndex(Player player) {
         List<String> ladder = ladder();
         int best = 0;
         for (String group : allGroups(player)) {
-            int index = ladder.indexOf(normalizeGroup(group));
+            String normalized = normalizeGroup(group);
+            if (isStaffGroup(normalized)) {
+                continue;
+            }
+            int index = ladder.indexOf(normalized);
             if (index > best) {
                 best = index;
             }
@@ -134,7 +183,24 @@ public class GradeManager {
         return best;
     }
 
-    private List<String> allGroups(Player player) {
+    public boolean isStaffGroup(String group) {
+        String normalized = normalizeGroup(group);
+        if ("helper".equals(normalized) || "modo".equals(normalized)
+                || "admin".equals(normalized) || "owner".equals(normalized)) {
+            return true;
+        }
+        List<String> extra = plugin.getConfig().getStringList("staff-ranks.groups");
+        if (extra != null) {
+            for (String entry : extra) {
+                if (normalized.equals(normalizeGroup(entry))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public List<String> allGroups(Player player) {
         List<String> groups = new ArrayList<String>();
         groups.add(group(player));
         if (vaultPerm == null) {
@@ -171,8 +237,35 @@ public class GradeManager {
     /** Code couleur du grade (ex: "&d"), configurable dans scoreboard.grade-colors.<groupe>. */
     public String color(Player player) {
         String group = resolveGroup(player);
+        if ("helper".equals(group)) {
+            return "&a";
+        }
+        if ("modo".equals(group)) {
+            return "&1";
+        }
+        if ("admin".equals(group)) {
+            return "&c";
+        }
+        if ("owner".equals(group)) {
+            return "&4";
+        }
         String color = plugin.getConfig().getString("scoreboard.grade-colors." + group, "");
         return color == null ? "" : color;
+    }
+
+    public boolean isStaffMember(Player player) {
+        if (player == null) {
+            return false;
+        }
+        String group = highestGroup(player);
+        if (isStaffGroup(group)) {
+            return true;
+        }
+        return player.hasPermission("draftmc.staff.mute")
+                || player.hasPermission("draftmc.staff.freeze")
+                || player.hasPermission("draftmc.staff.ban")
+                || player.hasPermission("draftmc.staff")
+                || player.hasPermission("draftmc.admin");
     }
 
     /**

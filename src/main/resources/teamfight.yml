@@ -13,6 +13,16 @@ between-match-seconds: 15
 prevent-item-drop: true
 cancel-ally-damage: true
 
+# Points F Top pour le top 3 du tournoi (1er / 2e / 3e).
+ranking-points:
+  1: 15
+  2: 10
+  3: 5
+
+# Seul /feed est autorise dans l'arene pendant le fight (admins : /teamfight stop).
+arena-allowed-commands:
+  - feed
+
 # Effects infinis dans l'arene (amplifier 0 = niveau 1, 1 = niveau 2).
 arena-effects:
   - { type: SPEED, amplifier: 1 }
@@ -46,20 +56,35 @@ arena:
   pos1: { world: world, x: -20, y: 50, z: -20 }
   pos2: { world: world, x: 40, y: 90, z: 20 }
 
+# Colle tes items ici. name = rename (couleurs &). Infinity 1.8 = ARROW_INFINITE.
+# Infinity est force sur tous les arcs du kit, meme si /teamfight savekit a ete utilise.
 kit:
   enabled: true
+  use-saved: false
   items:
     - material: DIAMOND_SWORD
       amount: 1
       slot: hand
+      name: "&6&lTeamFight"
       enchantments:
         - type: DAMAGE_ALL
           level: 5
         - type: DURABILITY
           level: 3
+    - material: BOW
+      amount: 1
+      name: "&6&lTeamFight"
+      enchantments:
+        - type: ARROW_KNOCKBACK
+          level: 2
+        - type: DURABILITY
+          level: 3
+        - type: ARROW_INFINITE
+          level: 1
     - material: DIAMOND_HELMET
       amount: 1
       slot: helmet
+      name: "&6&lTeamFight"
       enchantments:
         - type: PROTECTION_ENVIRONMENTAL
           level: 4
@@ -68,6 +93,7 @@ kit:
     - material: DIAMOND_CHESTPLATE
       amount: 1
       slot: chestplate
+      name: "&6&lTeamFight"
       enchantments:
         - type: PROTECTION_ENVIRONMENTAL
           level: 4
@@ -76,6 +102,7 @@ kit:
     - material: DIAMOND_LEGGINGS
       amount: 1
       slot: leggings
+      name: "&6&lTeamFight"
       enchantments:
         - type: PROTECTION_ENVIRONMENTAL
           level: 4
@@ -84,30 +111,21 @@ kit:
     - material: DIAMOND_BOOTS
       amount: 1
       slot: boots
+      name: "&6&lTeamFight"
       enchantments:
         - type: PROTECTION_ENVIRONMENTAL
           level: 4
         - type: DURABILITY
           level: 3
     - material: GOLDEN_APPLE
-      amount: 16
-    - material: COOKED_BEEF
-      amount: 32
+      amount: 24
     - material: POTION
-      amount: 20
+      amount: 32
       potion-type: INSTANT_HEAL
       potion-level: 2
       splash: true
-    - material: POTION
-      amount: 2
-      potion-type: STRENGTH
-      potion-level: 2
-      splash: false
-    - material: POTION
-      amount: 4
-      potion-type: SPEED
-      potion-level: 2
-      splash: false
+    - material: ARROW
+      amount: 1
 
 scoreboard:
   enabled: true
@@ -139,6 +157,9 @@ messages:
   match-over: "&6TeamFight termine ! Vainqueur : &a{winner}"
   next-match: "&eProchain match dans &6{seconds}s"
   tournament-over: "&6{winner} remporte le TeamFight !"
+  ranking-header: "&6Classement TeamFight:"
+  ranking-line: "&e{place} place: &a{faction} &7(+{points} pts)"
+  command-blocked: "&cCommandes interdites dans l'arene. Seul &e/feed &7est autorise."
   stopped: "&cTeamFight arrete."
   spawn-set: "&aSpawn &e{slot} &adefini."
   kit-saved: "&aKit TeamFight sauvegarde depuis ton inventaire."

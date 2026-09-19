@@ -27,7 +27,7 @@ import java.util.Map;
 public class EventCommand implements CommandExecutor, TabCompleter, Listener {
     private static final List<String> ROOT = Arrays.asList("help", "start", "stop", "info", "list",
             "conquest", "domination", "battleroyal", "masterkill", "totem", "totemgeant", "koth", "teamfight",
-            "br", "cq", "dom", "mk", "tot", "totemg", "tf", "kothgeant", "kothg");
+            "largage", "br", "cq", "dom", "mk", "tot", "totemg", "tf", "kothgeant", "kothg", "airdrop");
     private static final String[] DAYS = {
             "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"
     };
@@ -234,7 +234,7 @@ public class EventCommand implements CommandExecutor, TabCompleter, Listener {
         msg(sender, "&e/event stop <event> <map> &7- Arrete un event");
         msg(sender, "&e/event <event> list &7- Liste les maps");
         msg(sender, "&e/event info &7- Etat des events");
-        msg(sender, "&7Events : &fconquest&7, &fdomination&7, &fbattleroyal&7, &fmasterkill&7, &ftotem&7, &ftotemgeant&7, &fkothgeant&7, &fteamfight");
+        msg(sender, "&7Events : &fconquest&7, &fdomination&7, &fbattleroyal&7, &fmasterkill&7, &ftotem&7, &ftotemgeant&7, &fkothgeant&7, &fteamfight&7, &flargage");
         msg(sender, "&7Ex. &e/event start conquest default");
         msg(sender, "&7Battleroyal / MasterKill / TeamFight : 1er start = inscriptions, 2e start = lancement.");
     }

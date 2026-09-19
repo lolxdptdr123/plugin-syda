@@ -8,23 +8,26 @@ import fr.draftmc.util.Locations;
 import fr.draftmc.util.NMS;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockState;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.PotionSplashEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
-import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.PlayerExpChangeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
@@ -157,15 +160,7 @@ public class CoreCommands implements CommandExecutor, Listener {
     }
 
     private void openAnvil(Player player) {
-        Block block = player.getLocation().getBlock();
-        BlockState state = block.getState();
-        Material old = block.getType();
-        byte data = block.getData();
-        block.setType(Material.ANVIL);
-        player.openInventory(Bukkit.createInventory(player, InventoryType.ANVIL, CC.color("&8Enclume")));
-        block.setType(old);
-        block.setData(data);
-        state.update(true);
+        NMS.openAnvil(player);
         plugin.msg(player, "&7Enclume portable ouverte.");
     }
 
@@ -258,7 +253,13 @@ public class CoreCommands implements CommandExecutor, Listener {
             plugin.msg(player, "&cTu as déjà souhaité la bienvenue.");
             return;
         }
-        Bukkit.broadcastMessage(CC.color(plugin.prefix() + "&e" + player.getName() + " &7souhaite la bienvenue à &a" + target.getName() + "&7 !"));
+        String broadcast = plugin.getConfig().getString("core.welcome.broadcast",
+                "&e%player% &7souhaite la bienvenue à &a%target%&7 !");
+        if (broadcast != null && !broadcast.trim().isEmpty()) {
+            Bukkit.broadcastMessage(CC.color(plugin.prefix() + broadcast
+                    .replace("%player%", player.getName())
+                    .replace("%target%", target.getName())));
+        }
         double reward = plugin.getConfig().getDouble("core.welcome.reward", 50);
         if (plugin.getConfig().getBoolean("core.welcome.use-vault", true)) {
             plugin.economy().deposit(player, reward);
@@ -267,6 +268,72 @@ public class CoreCommands implements CommandExecutor, Listener {
             plugin.tokens().add(player.getUniqueId(), (long) reward);
             plugin.msg(player, "&a+" + (long) reward + " tokens boutique pour l'accueil.");
         }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onJoin(PlayerJoinEvent event) {
+        if (plugin.getConfig().getBoolean("join-quit.hide-join-message", true)) {
+            event.setJoinMessage(null);
+        }
+        Player player = event.getPlayer();
+        java.util.List<String> lines = plugin.getConfig().getStringList("join-quit.welcome");
+        if (lines == null || lines.isEmpty()) {
+            return;
+        }
+        for (int i = 0; i < lines.size(); i++) {
+            String line = lines.get(i);
+            if (line == null || line.isEmpty()) {
+                continue;
+            }
+            player.sendMessage(CC.color(plugin.prefix() + line.replace("%player%", player.getName())));
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onQuitMessage(PlayerQuitEvent event) {
+        if (plugin.getConfig().getBoolean("join-quit.hide-quit-message", false)) {
+            event.setQuitMessage(null);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onWorldTeleport(PlayerTeleportEvent event) {
+        if (event.getTo() == null || event.getFrom().getWorld() == null || event.getTo().getWorld() == null) {
+            return;
+        }
+        if (event.getFrom().getWorld().equals(event.getTo().getWorld())) {
+            return;
+        }
+        final Player player = event.getPlayer();
+        final GameMode mode = player.getGameMode();
+        Bukkit.getScheduler().runTask(plugin, new Runnable() {
+            @Override
+            public void run() {
+                if (!player.isOnline() || skipGameModeRestore(player)) {
+                    return;
+                }
+                if (plugin.staff() != null && plugin.staff().isStaff(player)) {
+                    player.setGameMode(GameMode.CREATIVE);
+                    player.setAllowFlight(true);
+                    return;
+                }
+                if (player.getGameMode() != mode) {
+                    player.setGameMode(mode);
+                }
+            }
+        });
+    }
+
+    private boolean skipGameModeRestore(Player player) {
+        if (plugin.tournament() != null && plugin.tournament().manager() != null
+                && plugin.tournament().manager().isParticipant(player.getUniqueId())) {
+            return true;
+        }
+        if (plugin.events() != null && plugin.events().teamfight() != null
+                && plugin.events().teamfight().getManager().isFighter(player.getUniqueId())) {
+            return true;
+        }
+        return false;
     }
 
     @EventHandler

@@ -222,17 +222,10 @@ public class MasterKillManager {
                 if (factionId != null) {
                     plugin.getHost().events().awardTopPoints(fr.draftmc.events.EventType.MASTERKILL, factionId);
                 }
-                List<Map.Entry<String, Integer>> top = plugin.getKillManager().getTop(5);
-                List<String> lines = new ArrayList<String>();
-                int place = 1;
-                for (Map.Entry<String, Integer> entry : top) {
-                    lines.add(place + ". " + entry.getKey() + " — " + entry.getValue() + " kills");
-                    place++;
-                }
-                if (lines.isEmpty()) {
-                    lines.add("1. " + winner.getName());
-                }
-                plugin.getHost().events().announceDiscord(fr.draftmc.events.EventType.MASTERKILL, winner.getName(), lines);
+                String factionName = factionId == null
+                        ? winner.getName()
+                        : plugin.getEventFactionHook().getFactionDisplayName(factionId);
+                plugin.getHost().events().announceDiscordWinner(fr.draftmc.events.EventType.MASTERKILL, "", factionName, -1);
             }
         }
 

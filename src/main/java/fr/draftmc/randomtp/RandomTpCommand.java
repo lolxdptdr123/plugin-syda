@@ -57,9 +57,7 @@ public class RandomTpCommand implements CommandExecutor {
             int y = world.getHighestBlockYAt(x, z);
             Location loc = new Location(world, x + 0.5, y + 1, z + 0.5);
             if (Locations.isSafe(loc)) {
-                player.teleport(loc);
-                plugin.startTpCooldown(player);
-                plugin.msg(player, "&aTéléporté en &e" + x + " " + y + " " + z);
+                plugin.teleports().request(player, loc, "&aTéléporté en &e" + x + " " + y + " " + z);
                 return true;
             }
         }

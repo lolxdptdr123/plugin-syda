@@ -72,7 +72,7 @@ sounds:
   on-victory: WITHER_SPAWN
 
 scoreboard:
-  enabled: true
+  enabled: false
   title: "&6&lCONQUEST"
 
 bossbar:
@@ -89,7 +89,7 @@ actionbar:
   format: '&7Zone {zone}&7 : &fCapture &e{seconds}s&7/&e{duration} &7par &f{player} &e{points}&7/&e{max}'
 
 titles:
-  enabled: true
+  enabled: false
   zone-captured:
     title: "&6{zone}"
     subtitle: "&7capturee par &f{faction}"

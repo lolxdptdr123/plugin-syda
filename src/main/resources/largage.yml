@@ -1,0 +1,50 @@
+prefix: "&8[&6Largage&8] &7"
+
+countdown-seconds: 60
+duration-seconds: 600
+items-per-chest-min: 3
+items-per-chest-max: 6
+# 1 point F Top donne au joueur qui ouvre le coffre tire au sort (pas d'item).
+ranking-points: 1
+
+scoreboard:
+  enabled: false
+  title: "&c✺ &6Draftmc.fr &c✺"
+
+messages:
+  countdown: "&eLargage dans &f{time}&e."
+  ranking-point: "&e{player} &7a obtenu &6{points} point(s) classement &7pour &e{faction}&7."
+  started: "&e{count} &7coffres de largage sont apparus !"
+  stopped: "&7Le largage est terminé."
+  no-chests: "&cAucun coffre configuré. &e/largage add"
+  already: "&cUn largage est déjà en cours."
+  not-running: "&cAucun largage en cours."
+  added: "&aCoffre #{id} ajouté."
+  removed: "&cCoffre #{id} retiré."
+  cleared: "&7Tous les points ont été retirés."
+  invalid-id: "&cID invalide. &e/largage list"
+
+# Positions fixes. /largage add sur chaque emplacement.
+chests: []
+
+maps:
+  default:
+    display: Default
+    world: world
+
+loot:
+  - {type: custom, id: ORB_SPEED, weight: 10}
+  - {type: custom, id: ORB_FORCE, weight: 10}
+  - {type: custom, id: ORB_FIRE_RESISTANCE, weight: 8}
+  - {type: custom, id: ORB_HASTE, weight: 8}
+  - {type: gear, piece: helmet, weight: 7}
+  - {type: gear, piece: chestplate, weight: 7}
+  - {type: gear, piece: leggings, weight: 7}
+  - {type: gear, piece: boots, weight: 7}
+  - {type: gear, piece: sword, weight: 10}
+  - {type: vanilla, material: GOLDEN_APPLE, amount: 3, weight: 12}
+  - {type: vanilla, material: GOLDEN_APPLE, amount: 1, data: 1, weight: 3}
+  - {type: vanilla, material: ENDER_PEARL, amount: 4, weight: 10}
+  - {type: vanilla, material: EXP_BOTTLE, amount: 16, weight: 10}
+  - {type: vanilla, material: COOKED_BEEF, amount: 16, weight: 6}
+  - {type: vanilla, material: ARROW, amount: 32, weight: 6}

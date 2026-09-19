@@ -11,6 +11,12 @@ start-countdown-seconds: 60
 pvp-points: 15
 stats-seconds: 120
 
+# Pas de punch (arc, rod, boule de neige, oeuf...) dans 10 blocs autour du totem.
+# Les coups melee restent autorises. Se punch soi-meme aussi.
+anti-punch:
+  enabled: true
+  radius: 10
+
 # Fire res + anti-poison uniquement tant que le totem (classique ou geant) est LANCE.
 # radius : autour du totem. 0 = tout le monde de la map.
 effects:
@@ -46,6 +52,7 @@ scoreboard:
   enabled: true
   title: "&c✺ &6Draftmc.fr &c✺"
   none: "-"
+  empty-block: "XX"
 
 messages:
   countdown-start: "&eLe Totem démarre dans &6{seconds}&e secondes !"

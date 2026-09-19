@@ -93,7 +93,8 @@ public class StaffManager implements CommandExecutor, Listener {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         String cmd = command.getName().toLowerCase();
         if (cmd.equals("sc")) {
-            if (!sender.hasPermission("draftmc.staff")) {
+            if (!sender.hasPermission("draftmc.staff.chat") && !sender.hasPermission("draftmc.staff")) {
+                plugin.msg(sender, "&cPas la permission.");
                 return true;
             }
             if (args.length == 0) {
@@ -268,7 +269,7 @@ public class StaffManager implements CommandExecutor, Listener {
     private void broadcastStaffChat(String from, String message) {
         String line = CC.color("&8[&cStaff&8] &e" + from + " &7» &f" + message);
         for (Player p : Bukkit.getOnlinePlayers()) {
-            if (p.hasPermission("draftmc.staff")) {
+            if (p.hasPermission("draftmc.staff.chat") || p.hasPermission("draftmc.staff")) {
                 p.sendMessage(line);
             }
         }
@@ -287,9 +288,7 @@ public class StaffManager implements CommandExecutor, Listener {
         if (!staffChatMode.contains(player.getUniqueId())) {
             return;
         }
-        if (!player.hasPermission("draftmc.staff")) {
-            // Permission retirée entre-temps (ex: /op-, plugin permissions) :
-            // on désactive proprement au lieu de laisser un état incohérent.
+        if (!player.hasPermission("draftmc.staff.chat") && !player.hasPermission("draftmc.staff")) {
             staffChatMode.remove(player.getUniqueId());
             return;
         }
