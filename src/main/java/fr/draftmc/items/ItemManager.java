@@ -4,6 +4,7 @@ import fr.draftmc.Draftmc;
 import fr.draftmc.util.Cooldowns;
 import fr.draftmc.util.ItemBuilder;
 import fr.draftmc.util.Items;
+import fr.draftmc.util.YamlFile;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -17,28 +18,35 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
 public class ItemManager implements Listener, CommandExecutor {
 
     private final Draftmc plugin;
+    private final YamlFile itemLogs;
 
     private static final String KEEP_ITEMS_KEY = "pending-keep-items";
 
     public ItemManager(Draftmc plugin) {
         this.plugin = plugin;
+        this.itemLogs = new YamlFile(plugin, "itemdraft-logs.yml");
 
         Bukkit.getScheduler().runTaskTimer(plugin, new Runnable() {
             @Override
@@ -164,6 +172,10 @@ public class ItemManager implements Listener, CommandExecutor {
                     ItemStack item = Items.fromBase64(data);
 
                     if (item == null) {
+                        continue;
+                    }
+
+                    if (equipKeptArmor(player, item)) {
                         continue;
                     }
 
@@ -323,6 +335,96 @@ public class ItemManager implements Listener, CommandExecutor {
         return false;
     }
 
+    @EventHandler
+    public void onInfinityShot(EntityShootBowEvent event) {
+        if (!(event.getEntity() instanceof Player)) {
+            return;
+        }
+        if (!"ARC_INFINI".equals(Cooldowns.sid(event.getBow()))) {
+            return;
+        }
+        final Player player = (Player) event.getEntity();
+        Bukkit.getScheduler().runTask(plugin, new Runnable() {
+            @Override
+            public void run() {
+                if (!player.isOnline() || has(player, "FLECHE_INFINI")) {
+                    return;
+                }
+                give(player, "FLECHE_INFINI");
+            }
+        });
+    }
+
+    private boolean equipKeptArmor(Player player, ItemStack item) {
+        String type = item.getType().name();
+        if (type.endsWith("_HELMET") && emptySlot(player.getInventory().getHelmet())) {
+            player.getInventory().setHelmet(item);
+            return true;
+        }
+        if (type.endsWith("_CHESTPLATE") && emptySlot(player.getInventory().getChestplate())) {
+            player.getInventory().setChestplate(item);
+            return true;
+        }
+        if (type.endsWith("_LEGGINGS") && emptySlot(player.getInventory().getLeggings())) {
+            player.getInventory().setLeggings(item);
+            return true;
+        }
+        if (type.endsWith("_BOOTS") && emptySlot(player.getInventory().getBoots())) {
+            player.getInventory().setBoots(item);
+            return true;
+        }
+        return false;
+    }
+
+    private boolean emptySlot(ItemStack stack) {
+        return stack == null || stack.getType() == Material.AIR;
+    }
+
+    private Enchantment resolveEnchant(String name) {
+        if (name == null || name.isEmpty()) {
+            return null;
+        }
+        String upper = name.toUpperCase(Locale.ROOT).replace(" ", "_").replace("-", "_");
+        if (upper.contains("INFIN")) {
+            Enchantment infinity = Enchantment.ARROW_INFINITE;
+            if (infinity != null) {
+                return infinity;
+            }
+            infinity = Enchantment.getByName("ARROW_INFINITE");
+            if (infinity != null) {
+                return infinity;
+            }
+            try {
+                return Enchantment.getById(51);
+            } catch (Throwable ignored) {
+                return null;
+            }
+        }
+        if ("PROTECTION".equals(upper) || "PROT".equals(upper)) {
+            upper = "PROTECTION_ENVIRONMENTAL";
+        } else if ("UNBREAKING".equals(upper)) {
+            upper = "DURABILITY";
+        } else if ("SHARPNESS".equals(upper)) {
+            upper = "DAMAGE_ALL";
+        } else if ("POWER".equals(upper)) {
+            upper = "ARROW_DAMAGE";
+        } else if ("PUNCH".equals(upper)) {
+            upper = "ARROW_KNOCKBACK";
+        } else if ("FLAME".equals(upper)) {
+            upper = "ARROW_FIRE";
+        }
+        Enchantment byName = Enchantment.getByName(upper);
+        if (byName != null) {
+            return byName;
+        }
+        for (Enchantment enchantment : Enchantment.values()) {
+            if (enchantment != null && upper.equalsIgnoreCase(enchantment.getName())) {
+                return enchantment;
+            }
+        }
+        return null;
+    }
+
     /*
      * Création des items custom.
      */
@@ -365,33 +467,26 @@ public class ItemManager implements Listener, CommandExecutor {
 
         if (enchants != null) {
             for (String enchantName : enchants.getKeys(false)) {
-
-                try {
-                    org.bukkit.enchantments.Enchantment enchant =
-                            org.bukkit.enchantments.Enchantment.getByName(
-                                    enchantName.toUpperCase()
-                            );
-
-                    if (enchant == null) {
-                        plugin.getLogger().warning(
-                                "Enchantement inconnu : " + enchantName
-                        );
-                        continue;
-                    }
-
-                    int level =
-                            enchants.getInt(enchantName, 1);
-
-                    item.addUnsafeEnchantment(enchant, level);
-
-                } catch (Exception e) {
-                    plugin.getLogger().warning(
-                            "Impossible d'ajouter l'enchantement "
-                                    + enchantName
-                                    + " à "
-                                    + id
-                    );
+                Enchantment enchant = resolveEnchant(enchantName);
+                if (enchant == null) {
+                    plugin.getLogger().warning("Enchantement inconnu : " + enchantName);
+                    continue;
                 }
+                int level = Math.max(1, enchants.getInt(enchantName, 1));
+                item.addUnsafeEnchantment(enchant, level);
+                ItemMeta meta = item.getItemMeta();
+                if (meta != null) {
+                    meta.addEnchant(enchant, level, true);
+                    item.setItemMeta(meta);
+                }
+            }
+        }
+        if (sec.getBoolean("unbreakable", false)) {
+            ItemMeta meta = item.getItemMeta();
+            if (meta != null) {
+                meta.spigot().setUnbreakable(true);
+                meta.addItemFlags(ItemFlag.HIDE_UNBREAKABLE);
+                item.setItemMeta(meta);
             }
         }
         /*
@@ -434,7 +529,17 @@ public class ItemManager implements Listener, CommandExecutor {
             String label,
             String[] args) {
 
-        if (!sender.hasPermission("draftmc.items.give")) {
+        if (!sender.hasPermission("draftmc.admin")) {
+            plugin.msg(sender, "&cPas la permission.");
+            return true;
+        }
+        if (!canTakeItems(sender)) {
+            plugin.msg(sender, "&cSeuls les &4Owner &cet les &cAdmin &cpeuvent prendre un item.");
+            return true;
+        }
+
+        if (args.length >= 1 && (args[0].equalsIgnoreCase("logs") || args[0].equalsIgnoreCase("log"))) {
+            showLogs(sender);
             return true;
         }
 
@@ -484,13 +589,67 @@ public class ItemManager implements Listener, CommandExecutor {
         }
 
         target.getInventory().addItem(item);
-
-        plugin.msg(
-                sender,
-                "&aItem donné."
-        );
-
+        logGive(sender, target, args[0].toUpperCase(Locale.ROOT));
         return true;
+    }
+
+    private boolean canTakeItems(CommandSender sender) {
+        if (!(sender instanceof Player)) {
+            return true;
+        }
+        Player player = (Player) sender;
+        if (plugin.grades() == null) {
+            return false;
+        }
+        for (String group : plugin.grades().allGroups(player)) {
+            if (group == null) {
+                continue;
+            }
+            String name = group.toLowerCase(Locale.ROOT);
+            if ("owner".equals(name) || "admin".equals(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void logGive(CommandSender sender, Player target, String id) {
+        String staff = sender.getName();
+        boolean self = staff.equalsIgnoreCase(target.getName());
+        String text = self
+                ? staff + " a pris " + id
+                : staff + " a pris " + id + " pour " + target.getName();
+        String line = new java.text.SimpleDateFormat("dd/MM HH:mm:ss", Locale.FRANCE).format(new java.util.Date())
+                + " | " + text;
+        plugin.getLogger().info("[itemdraft] " + text);
+        List<String> logs = itemLogs.get().getStringList("logs");
+        logs.add(line);
+        int max = 400;
+        if (logs.size() > max) {
+            logs = new ArrayList<String>(logs.subList(logs.size() - max, logs.size()));
+        }
+        itemLogs.get().set("logs", logs);
+        itemLogs.save();
+        String colored = "&7[Item] &e" + staff + " &7a pris &f" + id
+                + (self ? "" : " &7pour &e" + target.getName());
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (canTakeItems(online)) {
+                plugin.msg(online, colored);
+            }
+        }
+    }
+
+    private void showLogs(CommandSender sender) {
+        List<String> logs = itemLogs.get().getStringList("logs");
+        if (logs.isEmpty()) {
+            plugin.msg(sender, "&7Aucun item pris.");
+            return;
+        }
+        plugin.msg(sender, "&6Logs itemdraft");
+        int start = Math.max(0, logs.size() - 15);
+        for (int i = start; i < logs.size(); i++) {
+            sender.sendMessage(org.bukkit.ChatColor.GRAY + logs.get(i));
+        }
     }
 
     @EventHandler

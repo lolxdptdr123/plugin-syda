@@ -70,32 +70,49 @@ public class HelpCommand implements CommandExecutor, Listener {
             openMain(player);
             return;
         }
+        if (isChatCategory(sec)) {
+            player.closeInventory();
+            sendChat(player, sec);
+            return;
+        }
         Inventory inv = Bukkit.createInventory(new GuiHolder("help-cat", category), 54,
                 CC.color(sec.getString("title", sec.getString("name", "&8Aide"))));
         Menus.fill(inv);
-        List<String> commands = sec.getStringList("commands");
         int slot = 10;
-        for (String line : commands) {
-            String[] parts = line.split("\\|", 3);
-            String cmd = parts[0].trim();
-            String desc = parts.length > 1 ? parts[1].trim() : "";
-            String run = parts.length > 2 ? parts[2].trim() : "";
-            List<String> lore = new ArrayList<String>();
-            lore.add("&7" + desc);
-            if (!run.isEmpty()) {
-                lore.add("");
-                lore.add("&eClique pour ouvrir.");
+        List<?> items = sec.getList("items");
+        if (items != null && !items.isEmpty()) {
+            for (Object raw : items) {
+                if (!(raw instanceof java.util.Map)) {
+                    continue;
+                }
+                @SuppressWarnings("unchecked")
+                java.util.Map<String, Object> map = (java.util.Map<String, Object>) raw;
+                inv.setItem(slot, helpItem(map));
+                slot = nextSlot(slot);
+                if (slot >= 44) {
+                    break;
+                }
             }
-            inv.setItem(slot, new ItemBuilder(Material.PAPER)
-                    .name("&e" + cmd)
-                    .lore(lore)
-                    .build());
-            slot++;
-            if (slot % 9 == 8) {
-                slot += 2;
-            }
-            if (slot >= 44) {
-                break;
+        } else {
+            for (String line : sec.getStringList("commands")) {
+                String[] parts = line.split("\\|", 4);
+                String cmd = parts[0].trim();
+                String desc = parts.length > 1 ? parts[1].trim() : "";
+                String run = parts.length > 2 ? parts[2].trim() : "";
+                String icon = parts.length > 3 ? parts[3].trim() : "PAPER";
+                List<String> lore = new ArrayList<String>();
+                if (!desc.isEmpty()) {
+                    lore.add("&7" + desc);
+                }
+                if (!run.isEmpty()) {
+                    lore.add("");
+                    lore.add("&eClique pour ouvrir.");
+                }
+                inv.setItem(slot, iconItem(icon, "&e" + cmd, lore));
+                slot = nextSlot(slot);
+                if (slot >= 44) {
+                    break;
+                }
             }
         }
         inv.setItem(45, Menus.back());
@@ -142,7 +159,7 @@ public class HelpCommand implements CommandExecutor, Listener {
             openMain(player);
             return;
         }
-        if (current.getType() != Material.PAPER || !current.hasItemMeta() || !current.getItemMeta().hasDisplayName()) {
+        if (!current.hasItemMeta() || !current.getItemMeta().hasDisplayName()) {
             return;
         }
         String clicked = CC.strip(current.getItemMeta().getDisplayName());
@@ -150,14 +167,89 @@ public class HelpCommand implements CommandExecutor, Listener {
         if (sec == null) {
             return;
         }
+        List<?> items = sec.getList("items");
+        if (items != null) {
+            for (Object raw : items) {
+                if (!(raw instanceof java.util.Map)) {
+                    continue;
+                }
+                @SuppressWarnings("unchecked")
+                java.util.Map<String, Object> map = (java.util.Map<String, Object>) raw;
+                String name = String.valueOf(map.get("name") == null ? "" : map.get("name"));
+                Object run = map.get("run");
+                if (CC.strip(CC.color(name)).equalsIgnoreCase(clicked) && run != null && !String.valueOf(run).trim().isEmpty()) {
+                    player.closeInventory();
+                    player.performCommand(String.valueOf(run).trim());
+                    return;
+                }
+            }
+        }
         for (String line : sec.getStringList("commands")) {
-            String[] parts = line.split("\\|", 3);
+            String[] parts = line.split("\\|", 4);
             if (parts[0].trim().equalsIgnoreCase(clicked) && parts.length > 2 && !parts[2].trim().isEmpty()) {
                 player.closeInventory();
                 player.performCommand(parts[2].trim());
                 return;
             }
         }
+    }
+
+    private boolean isChatCategory(ConfigurationSection sec) {
+        String action = sec.getString("action", "");
+        return "chat".equalsIgnoreCase(action) || "link".equalsIgnoreCase(action);
+    }
+
+    private void sendChat(Player player, ConfigurationSection sec) {
+        List<String> messages = sec.getStringList("messages");
+        if (messages == null || messages.isEmpty()) {
+            String one = sec.getString("message", "&e" + sec.getString("link", ""));
+            messages = Arrays.asList(one);
+        }
+        String link = sec.getString("link", "");
+        for (String line : messages) {
+            player.sendMessage(CC.color(line.replace("{link}", link)));
+        }
+    }
+
+    private ItemStack helpItem(java.util.Map<String, Object> map) {
+        String icon = String.valueOf(map.get("material") == null ? "PAPER" : map.get("material"));
+        String name = String.valueOf(map.get("name") == null ? "&eItem" : map.get("name"));
+        List<String> lore = new ArrayList<String>();
+        Object rawLore = map.get("lore");
+        if (rawLore instanceof List) {
+            for (Object line : (List<?>) rawLore) {
+                lore.add(String.valueOf(line));
+            }
+        }
+        Object run = map.get("run");
+        if (run != null && !String.valueOf(run).trim().isEmpty()) {
+            lore.add("");
+            lore.add("&eClique pour ouvrir.");
+        }
+        return iconItem(icon, name, lore);
+    }
+
+    private ItemStack iconItem(String icon, String name, List<String> lore) {
+        short data = 0;
+        String matName = icon;
+        int colon = icon.indexOf(':');
+        if (colon > 0) {
+            matName = icon.substring(0, colon);
+            try {
+                data = Short.parseShort(icon.substring(colon + 1).trim());
+            } catch (NumberFormatException ignored) {
+                data = 0;
+            }
+        }
+        return new ItemBuilder(material(matName), 1, data).name(name).lore(lore).build();
+    }
+
+    private int nextSlot(int slot) {
+        slot++;
+        if (slot % 9 == 8) {
+            slot += 2;
+        }
+        return slot;
     }
 
     private List<String> categories() {

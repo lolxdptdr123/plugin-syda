@@ -100,12 +100,15 @@ public class AntiCleanupListener implements Listener {
         }
         final Location deathLoc = loc.clone();
         final DropZone tagged = zone;
-        Bukkit.getScheduler().runTask(plugin, new Runnable() {
-            @Override
-            public void run() {
-                tagNearby(deathLoc, tagged);
-            }
-        });
+        // Retag sur plusieurs ticks : les drops spawnent parfois après le MONITOR.
+        for (long delay = 0L; delay <= 3L; delay++) {
+            Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
+                @Override
+                public void run() {
+                    tagNearby(deathLoc, tagged);
+                }
+            }, delay);
+        }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -116,14 +119,14 @@ public class AntiCleanupListener implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     public void onPickup(PlayerPickupItemEvent event) {
         if (blockedPickup(event.getPlayer(), event.getItem())) {
             event.setCancelled(true);
         }
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     public void onHopper(InventoryPickupItemEvent event) {
         if (protectedItem(event.getItem())) {
             event.setCancelled(true);
@@ -131,7 +134,9 @@ public class AntiCleanupListener implements Listener {
     }
 
     private boolean blockedPickup(Player player, Item item) {
-        if (player.hasPermission("draftmc.admin") || player.hasPermission("draftmc.anticleanup.bypass")) {
+        // Uniquement la perm dédiée — draftmc.admin ne bypass plus (sinon les OP
+        // pensent que l'anticlean est cassé).
+        if (player.hasPermission("draftmc.anticleanup.bypass")) {
             return false;
         }
         ProtectInfo info = protectInfo(item);
@@ -194,8 +199,8 @@ public class AntiCleanupListener implements Listener {
         if (online != null) {
             name = online.getName();
         }
-        if (name == null) {
-            return null;
+        if (name == null || name.isEmpty()) {
+            name = "Killer";
         }
         return new LootOwner(last, name);
     }
@@ -232,7 +237,7 @@ public class AntiCleanupListener implements Listener {
             return;
         }
         int maxTicks = zone.seconds * 20 + 40;
-        for (Entity entity : loc.getWorld().getNearbyEntities(loc, 6.0, 6.0, 6.0)) {
+        for (Entity entity : loc.getWorld().getNearbyEntities(loc, 8.0, 8.0, 8.0)) {
             if (entity instanceof Item && entity.getTicksLived() <= maxTicks) {
                 protectItem((Item) entity, zone);
             }
@@ -245,8 +250,8 @@ public class AntiCleanupListener implements Listener {
         }
         item.setMetadata(META, new FixedMetadataValue(plugin, zone.owner.toString() + ":" + zone.until));
         NMS.setDroppedItemOwner(item, zone.ownerName);
-        if (item.getPickupDelay() < 5) {
-            item.setPickupDelay(5);
+        if (item.getPickupDelay() < 10) {
+            item.setPickupDelay(10);
         }
     }
 
@@ -256,7 +261,7 @@ public class AntiCleanupListener implements Listener {
         }
         long now = System.currentTimeMillis();
         DropZone best = null;
-        double bestDist = 36.0;
+        double bestDist = 64.0; // 8 blocs
         for (int i = 0; i < zones.size(); i++) {
             DropZone zone = zones.get(i);
             if (zone.until < now || zone.loc.getWorld() == null

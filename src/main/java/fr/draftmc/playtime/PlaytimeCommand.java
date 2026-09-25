@@ -58,12 +58,11 @@ public class PlaytimeCommand implements CommandExecutor, Listener {
                 int need = tier.getInt("seconds", 3600);
                 boolean done = claimed(player.getUniqueId()).contains(id);
                 boolean ready = seconds >= need && !done;
-                short data = (short) (done ? 5 : (ready ? 4 : 14));
                 List<String> lore = new ArrayList<String>();
                 lore.add("&7Requis : &e" + format(need));
                 lore.add("&7Récompense :");
                 for (String line : tier.getStringList("lore")) {
-                    lore.add("&7" + line);
+                    lore.add(line.startsWith("&") ? line : "&7" + line);
                 }
                 lore.add("");
                 if (done) {
@@ -74,7 +73,7 @@ public class PlaytimeCommand implements CommandExecutor, Listener {
                     int left = need - seconds;
                     lore.add("&cEncore &e" + format(left));
                 }
-                inv.setItem(slot, new ItemBuilder(Material.STAINED_GLASS_PANE, 1, data)
+                inv.setItem(slot, new ItemBuilder(material(tier.getString("material", "WATCH")))
                         .name(tier.getString("name", "&ePalier " + id))
                         .lore(lore)
                         .build());
@@ -107,7 +106,7 @@ public class PlaytimeCommand implements CommandExecutor, Listener {
             return;
         }
         ItemStack current = event.getCurrentItem();
-        if (current == null || current.getType() != Material.STAINED_GLASS_PANE || !current.hasItemMeta()) {
+        if (current == null || current.getType() == Material.AIR || !current.hasItemMeta() || !current.getItemMeta().hasDisplayName()) {
             return;
         }
         String clicked = CC.strip(current.getItemMeta().getDisplayName());
@@ -154,7 +153,38 @@ public class PlaytimeCommand implements CommandExecutor, Listener {
         for (String cmd : tier.getStringList("commands")) {
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd.replace("%player%", player.getName()));
         }
+        giveItems(player, tier.getMapList("items"));
         plugin.msg(player, "&aRécompense playtime récupérée : " + tier.getString("name", id));
+    }
+
+    private void giveItems(Player player, List<java.util.Map<?, ?>> items) {
+        if (items == null) {
+            return;
+        }
+        for (java.util.Map<?, ?> map : items) {
+            Object matName = map.get("material");
+            if (matName == null) {
+                continue;
+            }
+            int amount = 1;
+            Object rawAmount = map.get("amount");
+            if (rawAmount instanceof Number) {
+                amount = ((Number) rawAmount).intValue();
+            }
+            ItemBuilder builder = new ItemBuilder(material(String.valueOf(matName)), Math.max(1, amount));
+            if (map.get("name") != null) {
+                builder.name(String.valueOf(map.get("name")));
+            }
+            player.getInventory().addItem(builder.build());
+        }
+    }
+
+    private Material material(String raw) {
+        try {
+            return Material.valueOf(raw.toUpperCase());
+        } catch (Exception e) {
+            return Material.WATCH;
+        }
     }
 
     private List<String> claimed(UUID uuid) {

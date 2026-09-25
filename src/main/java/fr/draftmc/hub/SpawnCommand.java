@@ -1,6 +1,7 @@
 package fr.draftmc.hub;
 
 import fr.draftmc.Draftmc;
+import fr.draftmc.util.Items;
 import fr.draftmc.util.Locations;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -13,6 +14,8 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 
 public class SpawnCommand implements CommandExecutor, Listener {
     private static final String BOOT_KEY = "spawn_boot";
@@ -72,18 +75,68 @@ public class SpawnCommand implements CommandExecutor, Listener {
             return;
         }
         plugin.data().setLong(player.getUniqueId(), BOOT_KEY, bootId);
-        Bukkit.getScheduler().runTask(plugin, new Runnable() {
+        Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
             @Override
             public void run() {
-                if (player.isOnline()) {
-                    player.teleport(loc);
+                if (!player.isOnline()) {
+                    return;
                 }
+                PlayerInventory inv = player.getInventory();
+                final ItemStack[] contents = cloneItems(inv.getContents());
+                final ItemStack[] armor = cloneItems(inv.getArmorContents());
+                final boolean hadItems = hasAnyItem(contents) || hasAnyItem(armor);
+                player.teleport(loc);
+                Items.resyncClient(plugin, player);
+                Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
+                    @Override
+                    public void run() {
+                        if (!player.isOnline()) {
+                            return;
+                        }
+                        PlayerInventory now = player.getInventory();
+                        if (hadItems && !hasAnyItem(now.getContents()) && !hasAnyItem(now.getArmorContents())) {
+                            now.setContents(contents);
+                            now.setArmorContents(armor);
+                        }
+                        player.updateInventory();
+                    }
+                }, 5L);
             }
-        });
+        }, 5L);
     }
 
-    /** Toujours le même monde (spawn.location ou spawn du monde spawn.world). */
+    private static boolean hasAnyItem(ItemStack[] items) {
+        if (items == null) {
+            return false;
+        }
+        for (int i = 0; i < items.length; i++) {
+            if (items[i] != null && items[i].getType() != org.bukkit.Material.AIR) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static ItemStack[] cloneItems(ItemStack[] source) {
+        if (source == null) {
+            return new ItemStack[0];
+        }
+        ItemStack[] copy = new ItemStack[source.length];
+        for (int i = 0; i < source.length; i++) {
+            copy[i] = source[i] == null ? null : source[i].clone();
+        }
+        return copy;
+    }
+
     public Location spawnLocation() {
+        return resolve(plugin);
+    }
+
+    /** Position de /spawn set (config.yml), sinon spawn du monde spawn.world. */
+    public static Location resolve(Draftmc plugin) {
+        if (plugin == null) {
+            return null;
+        }
         Location set = Locations.deserialize(plugin.getConfig().getString("spawn.location"));
         if (set != null && set.getWorld() != null) {
             return set;

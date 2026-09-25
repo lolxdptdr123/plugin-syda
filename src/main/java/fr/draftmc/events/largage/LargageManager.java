@@ -452,6 +452,11 @@ public class LargageManager {
         return new ArrayList<String>(plugin.getConfig().getStringList("chests"));
     }
 
+    public Location firstSpot() {
+        List<Location> spots = loadSpots();
+        return spots.isEmpty() ? null : spots.get(0).clone();
+    }
+
     private List<Location> loadSpots() {
         List<Location> out = new ArrayList<Location>();
         Set<String> used = new HashSet<String>();

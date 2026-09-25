@@ -1,5 +1,5 @@
 require("dotenv").config();
-const { Client, GatewayIntentBits } = require("discord.js");
+const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, EmbedBuilder } = require("discord.js");
 
 const TOKEN = process.env.DISCORD_TOKEN;
 const GUILD_ID = process.env.GUILD_ID;
@@ -40,6 +40,85 @@ async function pluginFetch(path, options) {
     json = { ok: false, error: "invalid_json", raw: text };
   }
   return { ok: res.ok && json.ok !== false, status: res.status, json };
+}
+
+const STATS_CHOICES = [
+  { name: "Tout le mois", value: "all" },
+  { name: "Totem géant (points)", value: "totemgeant" },
+  { name: "Totem (blocs cassés)", value: "totem" },
+  { name: "KOTH géant (kills)", value: "koth_kills" },
+  { name: "KOTH géant (morts)", value: "koth_deaths" },
+  { name: "TeamFight (hits)", value: "teamfight" },
+  { name: "Conquest (points cap)", value: "conquest" },
+  { name: "Domination (points cap)", value: "domination_caps" },
+  { name: "Domination (morts)", value: "domination_deaths" },
+];
+
+const STATS_ORDER = [
+  "totemgeant",
+  "totem",
+  "koth_kills",
+  "koth_deaths",
+  "teamfight",
+  "conquest",
+  "domination_caps",
+  "domination_deaths",
+];
+
+function formatBoard(board, max) {
+  if (!board || !Array.isArray(board.entries) || board.entries.length === 0) {
+    return "_Aucune donnée ce mois._";
+  }
+  const medals = ["🥇", "🥈", "🥉"];
+  return board.entries.slice(0, max).map((entry, i) => {
+    const medal = medals[i] || "`" + (i + 1) + ".`";
+    return medal + " **" + entry.name + "** — **" + entry.value + "** " + (board.unit || "");
+  }).join("\n");
+}
+
+function statsEmbeds(json, filter) {
+  const boards = (json && json.boards) || {};
+  const keys = filter && filter !== "all" ? [filter] : STATS_ORDER;
+  const embeds = [];
+  const chunk = new EmbedBuilder()
+    .setColor(0xf1c40f)
+    .setTitle("Stats events — " + (json.label || "ce mois"))
+    .setDescription("Classements **in-game** du mois en cours. Les compteurs repartent à zéro le 1er de chaque mois.")
+    .setFooter({ text: "Draftmc • " + (json.month || "") });
+  for (const key of keys) {
+    const board = boards[key];
+    if (!board) {
+      continue;
+    }
+    chunk.addFields({
+      name: board.title || key,
+      value: formatBoard(board, 5).slice(0, 1024),
+      inline: false,
+    });
+  }
+  if (!chunk.data.fields || chunk.data.fields.length === 0) {
+    chunk.setDescription("Aucune stat pour ce filtre.");
+  }
+  embeds.push(chunk);
+  return embeds;
+}
+
+async function registerSlashCommands() {
+  const command = new SlashCommandBuilder()
+    .setName("stats")
+    .setDescription("Classements events IG du mois (totem, koth, teamfight, conquest, domination)")
+    .addStringOption((option) =>
+      option
+        .setName("event")
+        .setDescription("Filtrer un event")
+        .setRequired(false)
+        .addChoices(...STATS_CHOICES)
+    );
+  const rest = new REST({ version: "10" }).setToken(TOKEN);
+  await rest.put(Routes.applicationGuildCommands(client.user.id, GUILD_ID), {
+    body: [command.toJSON()],
+  });
+  console.log("Commande slash /stats enregistrée.");
 }
 
 async function applyMember(guild, job) {
@@ -121,6 +200,11 @@ async function pollEvents() {
 client.once("ready", async () => {
   console.log("Bot pret :", client.user.tag);
   try {
+    await registerSlashCommands();
+  } catch (err) {
+    console.warn("Enregistrement /stats :", err.message);
+  }
+  try {
     const health = await pluginFetch("/health", { method: "GET" });
     if (!health.ok) {
       console.warn("Plugin Minecraft injoignable sur", PLUGIN_URL);
@@ -184,6 +268,28 @@ client.on("messageCreate", async (message) => {
   } catch (err) {
     console.warn("Link:", err.message);
     await message.reply("Le plugin Minecraft est hors ligne.").catch(() => null);
+  }
+});
+
+client.on("interactionCreate", async (interaction) => {
+  if (!interaction.isChatInputCommand() || interaction.commandName !== "stats") {
+    return;
+  }
+  if (interaction.guildId && interaction.guildId !== GUILD_ID) {
+    return;
+  }
+  await interaction.deferReply();
+  try {
+    const { ok, json } = await pluginFetch("/stats", { method: "GET" });
+    if (!ok) {
+      await interaction.editReply("Le serveur Minecraft ne répond pas (plugin hors ligne ou secret API).");
+      return;
+    }
+    const filter = interaction.options.getString("event") || "all";
+    await interaction.editReply({ embeds: statsEmbeds(json, filter) });
+  } catch (err) {
+    console.warn("/stats:", err.message);
+    await interaction.editReply("Impossible de récupérer les stats IG.").catch(() => null);
   }
 });
 

@@ -6,6 +6,8 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 
+import fr.draftmc.events.EventMonthStats;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -94,6 +96,9 @@ public class Totem {
         }
         plugin.getTotemManager().recordBlockBreak(player);
         plugin.getHost().data().addInt(player.getUniqueId(), "totem_blocks", 1);
+        if (!giant) {
+            EventMonthStats.add(player, EventMonthStats.TOTEM_BREAKS, 1);
+        }
         if (capturingFactionId != null && !capturingFactionId.equals(factionId)) {
             lastBreakerName = player.getName();
             lastBreakerFaction = plugin.getEventFactionHook().getFactionDisplayName(factionId);
@@ -106,6 +111,7 @@ public class Totem {
                 lastGained = plugin.blockPointsFor(this, index);
                 if (lastGained > 0) {
                     plugin.getTotemManager().addScore(factionId, lastGained);
+                    EventMonthStats.add(player, EventMonthStats.TOTEM_GIANT_POINTS, lastGained);
                 }
                 plugin.broadcast("break-cancel-giant", this, player);
             } else {
@@ -138,6 +144,9 @@ public class Totem {
             if (giant) {
                 lastGained = plugin.blockPointsFor(this, index);
                 plugin.getTotemManager().addScore(factionId, lastGained);
+                if (lastGained > 0) {
+                    EventMonthStats.add(player, EventMonthStats.TOTEM_GIANT_POINTS, lastGained);
+                }
             }
         }
         actualSize--;
@@ -147,6 +156,7 @@ public class Totem {
                 lastBonus = plugin.oneshotBonus();
                 if (lastBonus > 0) {
                     plugin.getTotemManager().addScore(factionId, lastBonus);
+                    EventMonthStats.add(player, EventMonthStats.TOTEM_GIANT_POINTS, lastBonus);
                 }
                 plugin.broadcast("oneshot", this, player);
                 spawn();

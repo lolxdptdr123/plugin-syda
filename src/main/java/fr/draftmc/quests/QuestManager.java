@@ -63,6 +63,9 @@ public class QuestManager implements CommandExecutor, Listener {
                 lore.add("&7Progression : &e" + Math.min(progress, need) + "&7/&e" + need);
                 lore.add("&7Récompense : &a" + plugin.economy().format(quest.getDouble("money", 0))
                         + (quest.getLong("tokens", 0) > 0 ? " &7+ &6" + quest.getLong("tokens") + " tokens" : ""));
+                for (String line : quest.getStringList("reward-lore")) {
+                    lore.add(line);
+                }
                 lore.add("");
                 if (claimed) {
                     lore.add("&aRécompense récupérée");
@@ -142,6 +145,18 @@ public class QuestManager implements CommandExecutor, Listener {
         plugin.data().setList(uuid, "quests_claimed", claimed);
         plugin.economy().deposit(player, quest.getDouble("money", 0));
         plugin.tokens().add(uuid, quest.getLong("tokens", 0));
+        for (java.util.Map<?, ?> map : quest.getMapList("items")) {
+            Object matName = map.get("material");
+            if (matName == null) {
+                continue;
+            }
+            int amount = map.get("amount") instanceof Number ? ((Number) map.get("amount")).intValue() : 1;
+            ItemBuilder builder = new ItemBuilder(material(String.valueOf(matName)), Math.max(1, amount));
+            if (map.get("name") != null) {
+                builder.name(String.valueOf(map.get("name")));
+            }
+            player.getInventory().addItem(builder.build());
+        }
         plugin.classement().addQuest(player);
         plugin.msg(player, "&aQuête terminée : " + quest.getString("name", id));
     }
@@ -155,6 +170,7 @@ public class QuestManager implements CommandExecutor, Listener {
             if (plugin.factions() != null && event.getEntity().getKiller() != null) {
                 plugin.factions().addPvpPoints(event.getEntity().getKiller(), 1);
             }
+            progress(event.getEntity().getKiller(), "PVP", "PLAYER");
             return;
         }
         Player killer = event.getEntity().getKiller();

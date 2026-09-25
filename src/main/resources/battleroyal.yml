@@ -38,9 +38,8 @@ factions:
   # une equipe. Passe a false pour autoriser des teams mixtes.
   require-same-faction: true
 
-# Ou teleporter tout le monde a la fin d'une partie (victoire ou /br stop).
-# Si non renseigne, Battleroyal se replie sur le spawn du premier monde
-# charge par le serveur.
+# Fallback si /spawn set n'est pas defini dans config.yml.
+# En priorite, la fin de partie utilise le spawn Draftmc (/spawn set).
 spawn:
   world: world
   x: 0

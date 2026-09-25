@@ -1,6 +1,7 @@
 package fr.draftmc.events.teamfight;
 
 import fr.draftmc.events.EventHub;
+import fr.draftmc.events.EventMonthStats;
 import fr.draftmc.events.EventType;
 import fr.draftmc.util.CC;
 import fr.draftmc.util.NmsTitles;
@@ -293,6 +294,7 @@ public class TeamFightManager {
             return;
         }
         statsOf(damager.getUniqueId()).addHit(victim.getUniqueId());
+        EventMonthStats.add(damager, EventMonthStats.TF_HITS, 1);
     }
 
     public void onPotionUsed(Player player, String type) {
@@ -737,6 +739,14 @@ public class TeamFightManager {
         plugin.getConfig().set(path + ".y", loc.getY());
         plugin.getConfig().set(path + ".z", loc.getZ());
         plugin.saveConfig();
+    }
+
+    public Location joinPoint() {
+        Location wait = readSpawn("spawns.wait");
+        if (wait != null) {
+            return wait;
+        }
+        return readSpawn("spawns.a");
     }
 
     Location readSpawn(String path) {

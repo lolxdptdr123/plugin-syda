@@ -139,6 +139,17 @@ public class KothZone {
         return maxZ;
     }
 
+    public Location getCenter() {
+        if (worldName == null) {
+            return null;
+        }
+        World world = org.bukkit.Bukkit.getWorld(worldName);
+        if (world == null) {
+            return null;
+        }
+        return new Location(world, (minX + maxX) / 2.0 + 0.5, minY + 1, (minZ + maxZ) / 2.0 + 0.5);
+    }
+
     public KothType getType() {
         return type;
     }

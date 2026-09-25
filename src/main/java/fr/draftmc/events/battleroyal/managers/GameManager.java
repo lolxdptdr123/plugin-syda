@@ -3,6 +3,7 @@ package fr.draftmc.events.battleroyal.managers;
 import fr.draftmc.events.battleroyal.BattleRoyal;
 import fr.draftmc.events.battleroyal.model.GameState;
 import fr.draftmc.events.battleroyal.model.TeamBR;
+import fr.draftmc.hub.SpawnCommand;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
@@ -270,35 +271,54 @@ public class GameManager {
      * partie (victoire) et lors d'un arret force.
      */
     private void teleportAllToSpawnAndClear() {
-        Location spawn = resolveSpawnLocation();
+        final Location spawn = resolveSpawnLocation();
+        final Set<UUID> toSend = new HashSet<UUID>();
         for (TeamBR team : teamManager.getTeams()) {
-            for (UUID uuid : team.getMembers()) {
-                Player p = Bukkit.getPlayer(uuid);
-                if (p != null) {
-                    resetPlayer(p, spawn);
+            toSend.addAll(team.getMembers());
+        }
+        toSend.addAll(eliminatedPlayers);
+        Bukkit.getScheduler().runTask(plugin.getHost(), new Runnable() {
+            @Override
+            public void run() {
+                for (UUID uuid : toSend) {
+                    Player player = Bukkit.getPlayer(uuid);
+                    if (player != null && player.isOnline()) {
+                        resetPlayer(player, spawn);
+                    }
                 }
             }
-        }
+        });
     }
 
     private void resetPlayer(Player player, Location spawn) {
         player.getInventory().clear();
         player.getInventory().setArmorContents(null);
+        player.setGameMode(GameMode.SURVIVAL);
+        player.setAllowFlight(false);
+        player.setFlying(false);
         if (spawn != null) {
             player.teleport(spawn);
         }
     }
 
-    /** Lit spawn.world/x/y/z/yaw/pitch dans la config, ou se replie sur le spawn du premier monde du serveur. */
+    public Location getCenter() {
+        return center == null ? null : center.clone();
+    }
+
+    /** Même endroit que /spawn (config.yml /spawn set), sinon battleroyal.yml, sinon spawn du monde. */
     public Location resolveSpawnLocation() {
+        Location main = SpawnCommand.resolve(plugin.getHost());
+        if (main != null) {
+            return main;
+        }
         String worldName = plugin.getConfig().getString("spawn.world");
         World world = worldName != null ? Bukkit.getWorld(worldName) : null;
-
         if (world == null) {
-            if (Bukkit.getWorlds().isEmpty()) return null;
+            if (Bukkit.getWorlds().isEmpty()) {
+                return null;
+            }
             return Bukkit.getWorlds().get(0).getSpawnLocation();
         }
-
         double x = plugin.getConfig().getDouble("spawn.x", world.getSpawnLocation().getX());
         double y = plugin.getConfig().getDouble("spawn.y", world.getSpawnLocation().getY());
         double z = plugin.getConfig().getDouble("spawn.z", world.getSpawnLocation().getZ());
@@ -407,6 +427,7 @@ public class GameManager {
     private void resetEverything() {
         scoreboardManager.clearAll();
         teleportAllToSpawnAndClear();
+        eliminatedPlayers.clear();
         teamManager.reset();
         clearArenaEntities();
         state = GameState.WAITING;

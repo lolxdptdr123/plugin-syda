@@ -598,11 +598,9 @@ boutique:
     atouts:
       name: "&c&lAtouts"
       material: BLAZE_POWDER
-      min-grade: empereur
       lore:
         - "&7Atouts permanents (combat et confort)."
         - "&7Paiement en tokens."
-        - "&cGrade Empereur requis."
       items:
         - INCREASE_DAMAGE
         - FIRE_RESISTANCE
@@ -1369,11 +1367,9 @@ shop:
     atouts:
       name: "&c&lAtouts"
       material: BLAZE_POWDER
-      min-grade: empereur
       lore:
         - "&7Atouts permanents (combat et confort)."
         - "&7Paiement avec ton argent."
-        - "&cGrade Empereur requis."
       items:
         SHOP_ATOUT_FORCE:
           type: ATOUT

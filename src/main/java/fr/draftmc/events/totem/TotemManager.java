@@ -32,6 +32,7 @@ public class TotemManager {
     private final Map<String, Integer> scores = new LinkedHashMap<String, Integer>();
     private final Map<UUID, Integer> liveBreaks = new HashMap<UUID, Integer>();
     private final Map<UUID, String> liveNames = new HashMap<UUID, String>();
+    private final Map<UUID, Long> lastBreakAt = new HashMap<UUID, Long>();
     private List<TotemStat> lastStats = new ArrayList<TotemStat>();
     private long statsUntilMillis;
     private BukkitTask countdownTask;
@@ -80,6 +81,10 @@ public class TotemManager {
         loadAll();
     }
 
+    public Collection<Totem> all() {
+        return totems.values();
+    }
+
     public Totem get(String name) {
         if (name == null) {
             return null;
@@ -100,10 +105,6 @@ public class TotemManager {
         }
         totems.put(key, totem);
         return totem;
-    }
-
-    public Collection<Totem> all() {
-        return totems.values();
     }
 
     public Totem findByBlock(Block block) {
@@ -195,6 +196,7 @@ public class TotemManager {
         scores.clear();
         liveBreaks.clear();
         liveNames.clear();
+        lastBreakAt.clear();
         endAtMillis = 0;
         totem.setGiant(giant);
         totem.setStatusStarting();
@@ -292,6 +294,23 @@ public class TotemManager {
         Integer current = liveBreaks.get(uuid);
         liveBreaks.put(uuid, current == null ? 1 : current.intValue() + 1);
         liveNames.put(uuid, player.getName());
+        lastBreakAt.put(uuid, System.currentTimeMillis());
+    }
+
+    public int breakCooldownRemaining(Player player) {
+        if (player == null) {
+            return 0;
+        }
+        Long last = lastBreakAt.get(player.getUniqueId());
+        if (last == null) {
+            return 0;
+        }
+        int cooldown = Math.max(0, plugin.getConfig().getInt("break-cooldown-seconds", 18));
+        long left = last.longValue() + cooldown * 1000L - System.currentTimeMillis();
+        if (left <= 0L) {
+            return 0;
+        }
+        return (int) Math.ceil(left / 1000.0);
     }
 
     public void freezeStats() {

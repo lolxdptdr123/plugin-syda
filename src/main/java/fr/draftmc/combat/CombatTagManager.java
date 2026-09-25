@@ -3,6 +3,7 @@ package fr.draftmc.combat;
 import fr.draftmc.Draftmc;
 import fr.draftmc.util.ActionBars;
 import fr.draftmc.util.CC;
+import fr.draftmc.util.NMS;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
@@ -10,30 +11,30 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.EnderPearl;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
+import org.bukkit.entity.ThrownPotion;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
-import org.bukkit.event.entity.PotionSplashEvent;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -55,6 +56,7 @@ public class CombatTagManager implements Listener, CommandExecutor {
 
     private final Draftmc plugin;
     private final Map<UUID, Long> taggedUntil = new ConcurrentHashMap<UUID, Long>();
+    private final Set<UUID> dropInventoryOnRespawn = new HashSet<UUID>();
     private BukkitTask tickTask;
 
     public CombatTagManager(Draftmc plugin) {
@@ -128,6 +130,9 @@ public class CombatTagManager implements Listener, CommandExecutor {
 
     public void tag(Player player) {
         if (!enabled() || player == null || !player.isOnline()) {
+            return;
+        }
+        if (player.isDead() || player.getHealth() <= 0.0) {
             return;
         }
         if (inStaffMode(player)) {
@@ -204,24 +209,42 @@ public class CombatTagManager implements Listener, CommandExecutor {
         }
     }
 
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onMeleeSyncHand(EntityDamageByEntityEvent event) {
+        if (!(event.getDamager() instanceof Player)) {
+            return;
+        }
+        Player attacker = (Player) event.getDamager();
+        ItemStack hand = attacker.getItemInHand();
+        if (hand == null || hand.getType() == Material.AIR) {
+            NMS.resetAttackDamage(attacker);
+        }
+    }
+
     @EventHandler(priority = EventPriority.MONITOR)
     public void onDamage(EntityDamageByEntityEvent event) {
         if (!enabled() || !(event.getEntity() instanceof Player)) {
             return;
         }
         Player victim = (Player) event.getEntity();
+        if (victim.isDead() || victim.getHealth() <= 0.0) {
+            return;
+        }
         Player attacker = attackerOf(event.getDamager());
         if (attacker == null) {
             return;
         }
+        if (event.isCancelled()) {
+            return;
+        }
         boolean projectile = event.getDamager() instanceof Projectile;
+        if (event.getDamager() instanceof ThrownPotion) {
+            return;
+        }
         if (attacker.equals(victim)) {
             if (projectile) {
                 tag(victim);
             }
-            return;
-        }
-        if (event.isCancelled() && !projectile && event.getDamage() <= 0.0) {
             return;
         }
         tagPair(attacker, victim);
@@ -240,42 +263,6 @@ public class CombatTagManager implements Listener, CommandExecutor {
         }
         if (projectile instanceof EnderPearl) {
             tag(shooter);
-        }
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onPearlInteract(PlayerInteractEvent event) {
-        if (!enabled()) {
-            return;
-        }
-        Action action = event.getAction();
-        if (action != Action.RIGHT_CLICK_AIR && action != Action.RIGHT_CLICK_BLOCK) {
-            return;
-        }
-        ItemStack item = event.getItem();
-        if (item == null) {
-            item = event.getPlayer().getItemInHand();
-        }
-        if (item == null || item.getType() != Material.ENDER_PEARL) {
-            return;
-        }
-        tag(event.getPlayer());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onSplash(PotionSplashEvent event) {
-        if (!enabled()) {
-            return;
-        }
-        ProjectileSource shooter = event.getPotion().getShooter();
-        if (!(shooter instanceof Player)) {
-            return;
-        }
-        Player thrower = (Player) shooter;
-        for (LivingEntity entity : event.getAffectedEntities()) {
-            if (entity instanceof Player && !entity.equals(thrower) && event.getIntensity(entity) > 0.0) {
-                tagPair(thrower, (Player) entity);
-            }
         }
     }
 
@@ -319,14 +306,61 @@ public class CombatTagManager implements Listener, CommandExecutor {
         return null;
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onDeath(PlayerDeathEvent event) {
-        untag(event.getEntity().getUniqueId(), false);
+        final Player player = event.getEntity();
+        untag(player.getUniqueId(), false);
+        if (event.getKeepInventory()) {
+            return;
+        }
+        dropInventoryOnRespawn.add(player.getUniqueId());
+        Bukkit.getScheduler().runTask(plugin, new Runnable() {
+            @Override
+            public void run() {
+                if (!player.isOnline()) {
+                    return;
+                }
+                wipeDroppedGear(player);
+            }
+        });
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onRespawn(PlayerRespawnEvent event) {
+        final Player player = event.getPlayer();
+        untag(player.getUniqueId(), false);
+        if (dropInventoryOnRespawn.remove(player.getUniqueId())) {
+            wipeDroppedGear(player);
+        }
+        Bukkit.getScheduler().runTask(plugin, new Runnable() {
+            @Override
+            public void run() {
+                if (!player.isOnline()) {
+                    return;
+                }
+                untag(player.getUniqueId(), false);
+                ItemStack hand = player.getItemInHand();
+                if (hand == null || hand.getType() == Material.AIR) {
+                    NMS.resetAttackDamage(player);
+                }
+                player.updateInventory();
+            }
+        });
+    }
+
+    /** L'épée a déjà été mise dans les drops. On enlève la copie restée côté serveur. */
+    private void wipeDroppedGear(Player player) {
+        player.getInventory().clear();
+        player.getInventory().setArmorContents(new ItemStack[4]);
+        player.setItemInHand(new ItemStack(Material.AIR));
+        NMS.resetAttackDamage(player);
+        player.updateInventory();
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
+        dropInventoryOnRespawn.remove(player.getUniqueId());
         if (!enabled() || !isTagged(player)) {
             taggedUntil.remove(player.getUniqueId());
             return;
@@ -335,10 +369,12 @@ public class CombatTagManager implements Listener, CommandExecutor {
         if (!plugin.getConfig().getBoolean("combat-tag.combat-log", true)) {
             return;
         }
-        if (commandBypass(player)) {
+        if (inStaffMode(player)) {
             return;
         }
         player.setHealth(0.0);
+        wipeDroppedGear(player);
+        dropInventoryOnRespawn.remove(player.getUniqueId());
         String broadcast = plugin.getConfig().getString("combat-tag.log-broadcast",
                 "&c{player} s'est déconnecté en combat.");
         Bukkit.broadcastMessage(CC.color(plugin.prefix() + broadcast.replace("{player}", player.getName())));

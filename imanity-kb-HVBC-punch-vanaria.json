@@ -1,0 +1,69 @@
+{
+  "name": "HVBC",
+  "behaviours": [
+    {
+      "id": "extra",
+      "type": "hitBase",
+      "damagerMonsterType": "ALL",
+      "sprintingSlowdown": "0.6",
+      "horizontalFriction": "2.0",
+      "damagerType": "ALL",
+      "vertical": "0.32",
+      "extraHorizontal": "0.37",
+      "knockbackEnchantMul": "1.0",
+      "verticalLimit": "0.35",
+      "extraVertical": "0.065",
+      "horizontal": "0.35",
+      "verticalFriction": "2.0",
+      "indirectSelfBoosting": "true",
+      "damagerProjectileType": "ALL",
+      "stopSprinting": "true"
+    },
+    {
+      "id": "base",
+      "type": "classic",
+      "inheritVertical": "1.0",
+      "shouldInheritHorizontal": "true",
+      "rodHorizontal": "0.92",
+      "comboDamageTicks": "3.0",
+      "shouldInheritVertical": "false",
+      "vertical": "0.32",
+      "sprintHorizontal": "1.023",
+      "friction": "2.0",
+      "verticalLimit": "0.4",
+      "bowVertical": "0.9",
+      "horizontal": "0.35",
+      "yDifferentLimit": "1.2",
+      "inheritHorizontal": "1.0",
+      "groundHorizontal": "1.023",
+      "stopSprinting": "true",
+      "rodVertical": "0.9",
+      "sprintVertical": "1.023",
+      "groundVertical": "1.023",
+      "shouldLimitYDifferent": "true",
+      "comboMode": "false",
+      "bowHorizontal": "0.9",
+      "sprintSlowdownHorizontal": "0.6",
+      "comboHeight": "-0.035"
+    },
+    {
+      "id": "hitdelay",
+      "type": "hitDelay",
+      "hitDelay": "20"
+    },
+    {
+      "id": "pots",
+      "type": "projectile",
+      "projectileType": "POTION",
+      "offset": "-20.0",
+      "throwSpeedMultiplier": "0.5",
+      "fallSpeed": "0.05"
+    },
+    {
+      "id": "punch",
+      "type": "bowExtra",
+      "bowExtraVerticalMul": "0.1",
+      "bowExtraHorizontalMul": "0.0"
+    }
+  ]
+}

@@ -57,6 +57,9 @@ public enum FactionPerm {
     }
 
     public boolean shownFor(String group) {
+        if (this == RELATIONS) {
+            return false;
+        }
         if ("NEUTRAL".equals(group) || "ENEMY".equals(group)) {
             return land;
         }

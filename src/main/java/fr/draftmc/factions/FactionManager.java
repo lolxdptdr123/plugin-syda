@@ -46,7 +46,7 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
             "help", "create", "disband", "invite", "deinvite", "join", "kick", "leave",
             "promote", "demote", "rank", "leader", "show", "who", "list", "desc", "motd", "rename",
             "open", "close", "chest", "upgrade", "perm", "fly", "home", "sethome", "delhome",
-            "claim", "unclaim", "unclaimall", "map", "enemy", "neutral",
+            "claim", "unclaim", "unclaimall", "map",
             "chat", "c", "rally", "top", "logs", "menu", "mission", "missions", "prestige",
             "acces", "access", "warp", "warps", "setwarp", "delwarp"
     );
@@ -61,6 +61,7 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
     private LunarClientFeatures lunarFeatures;
     private final Map<UUID, FactionChatMode> chatModes = new HashMap<UUID, FactionChatMode>();
     private final Map<UUID, String> pendingDisband = new HashMap<UUID, String>();
+    private final Set<UUID> factionFlying = new HashSet<UUID>();
 
     public FactionManager(Draftmc plugin) {
         this.plugin = plugin;
@@ -84,6 +85,12 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
                 regenPower();
             }
         }, 20L * 60, 20L * 60);
+        Bukkit.getScheduler().runTaskTimer(plugin, new Runnable() {
+            @Override
+            public void run() {
+                tickFactionFly();
+            }
+        }, 10L, 10L);
     }
 
     public FactionMenus menus() {
@@ -146,8 +153,14 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
         return FactionRank.MEMBER;
     }
 
+    public boolean isFactionAdmin(Player player) {
+        return player != null && (player.isOp()
+                || player.hasPermission("draftmc.admin")
+                || player.hasPermission("draftmc.faction.bypass"));
+    }
+
     public boolean hasPerm(Player player, FactionPerm perm) {
-        if (player.hasPermission("draftmc.admin") || player.hasPermission("draftmc.faction.bypass")) {
+        if (isFactionAdmin(player)) {
             return true;
         }
         String fac = factionOf(player);
@@ -394,7 +407,7 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
     }
 
     public boolean canBuild(Player player, Location location, FactionPerm perm) {
-        if (player.hasPermission("draftmc.admin") || player.hasPermission("draftmc.faction.bypass")) {
+        if (isFactionAdmin(player)) {
             return true;
         }
         String owner = claimAt(location);
@@ -454,25 +467,89 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
         if (from.equalsIgnoreCase(to)) {
             return FactionRelation.MEMBER;
         }
-        if (listContains("factions." + from + ".enemies", to)) {
-            return FactionRelation.ENEMY;
-        }
-        return FactionRelation.NEUTRAL;
+        return FactionRelation.ENEMY;
     }
 
     public void onChunkChange(Player player, Location to) {
-        if (!player.getAllowFlight() || player.hasPermission("draftmc.fly")) {
+        enforceFactionFly(player, to, false);
+    }
+
+    private void tickFactionFly() {
+        if (factionFlying.isEmpty()) {
             return;
         }
+        for (UUID uuid : new ArrayList<UUID>(factionFlying)) {
+            Player player = Bukkit.getPlayer(uuid);
+            if (player == null || !player.isOnline()) {
+                factionFlying.remove(uuid);
+                continue;
+            }
+            enforceFactionFly(player, player.getLocation(), false);
+        }
+    }
+
+    private boolean enforceFactionFly(Player player, Location at, boolean quiet) {
+        if (!factionFlying.contains(player.getUniqueId())) {
+            return true;
+        }
+        String reason = factionFlyBlockReason(player, at);
+        if (reason == null) {
+            return true;
+        }
+        disableFactionFly(player, quiet ? null : reason);
+        return false;
+    }
+
+    private String factionFlyBlockReason(Player player, Location at) {
         String fac = factionOf(player);
-        if (fac.isEmpty() || !hasFly(fac)) {
-            return;
+        if (fac.isEmpty()) {
+            return plugin.getConfig().getString("factions.fly.claim-message",
+                    "&cLe fly faction fonctionne uniquement dans tes claims.");
         }
-        String owner = claimAt(to);
+        String owner = claimAt(at == null ? player.getLocation() : at);
         if (owner == null || !owner.equalsIgnoreCase(fac)) {
-            player.setAllowFlight(false);
-            player.setFlying(false);
-            plugin.msg(player, "&cFly désactivé hors de tes claims.");
+            return plugin.getConfig().getString("factions.fly.claim-message",
+                    "&cLe fly faction fonctionne uniquement dans tes claims.");
+        }
+        Player enemy = nearbyEnemy(player, at == null ? player.getLocation() : at);
+        if (enemy != null) {
+            return plugin.getConfig().getString("factions.fly.enemy-message",
+                    "&cFly coupé : ennemi à proximité.");
+        }
+        return null;
+    }
+
+    private Player nearbyEnemy(Player player, Location at) {
+        double radius = plugin.getConfig().getDouble("factions.fly.enemy-radius", 15);
+        double max = radius * radius;
+        String fac = factionOf(player);
+        for (Player other : at.getWorld().getPlayers()) {
+            if (other.equals(player) || !other.isOnline()) {
+                continue;
+            }
+            if (other.getGameMode() == org.bukkit.GameMode.SPECTATOR) {
+                continue;
+            }
+            if (other.getLocation().distanceSquared(at) > max) {
+                continue;
+            }
+            if (!fac.isEmpty() && fac.equalsIgnoreCase(factionOf(other))) {
+                continue;
+            }
+            String otherFac = factionOf(other);
+            if (otherFac.isEmpty() || relationOf(fac, otherFac) == FactionRelation.ENEMY) {
+                return other;
+            }
+        }
+        return null;
+    }
+
+    private void disableFactionFly(Player player, String message) {
+        factionFlying.remove(player.getUniqueId());
+        player.setAllowFlight(false);
+        player.setFlying(false);
+        if (message != null && !message.isEmpty()) {
+            plugin.msg(player, message);
         }
     }
 
@@ -521,6 +598,7 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
 
     public void clearChat(UUID uuid) {
         chatModes.remove(uuid);
+        factionFlying.remove(uuid);
     }
 
     public void sendMotd(Player player) {
@@ -555,7 +633,15 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
         } else if (sub.equals("create") && args.length >= 2) {
             create(player, args[1]);
         } else if (sub.equals("disband")) {
-            disband(player, args.length >= 2 && args[1].equalsIgnoreCase("confirm"));
+            String target = null;
+            boolean confirm = false;
+            if (args.length >= 2 && args[1].equalsIgnoreCase("confirm")) {
+                confirm = true;
+            } else if (args.length >= 2) {
+                target = args[1];
+                confirm = args.length >= 3 && args[2].equalsIgnoreCase("confirm");
+            }
+            disband(player, target, confirm);
         } else if (sub.equals("invite") && args.length >= 2) {
             invite(player, args[1]);
         } else if (sub.equals("deinvite") && args.length >= 2) {
@@ -576,8 +662,6 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
             } else {
                 plugin.msg(player, "&cUsage : &e/f rank <joueur> <Co-leader|Officier|Membre|Recrue>");
             }
-        } else if (sub.equals("ally") || sub.equals("allies") || sub.equals("unally") || sub.equals("truce")) {
-            plugin.msg(player, "&cLes alliances de faction sont désactivées.");
         } else if (sub.equals("leader") && args.length >= 2) {
             transfer(player, args[1]);
         } else if (sub.equals("show") || sub.equals("who") || sub.equals("info")) {
@@ -624,15 +708,11 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
         } else if (sub.equals("claim")) {
             claim(player);
         } else if (sub.equals("unclaim")) {
-            unclaim(player, false);
+            unclaim(player, false, null);
         } else if (sub.equals("unclaimall")) {
-            unclaim(player, true);
+            unclaim(player, true, args.length >= 2 ? args[1] : null);
         } else if (sub.equals("map")) {
             map(player);
-        } else if (sub.equals("enemy") && args.length >= 2) {
-            setRelation(player, args[1], FactionRelation.ENEMY);
-        } else if (sub.equals("neutral") && args.length >= 2) {
-            setRelation(player, args[1], FactionRelation.NEUTRAL);
         } else if (sub.equals("chat")) {
             cycleChat(player);
         } else if (sub.equals("c")) {
@@ -670,7 +750,7 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
                     }
                 }
             } else if (sub.equals("join") || sub.equals("show") || sub.equals("who") || sub.equals("info")
-                    || sub.equals("enemy") || sub.equals("neutral")) {
+                    || sub.equals("disband") || sub.equals("unclaimall")) {
                 addFactionTab(out, args[1]);
             } else if (sub.equals("top")) {
                 for (String s : Arrays.asList("add", "remove", "reset")) {
@@ -836,7 +916,6 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
         plugin.msg(player, "&e/f join/leave/disband");
         plugin.msg(player, "&e/f claim/unclaim/map/home/rally");
         plugin.msg(player, "&e/f rally &8- &7Waypoint rally (&e/f rally del &7pour supprimer)");
-        plugin.msg(player, "&e/f enemy/neutral <faction>");
         plugin.msg(player, "&e/f menu &8- &7Classements, prestige, perms, missions");
         plugin.msg(player, "&e/f logs &8- &7Logs, claims, zones, coffre, warps");
         plugin.msg(player, "&e/f prestige &8- &7Prestiges de faction");
@@ -846,8 +925,10 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
         plugin.msg(player, "&e/f upgrade &8- &7Menu des améliorations");
         plugin.msg(player, "&e/f perm &8- &7Menu des permissions");
         plugin.msg(player, "&e/f chest, /f fly, /f chat, /f list, /f top");
-        if (player.hasPermission("draftmc.faction.top") || player.hasPermission("draftmc.admin")) {
-            plugin.msg(player, "&e/f top add/remove/reset &8- &7Gérer le F Top (admin)");
+        if (isFactionAdmin(player)) {
+            plugin.msg(player, "&e/f disband <faction> [confirm] &8- &7Dissoudre n'importe quelle faction");
+            plugin.msg(player, "&e/f join <faction> &8- &7Rejoindre sans invitation");
+            plugin.msg(player, "&e/f unclaimall [faction] &8- &7Retirer les claims");
         }
     }
 
@@ -882,26 +963,52 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
         broadcast("&6" + player.getName() + " &7a créé la faction &e" + name + "&7.");
     }
 
-    private void disband(Player player, boolean confirm) {
-        String fac = factionOf(player);
-        if (fac.isEmpty()) {
-            plugin.msg(player, "&cPas de faction.");
-            return;
-        }
-        if (rankOf(player) != FactionRank.LEADER) {
-            plugin.msg(player, "&cSeul le chef peut dissoudre la faction.");
-            return;
+    private void disband(Player player, String targetName, boolean confirm) {
+        String fac;
+        if (targetName != null) {
+            if (!isFactionAdmin(player)) {
+                plugin.msg(player, "&cTu ne peux pas dissoudre une faction qui ne t'appartient pas.");
+                return;
+            }
+            fac = resolveFaction(targetName);
+            if (fac == null) {
+                plugin.msg(player, "&cFaction introuvable.");
+                return;
+            }
+        } else {
+            fac = factionOf(player);
+            if (fac.isEmpty()) {
+                plugin.msg(player, isFactionAdmin(player)
+                        ? "&cUsage : &e/f disband <faction> &7ou rejoins une faction."
+                        : "&cPas de faction.");
+                return;
+            }
+            if (!isFactionAdmin(player) && rankOf(player) != FactionRank.LEADER) {
+                plugin.msg(player, "&cSeul le chef peut dissoudre la faction.");
+                return;
+            }
         }
         if (!confirm) {
             pendingDisband.put(player.getUniqueId(), fac);
-            plugin.msg(player, "&cConfirme avec &e/f disband confirm");
+            plugin.msg(player, "&cConfirme avec &e/f disband confirm"
+                    + (isFactionAdmin(player) ? " &7ou &e/f disband " + displayName(fac) + " confirm" : ""));
             return;
         }
-        if (!fac.equals(pendingDisband.get(player.getUniqueId()))) {
-            plugin.msg(player, "&cRefais &e/f disband &cpuis confirme.");
-            return;
+        if (targetName == null) {
+            String pending = pendingDisband.get(player.getUniqueId());
+            if (pending == null) {
+                plugin.msg(player, "&cRefais &e/f disband &cpuis confirme.");
+                return;
+            }
+            fac = pending;
         }
         pendingDisband.remove(player.getUniqueId());
+        String shown = displayName(fac);
+        doDisband(fac);
+        plugin.msg(player, "&cFaction &e" + shown + " &cdissoute.");
+    }
+
+    private void doDisband(String fac) {
         String name = displayName(fac);
         rally.clearRally(fac);
         for (String raw : members(fac)) {
@@ -916,7 +1023,6 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
         removeClaims(fac);
         file.get().set("factions." + fac, null);
         file.save();
-        plugin.msg(player, "&cFaction dissoute.");
         broadcast("&cLa faction &e" + name + " &ca été dissoute.");
         if (plugin.events() != null && plugin.events().totem() != null) {
             plugin.events().totem().onFactionDisband(fac);
@@ -988,9 +1094,13 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
     }
 
     private void join(Player player, String name) {
-        if (!factionOf(player).isEmpty()) {
-            plugin.msg(player, "&cTu es déjà dans une faction.");
-            return;
+        String current = factionOf(player);
+        if (!current.isEmpty()) {
+            if (!isFactionAdmin(player)) {
+                plugin.msg(player, "&cTu es déjà dans une faction.");
+                return;
+            }
+            leaveInternal(player, true);
         }
         String id = resolveFaction(name);
         if (id == null) {
@@ -999,11 +1109,11 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
         }
         boolean open = file.get().getBoolean("factions." + id + ".open", false);
         List<String> invites = file.get().getStringList("factions." + id + ".invites");
-        if (!open && !invites.contains(player.getUniqueId().toString()) && !player.hasPermission("draftmc.admin")) {
+        if (!open && !invites.contains(player.getUniqueId().toString()) && !isFactionAdmin(player)) {
             plugin.msg(player, "&cPas d'invitation.");
             return;
         }
-        if (members(id).size() >= maxMembers(id)) {
+        if (members(id).size() >= maxMembers(id) && !isFactionAdmin(player)) {
             plugin.msg(player, "&cCette faction est pleine.");
             return;
         }
@@ -1022,13 +1132,35 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
     }
 
     private void kick(Player player, String targetName) {
-        String fac = requireFac(player);
-        if (fac == null) return;
-        if (!hasPerm(player, FactionPerm.KICK)) {
+        UUID uuid = null;
+        String fac = factionOf(player);
+        if (isFactionAdmin(player)) {
+            Player online = Bukkit.getPlayer(targetName);
+            if (online != null && !factionOf(online).isEmpty()) {
+                uuid = online.getUniqueId();
+                fac = factionOf(online);
+            } else {
+                UUID stored = plugin.data().findUuidByString("name", targetName);
+                if (stored != null) {
+                    String storedFac = plugin.data().getString(stored, "faction");
+                    if (storedFac != null && !storedFac.isEmpty()) {
+                        uuid = stored;
+                        fac = storedFac;
+                    }
+                }
+            }
+        }
+        if (uuid == null) {
+            if (fac.isEmpty()) {
+                plugin.msg(player, "&cPas de faction.");
+                return;
+            }
+            uuid = findMember(fac, targetName);
+        }
+        if (!hasPerm(player, FactionPerm.KICK) && !isFactionAdmin(player)) {
             plugin.msg(player, "&cTu ne peux pas expulser.");
             return;
         }
-        UUID uuid = findMember(fac, targetName);
         if (uuid == null) {
             plugin.msg(player, "&cCe joueur n'est pas dans la faction.");
             return;
@@ -1039,7 +1171,7 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
         }
         FactionRank mine = rankOf(player);
         FactionRank theirs = rankOf(fac, uuid);
-        if (theirs.weight() >= mine.weight()) {
+        if (!isFactionAdmin(player) && theirs.weight() >= mine.weight()) {
             plugin.msg(player, "&cTu ne peux pas expulser ce grade.");
             return;
         }
@@ -1049,13 +1181,31 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
     }
 
     private void leave(Player player) {
+        leaveInternal(player, isFactionAdmin(player));
+    }
+
+    private void leaveInternal(Player player, boolean force) {
         String fac = requireFac(player);
         if (fac == null) return;
-        if (rankOf(player) == FactionRank.LEADER) {
+        if (rankOf(player) == FactionRank.LEADER && !force) {
             plugin.msg(player, "&cTransfère le lead (&e/f leader&c) ou dissous (&e/f disband&c).");
             return;
         }
         extras.addLog(fac, "roster", player.getName() + " a quitté la faction");
+        if (rankOf(player) == FactionRank.LEADER) {
+            List<String> rest = new ArrayList<String>(members(fac));
+            rest.remove(player.getUniqueId().toString());
+            if (rest.isEmpty()) {
+                String shown = displayName(fac);
+                removeMember(fac, player.getUniqueId(), "&cTu as quitté la faction.");
+                doDisband(fac);
+                plugin.msg(player, "&eFaction &6" + shown + " &edissoute (plus de membres).");
+                return;
+            }
+            UUID next = UUID.fromString(rest.get(0));
+            file.get().set("factions." + fac + ".leader", next.toString());
+            file.get().set("factions." + fac + ".ranks." + next.toString(), FactionRank.LEADER.name());
+        }
         removeMember(fac, player.getUniqueId(), "&cTu as quitté la faction.");
         notifyMembers(fac, "&e" + player.getName() + " &7a quitté la faction.");
     }
@@ -1078,7 +1228,7 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
             return;
         }
         FactionRank actor = rankOf(player);
-        if (current.weight() >= actor.weight() && actor != FactionRank.LEADER) {
+        if (current.weight() >= actor.weight() && actor != FactionRank.LEADER && !isFactionAdmin(player)) {
             plugin.msg(player, "&cTu ne peux pas changer le grade de ce membre.");
             return;
         }
@@ -1087,7 +1237,7 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
             plugin.msg(player, up ? "&cDéjà au grade max (hors leader)." : "&cDéjà recrue.");
             return;
         }
-        if (next.weight() >= actor.weight() && actor != FactionRank.LEADER) {
+        if (next.weight() >= actor.weight() && actor != FactionRank.LEADER && !isFactionAdmin(player)) {
             plugin.msg(player, "&cTu ne peux pas promouvoir à ce grade.");
             return;
         }
@@ -1121,11 +1271,11 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
             return;
         }
         FactionRank actor = rankOf(player);
-        if (current.weight() >= actor.weight() && actor != FactionRank.LEADER) {
+        if (current.weight() >= actor.weight() && actor != FactionRank.LEADER && !isFactionAdmin(player)) {
             plugin.msg(player, "&cTu ne peux pas changer le grade de ce membre.");
             return;
         }
-        if (wanted.weight() >= actor.weight() && actor != FactionRank.LEADER) {
+        if (wanted.weight() >= actor.weight() && actor != FactionRank.LEADER && !isFactionAdmin(player)) {
             plugin.msg(player, "&cTu ne peux pas attribuer ce grade.");
             return;
         }
@@ -1146,7 +1296,7 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
     private void transfer(Player player, String targetName) {
         String fac = requireFac(player);
         if (fac == null) return;
-        if (rankOf(player) != FactionRank.LEADER) {
+        if (rankOf(player) != FactionRank.LEADER && !isFactionAdmin(player)) {
             plugin.msg(player, "&cSeul le chef peut transférer le lead.");
             return;
         }
@@ -1207,7 +1357,7 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
         if (created > 0) {
             player.sendMessage(CC.color("&eCréée le &7» &f" + new SimpleDateFormat("dd/MM/yyyy HH:mm").format(new Date(created))));
         }
-        player.sendMessage(CC.color("&eEnnemis &7» &c" + relNames(id, "enemies")));
+        player.sendMessage(CC.color("&eEnnemis &7» &cToutes les autres factions"));
         player.sendMessage(CC.color("&6Grades de faction"));
         for (FactionRank rank : new FactionRank[] {
                 FactionRank.LEADER, FactionRank.COLEADER, FactionRank.OFFICER, FactionRank.MEMBER, FactionRank.RECRUIT
@@ -1416,17 +1566,19 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
                 return;
             }
         }
-        if (!player.hasPermission("draftmc.fly")) {
-            String owner = claimAt(player.getLocation());
-            if (owner == null || !owner.equalsIgnoreCase(fac)) {
-                plugin.msg(player, "&cLe fly faction fonctionne uniquement dans tes claims.");
-                return;
-            }
+        if (player.getAllowFlight() && factionFlying.contains(player.getUniqueId())) {
+            disableFactionFly(player, "&cFly désactivé.");
+            return;
         }
-        boolean now = !player.getAllowFlight();
-        player.setAllowFlight(now);
-        player.setFlying(now);
-        plugin.msg(player, now ? "&aFly activé." : "&cFly désactivé.");
+        String blocked = factionFlyBlockReason(player, player.getLocation());
+        if (blocked != null) {
+            plugin.msg(player, blocked);
+            return;
+        }
+        factionFlying.add(player.getUniqueId());
+        player.setAllowFlight(true);
+        player.setFlying(true);
+        plugin.msg(player, "&aFly activé. &7Uniquement dans tes claims.");
     }
 
     private void home(Player player) {
@@ -1494,7 +1646,7 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
             plugin.msg(player, "&cDéjà claim par &e" + displayName(existing));
             return;
         }
-        if (claimCount(fac) + 1 > factionPower(fac)) {
+        if (claimCount(fac) + 1 > factionPower(fac) && !isFactionAdmin(player)) {
             plugin.msg(player, "&cPas assez de power. &7(" + formatPower(factionPower(fac)) + ")");
             return;
         }
@@ -1505,10 +1657,43 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
         plugin.msg(player, "&aChunk claim &7(" + chunk.getX() + ", " + chunk.getZ() + ")");
     }
 
-    private void unclaim(Player player, boolean all) {
-        String fac = requireFac(player);
-        if (fac == null) return;
-        if (!hasPerm(player, FactionPerm.UNCLAIM)) {
+    private void unclaim(Player player, boolean all, String targetName) {
+        String fac;
+        if (all && targetName != null) {
+            if (!isFactionAdmin(player)) {
+                plugin.msg(player, "&cTu ne peux pas unclaim une autre faction.");
+                return;
+            }
+            fac = resolveFaction(targetName);
+            if (fac == null) {
+                plugin.msg(player, "&cFaction introuvable.");
+                return;
+            }
+        } else if (all) {
+            fac = requireFac(player);
+            if (fac == null) {
+                return;
+            }
+        } else {
+            String existing = claimAt(player.getLocation());
+            if (existing == null) {
+                plugin.msg(player, "&cCe chunk n'est pas claim.");
+                return;
+            }
+            if (!isFactionAdmin(player)) {
+                fac = requireFac(player);
+                if (fac == null) {
+                    return;
+                }
+                if (!existing.equalsIgnoreCase(fac)) {
+                    plugin.msg(player, "&cCe chunk n'est pas à toi.");
+                    return;
+                }
+            } else {
+                fac = existing;
+            }
+        }
+        if (!hasPerm(player, FactionPerm.UNCLAIM) && !isFactionAdmin(player)) {
             plugin.msg(player, "&cTu ne peux pas unclaim.");
             return;
         }
@@ -1516,12 +1701,7 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
             int n = removeClaims(fac);
             file.save();
             extras.addLog(fac, "claim", player.getName() + " a unclaim all (" + n + ")");
-            plugin.msg(player, "&e" + n + " claims retirés.");
-            return;
-        }
-        String existing = claimAt(player.getLocation());
-        if (existing == null || !existing.equalsIgnoreCase(fac)) {
-            plugin.msg(player, "&cCe chunk n'est pas à toi.");
+            plugin.msg(player, "&e" + n + " claims retirés de &6" + displayName(fac) + "&e.");
             return;
         }
         Chunk chunk = player.getLocation().getChunk();
@@ -1529,7 +1709,7 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
         file.save();
         extras.addLog(fac, "claim", player.getName() + " a unclaim " + chunk.getWorld().getName()
                 + " " + chunk.getX() + "," + chunk.getZ());
-        plugin.msg(player, "&eChunk unclaim.");
+        plugin.msg(player, "&eChunk unclaim &7(" + displayName(fac) + "&7).");
     }
 
     private void map(Player player) {
@@ -1567,33 +1747,6 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
         if (legend.length() > 0) {
             plugin.msg(player, "&7Légende : " + legend);
         }
-    }
-
-    private void setRelation(Player player, String name, FactionRelation wanted) {
-        String fac = requireFac(player);
-        if (fac == null) return;
-        if (!hasPerm(player, FactionPerm.RELATIONS)) {
-            plugin.msg(player, "&cTu ne peux pas gérer les relations.");
-            return;
-        }
-        String other = resolveFaction(name);
-        if (other == null) {
-            plugin.msg(player, "&cFaction introuvable.");
-            return;
-        }
-        if (other.equalsIgnoreCase(fac)) {
-            plugin.msg(player, "&cImpossible.");
-            return;
-        }
-        clearRelations(fac, other);
-        if (wanted == FactionRelation.ENEMY) {
-            addRel(fac, "enemies", other);
-            addRel(other, "enemies", fac);
-        }
-        file.save();
-        String label = wanted == FactionRelation.NEUTRAL ? "neutre" : wanted.name().toLowerCase(Locale.ROOT);
-        notifyMembers(fac, "&7Relation avec &e" + displayName(other) + " &7: " + wanted.color() + label);
-        notifyMembers(other, "&7Relation avec &e" + displayName(fac) + " &7: " + wanted.color() + label);
     }
 
     private void cycleChat(Player player) {
@@ -1653,6 +1806,7 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
         file.get().set("factions." + fac + ".ranks." + uuid.toString(), null);
         file.save();
         plugin.data().setString(uuid, "faction", "");
+        factionFlying.remove(uuid);
         Player online = Bukkit.getPlayer(uuid);
         if (online != null) {
             if (online.getAllowFlight() && !online.hasPermission("draftmc.fly")) {
@@ -1745,50 +1899,6 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
         }
         OfflinePlayer off = Bukkit.getOfflinePlayer(name);
         return off != null && off.hasPlayedBefore() ? off.getUniqueId() : null;
-    }
-
-    private boolean listContains(String path, String value) {
-        for (String s : file.get().getStringList(path)) {
-            if (s.equalsIgnoreCase(value)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private void addRel(String fac, String key, String other) {
-        List<String> list = file.get().getStringList("factions." + fac + "." + key);
-        if (!list.contains(other)) {
-            list.add(other);
-        }
-        file.get().set("factions." + fac + "." + key, list);
-    }
-
-    private void clearRelations(String a, String b) {
-        removeRel(a, "allies", b);
-        removeRel(a, "truces", b);
-        removeRel(a, "enemies", b);
-        removeRel(b, "allies", a);
-        removeRel(b, "truces", a);
-        removeRel(b, "enemies", a);
-    }
-
-    private void removeRel(String fac, String key, String other) {
-        List<String> list = file.get().getStringList("factions." + fac + "." + key);
-        list.remove(other);
-        file.get().set("factions." + fac + "." + key, list);
-    }
-
-    private String relNames(String fac, String key) {
-        List<String> list = file.get().getStringList("factions." + fac + "." + key);
-        if (list.isEmpty()) {
-            return "Aucun";
-        }
-        List<String> names = new ArrayList<String>();
-        for (String id : list) {
-            names.add(displayName(id));
-        }
-        return joinComma(names);
     }
 
     private String claimKey(Chunk chunk) {

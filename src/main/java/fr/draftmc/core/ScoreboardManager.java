@@ -542,9 +542,17 @@ public class ScoreboardManager {
             cut = 15;
         }
         String prefix = text.substring(0, cut);
-        String suffix = ChatColor.getLastColors(prefix) + text.substring(cut);
+        String rest = text.substring(cut);
+        String suffix;
+        if (rest.length() > 0 && rest.charAt(0) == ChatColor.COLOR_CHAR) {
+            suffix = rest;
+        } else {
+            suffix = ChatColor.getLastColors(prefix) + rest;
+        }
         if (suffix.length() > 16) {
-            suffix = suffix.substring(0, 16);
+            suffix = suffix.charAt(15) == ChatColor.COLOR_CHAR
+                    ? suffix.substring(0, 15)
+                    : suffix.substring(0, 16);
         }
         team.setPrefix(prefix);
         team.setSuffix(suffix);

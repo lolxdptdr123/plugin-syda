@@ -1,4 +1,5 @@
 package fr.draftmc.events.conquest.managers;
+import fr.draftmc.events.EventMonthStats;
 import fr.draftmc.events.conquest.ConquestPlugin;
 import fr.draftmc.events.conquest.model.ConquestState;
 import fr.draftmc.events.conquest.model.Zone;
@@ -165,6 +166,7 @@ public class CaptureManager {
         }
         int maxPoints = plugin.getConfig().getInt("general.zone-max-points", 25);
         boolean justReachedMax = zone.addPoints(factionId, 1, maxPoints);
+        EventMonthStats.add(captor, EventMonthStats.CONQUEST_CAPS, 1);
         String factionName = plugin.getEventFactionHook().getFactionDisplayName(factionId);
 
         Map<String, String> placeholders = new HashMap<>();

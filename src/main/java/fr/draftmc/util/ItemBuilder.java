@@ -30,6 +30,9 @@ public class ItemBuilder {
 
     public ItemBuilder name(String name) {
         ItemMeta meta = item.getItemMeta();
+        if (meta == null) {
+            return this;
+        }
         meta.setDisplayName(CC.color(name));
         item.setItemMeta(meta);
         return this;
@@ -41,6 +44,9 @@ public class ItemBuilder {
 
     public ItemBuilder lore(List<String> lore) {
         ItemMeta meta = item.getItemMeta();
+        if (meta == null) {
+            return this;
+        }
         meta.setLore(CC.color(lore));
         item.setItemMeta(meta);
         return this;

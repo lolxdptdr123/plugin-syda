@@ -109,3 +109,49 @@ items:
       - "&8Clic droit pour utiliser."
     ability: TOP_POINTS
     points: 1
+  EXCALIBUR:
+    name: "&6Excalibur"
+    material: DIAMOND_SWORD
+    lore:
+      - "&7Revient à la mort."
+    keep-on-death: true
+    no-drop: true
+    unbreakable: true
+    enchants:
+      DAMAGE_ALL: 5
+      FIRE_ASPECT: 2
+      DURABILITY: 3
+  ARC_INFINI:
+    name: "&bArc de l'Infini"
+    material: BOW
+    lore:
+      - "&7Ne consomme pas la flèche de l'infini."
+      - "&7Revient à la mort."
+    keep-on-death: true
+    no-drop: true
+    unbreakable: true
+    enchants:
+      ARROW_DAMAGE: 5
+      ARROW_KNOCKBACK: 2
+      ARROW_FIRE: 1
+      ARROW_INFINITE: 1
+      DURABILITY: 3
+  FLECHE_INFINI:
+    name: "&bFlèche de l'Infini"
+    material: ARROW
+    lore:
+      - "&7Ne disparaît pas."
+      - "&7Revient à la mort."
+    keep-on-death: true
+    no-drop: true
+  PLASTRON_INFINI:
+    name: "&bPlastron de l'Infini"
+    material: DIAMOND_CHESTPLATE
+    lore:
+      - "&7Revient à la mort."
+    keep-on-death: true
+    no-drop: true
+    unbreakable: true
+    enchants:
+      PROTECTION_ENVIRONMENTAL: 4
+      DURABILITY: 3

@@ -6,6 +6,7 @@ import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.entity.EnderPearl;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -47,6 +48,8 @@ public class EnderPearlCooldown implements Listener {
             return;
         }
         event.setCancelled(true);
+        event.setUseItemInHand(Event.Result.DENY);
+        event.setUseInteractedBlock(Event.Result.DENY);
         player.updateInventory();
         warn(player, left);
     }
@@ -68,6 +71,7 @@ public class EnderPearlCooldown implements Listener {
             return;
         }
         event.setCancelled(true);
+        event.getEntity().remove();
         refundPearl(player);
         warn(player, Cooldowns.remaining(player, "enderpearl"));
     }

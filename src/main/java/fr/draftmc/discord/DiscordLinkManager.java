@@ -106,6 +106,12 @@ public class DiscordLinkManager implements CommandExecutor, Listener {
                     handleEvents(exchange);
                 }
             });
+            httpServer.createContext("/stats", new com.sun.net.httpserver.HttpHandler() {
+                @Override
+                public void handle(HttpExchange exchange) {
+                    handleStats(exchange);
+                }
+            });
             httpServer.setExecutor(null);
             httpServer.start();
             plugin.getLogger().info("Discord link: API http://" + bind + ":" + port + " (bot discord-bot/)");
@@ -350,6 +356,39 @@ public class DiscordLinkManager implements CommandExecutor, Listener {
         }
         sb.append("]}");
         reply(exchange, 200, sb.toString());
+    }
+
+    private void handleStats(HttpExchange exchange) {
+        try {
+            if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+                reply(exchange, 405, "{\"ok\":false,\"error\":\"method\"}");
+                return;
+            }
+            if (!authorized(exchange)) {
+                reply(exchange, 401, "{\"ok\":false,\"error\":\"unauthorized\"}");
+                return;
+            }
+            final String[] result = new String[1];
+            final CountDownLatch latch = new CountDownLatch(1);
+            Bukkit.getScheduler().runTask(plugin, new Runnable() {
+                @Override
+                public void run() {
+                    if (plugin.events() == null || plugin.events().monthStats() == null) {
+                        result[0] = "{\"ok\":false,\"error\":\"unavailable\"}";
+                    } else {
+                        result[0] = plugin.events().monthStats().toJson(10);
+                    }
+                    latch.countDown();
+                }
+            });
+            if (!latch.await(5, TimeUnit.SECONDS) || result[0] == null) {
+                reply(exchange, 504, "{\"ok\":false,\"error\":\"timeout\"}");
+                return;
+            }
+            reply(exchange, 200, result[0]);
+        } catch (Exception ex) {
+            reply(exchange, 500, "{\"ok\":false,\"error\":\"server\"}");
+        }
     }
 
     private boolean authorized(HttpExchange exchange) {

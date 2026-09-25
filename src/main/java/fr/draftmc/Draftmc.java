@@ -1,6 +1,8 @@
 package fr.draftmc;
 
 import fr.draftmc.anticleanup.AntiCleanupListener;
+import fr.draftmc.combat.CombatDamageListener;
+import fr.draftmc.events.EventDeathSpawnListener;
 import fr.draftmc.anticommand.AntiCommandListener;
 import fr.draftmc.atouts.AtoutManager;
 import fr.draftmc.classement.ClassementManager;
@@ -119,7 +121,7 @@ public class Draftmc extends JavaPlugin {
         saveDefaultConfig();
         reloadConfig();
         ensureConfigSections("rankup", "grade-commands", "grade-perks", "discord-link", "sell-prices", "banned-items",
-                "combat-tag", "tpa", "enderpearl", "homes", "teleport", "anti-cleanup", "warps",
+                "combat-tag", "combat", "tpa", "enderpearl", "homes", "teleport", "anti-cleanup", "warps",
                 "help-gui", "admin-gui", "playtime-rewards", "quests", "collections", "outposts", "yt-menu", "hub", "baltop",
                 "faction-prestige", "faction-missions", "factions", "staff", "clear-lag", "spawn", "pay", "staff-ranks", "staff-logs", "scoreboard", "join-quit");
         saveResourceIfMissing("items.yml");
@@ -176,6 +178,7 @@ public class Draftmc extends JavaPlugin {
 
         Bukkit.getPluginManager().registerEvents(new AntiCleanupListener(this), this);
         Bukkit.getPluginManager().registerEvents(new AntiCommandListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new EventDeathSpawnListener(this), this);
         Bukkit.getPluginManager().registerEvents(atouts, this);
         Bukkit.getPluginManager().registerEvents(classement, this);
         Bukkit.getPluginManager().registerEvents(stats, this);
@@ -196,6 +199,7 @@ public class Draftmc extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(rankup, this);
         Bukkit.getPluginManager().registerEvents(kits, this);
         Bukkit.getPluginManager().registerEvents(combat, this);
+        Bukkit.getPluginManager().registerEvents(new CombatDamageListener(this), this);
         Bukkit.getPluginManager().registerEvents(teleports, this);
         Bukkit.getPluginManager().registerEvents(warps, this);
         Bukkit.getPluginManager().registerEvents(tpa, this);
@@ -244,6 +248,7 @@ public class Draftmc extends JavaPlugin {
         cmd("tags", tags);
         cmd("tokens", tokens);
         cmd("money", economy);
+        cmd("bal", economy);
         cmd("pay", new PayCommand(this));
         cmd("f", factions);
         cmd("voteparty", voteParty);
@@ -372,7 +377,7 @@ public class Draftmc extends JavaPlugin {
     public void reloadAll() {
         reloadConfig();
         ensureConfigSections("rankup", "grade-commands", "grade-perks", "discord-link", "sell-prices", "banned-items",
-                "combat-tag", "tpa", "enderpearl", "homes", "teleport", "anti-cleanup", "warps",
+                "combat-tag", "combat", "tpa", "enderpearl", "homes", "teleport", "anti-cleanup", "warps",
                 "help-gui", "admin-gui", "playtime-rewards", "quests", "collections", "outposts", "yt-menu", "hub", "baltop",
                 "faction-prestige", "faction-missions", "factions", "staff", "clear-lag", "spawn", "pay", "staff-ranks", "staff-logs", "scoreboard", "join-quit");
         reloadItems();
@@ -422,10 +427,13 @@ public class Draftmc extends JavaPlugin {
                         changed |= mergeStringList(defaults, "combat-tag.blocked-commands");
                         changed |= mergeStringList(defaults, "combat-tag.blocked-subcommands");
                     }
-                    if ("discord-link".equals(section) || "anti-cleanup".equals(section) || "teleport".equals(section)
+                    if ("combat".equals(section) || "discord-link".equals(section) || "anti-cleanup".equals(section) || "teleport".equals(section)
                             || "homes".equals(section) || "warps".equals(section) || "factions".equals(section)
                             || "staff".equals(section) || "rankup".equals(section) || "scoreboard".equals(section)
-                            || "staff-logs".equals(section)) {
+                            || "staff-logs".equals(section) || "help-gui".equals(section)
+                            || "playtime-rewards".equals(section) || "quests".equals(section)
+                            || "collections".equals(section) || "faction-prestige".equals(section)
+                            || "faction-missions".equals(section)) {
                         changed |= mergeMissingLeaves(defaults, section);
                     }
                     continue;

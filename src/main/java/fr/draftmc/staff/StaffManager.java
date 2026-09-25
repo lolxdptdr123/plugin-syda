@@ -236,8 +236,22 @@ public class StaffManager implements CommandExecutor, Listener {
 
     private void restore(Player player, StaffState state) {
         PlayerInventory inv = player.getInventory();
-        inv.setContents(state.inventory());
-        inv.setArmorContents(state.armor());
+        ItemStack[] contents = state.inventory();
+        ItemStack[] armor = state.armor();
+        if (contents != null && contents.length == inv.getContents().length) {
+            inv.setContents(contents);
+        } else if (contents != null && contents.length > 0) {
+            ItemStack[] padded = new ItemStack[inv.getContents().length];
+            System.arraycopy(contents, 0, padded, 0, Math.min(contents.length, padded.length));
+            inv.setContents(padded);
+        }
+        if (armor != null && armor.length == inv.getArmorContents().length) {
+            inv.setArmorContents(armor);
+        } else if (armor != null && armor.length > 0) {
+            ItemStack[] padded = new ItemStack[inv.getArmorContents().length];
+            System.arraycopy(armor, 0, padded, 0, Math.min(armor.length, padded.length));
+            inv.setArmorContents(padded);
+        }
 
         double maxHealth = player.getMaxHealth();
         player.setHealth(Math.min(state.health(), maxHealth));
@@ -312,26 +326,51 @@ public class StaffManager implements CommandExecutor, Listener {
             }
         }
 
-        // Filet de sécurité : un snapshot est resté sur disque (arrêt non
-        // propre pendant que ce joueur était en mode staff) et n'a pas encore
-        // été rechargé en mémoire dans cette session -> on restaure avant
-        // qu'il ne touche à quoi que ce soit.
+        // Filet crash : staffmode.yml n'a du sens que si le .dat est encore
+        // vide (inventaire vidé par /staff puis crash). Un snapshot vide ou
+        // périmé ne doit JAMAIS écraser un inventaire déjà chargé.
         final UUID uuid = player.getUniqueId();
-        if (!savedStates.containsKey(uuid) && store.has(uuid)) {
-            StaffState state = store.load(uuid);
+        if (savedStates.containsKey(uuid) || !store.has(uuid)) {
+            return;
+        }
+        final StaffState state = store.load(uuid);
+        if (state == null || !hasAnyItem(state.inventory(), state.armor())) {
             store.remove(uuid);
-            if (state != null) {
-                final StaffState toRestore = state;
-                Bukkit.getScheduler().runTask(plugin, new Runnable() {
-                    @Override
-                    public void run() {
-                        restore(player, toRestore);
-                        plugin.msg(player, "&aTon inventaire a été restauré suite à un redémarrage du serveur pendant le mode staff.");
-                    }
-                });
+            return;
+        }
+        Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
+            @Override
+            public void run() {
+                if (!player.isOnline()) {
+                    return;
+                }
+                if (hasAnyItem(player.getInventory().getContents(), player.getInventory().getArmorContents())) {
+                    store.remove(uuid);
+                    return;
+                }
+                restore(player, state);
+                store.remove(uuid);
+                player.updateInventory();
+                plugin.msg(player, "&aTon inventaire a été restauré suite à un redémarrage du serveur pendant le mode staff.");
                 plugin.getLogger().info("Snapshot staff restauré pour " + player.getName() + " après un arrêt non propre.");
             }
+        }, 2L);
+    }
+
+    private static boolean hasAnyItem(ItemStack[] contents, ItemStack[] armor) {
+        return hasAnyItem(contents) || hasAnyItem(armor);
+    }
+
+    private static boolean hasAnyItem(ItemStack[] items) {
+        if (items == null) {
+            return false;
         }
+        for (int i = 0; i < items.length; i++) {
+            if (items[i] != null && items[i].getType() != org.bukkit.Material.AIR) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @EventHandler

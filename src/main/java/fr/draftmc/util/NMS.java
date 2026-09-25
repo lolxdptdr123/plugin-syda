@@ -7,10 +7,12 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 public final class NMS {
     private static final String VERSION = org.bukkit.Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3];
+    private static boolean loggedAttackFix;
 
     private NMS() {}
 
@@ -245,28 +247,7 @@ public final class NMS {
         }
         try {
             Object handle = item.getClass().getMethod("getHandle").invoke(item);
-            if (setStringField(handle, "owner", playerName)) {
-                return;
-            }
-            Class<?> type = handle.getClass();
-            while (type != null && type != Object.class) {
-                Field[] fields = type.getDeclaredFields();
-                for (int i = 0; i < fields.length; i++) {
-                    Field field = fields[i];
-                    if (field.getType() != String.class) {
-                        continue;
-                    }
-                    String name = field.getName();
-                    if ("thrower".equals(name)) {
-                        continue;
-                    }
-                    if ("c".equals(name) || "f".equals(name)) {
-                        field.setAccessible(true);
-                        field.set(handle, playerName);
-                    }
-                }
-                type = type.getSuperclass();
-            }
+            setStringField(handle, "owner", playerName);
         } catch (Throwable ignored) {
         }
     }
@@ -293,6 +274,59 @@ public final class NMS {
     private static String json(String text) {
         String colored = CC.color(text == null ? "" : text);
         return "{\"text\":\"" + colored.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n") + "\"}";
+    }
+
+    /**
+     * 1.8 : les modificateurs de dégâts de l'épée restent collés après la mort.
+     * Le poing tape alors comme l'épée. On les retire.
+     */
+    public static void resetAttackDamage(Player player) {
+        if (player == null) {
+            return;
+        }
+        try {
+            Object handle = player.getClass().getMethod("getHandle").invoke(player);
+            Class<?> iAttribute = nms("IAttribute");
+            Object attack = nms("GenericAttributes").getField("ATTACK_DAMAGE").get(null);
+            Object attr = handle.getClass().getMethod("getAttributeInstance", iAttribute).invoke(handle, attack);
+            if (attr == null) {
+                return;
+            }
+            Collection<?> mods = null;
+            for (Method method : attr.getClass().getMethods()) {
+                if (method.getParameterTypes().length == 0 && Collection.class.isAssignableFrom(method.getReturnType())) {
+                    Object result = method.invoke(attr);
+                    if (result instanceof Collection) {
+                        mods = (Collection<?>) result;
+                        break;
+                    }
+                }
+            }
+            if (mods == null || mods.isEmpty()) {
+                return;
+            }
+            Class<?> modifierClass = nms("AttributeModifier");
+            Method remove = null;
+            for (Method method : attr.getClass().getMethods()) {
+                if (method.getParameterTypes().length == 1 && method.getParameterTypes()[0] == modifierClass
+                        && "c".equals(method.getName())) {
+                    remove = method;
+                    break;
+                }
+            }
+            if (remove == null) {
+                return;
+            }
+            List<Object> copy = new ArrayList<Object>(mods);
+            for (Object modifier : copy) {
+                remove.invoke(attr, modifier);
+            }
+        } catch (Throwable t) {
+            if (!loggedAttackFix) {
+                loggedAttackFix = true;
+                Bukkit.getLogger().warning("[Draftmc] Reset degats d'attaque impossible: " + t.getMessage());
+            }
+        }
     }
 
     private static void sendPacket(Player player, Object packet) throws Exception {

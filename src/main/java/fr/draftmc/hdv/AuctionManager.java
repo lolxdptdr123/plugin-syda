@@ -1,6 +1,7 @@
 package fr.draftmc.hdv;
 
 import fr.draftmc.Draftmc;
+import fr.draftmc.util.ActionLogs;
 import fr.draftmc.util.CC;
 import fr.draftmc.util.ItemBuilder;
 import fr.draftmc.util.Items;
@@ -35,6 +36,14 @@ public class AuctionManager implements CommandExecutor, Listener {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (args.length >= 1 && (args[0].equalsIgnoreCase("logs") || args[0].equalsIgnoreCase("log"))) {
+            if (plugin.grades() == null || !plugin.grades().isOwnerOrAdmin(sender)) {
+                plugin.msg(sender, "&cSeuls les Owner et les Admin peuvent voir les logs HDV.");
+                return true;
+            }
+            ActionLogs.show(plugin, sender, "hdv-logs.yml", "Logs HDV");
+            return true;
+        }
         if (!(sender instanceof Player)) {
             sender.sendMessage("§cJoueur uniquement.");
             return true;
@@ -86,8 +95,13 @@ public class AuctionManager implements CommandExecutor, Listener {
         file.get().set(path + ".item", Items.toBase64(hand));
         file.get().set(path + ".time", System.currentTimeMillis());
         file.save();
+        String label = ActionLogs.itemLabel(hand);
         player.setItemInHand(null);
         plugin.msg(player, "&aItem mis en vente pour &e" + plugin.economy().format(price) + "&a. &7/hdv");
+        String text = player.getName() + " a mis en vente " + label + " pour " + plugin.economy().format(price);
+        ActionLogs.append(plugin, "hdv-logs.yml", "hdv", text);
+        ActionLogs.notifyStaff(plugin, "&7[HDV] &e" + player.getName() + " &7vend &f" + label
+                + " &7pour &a" + plugin.economy().format(price));
     }
 
     public void open(Player player, int page) {
@@ -197,10 +211,16 @@ public class AuctionManager implements CommandExecutor, Listener {
             return;
         }
         plugin.economy().deposit(seller, price);
+        String sellerName = file.get().getString(path + ".seller-name", "?");
+        String label = ActionLogs.itemLabel(item);
         file.get().set(path, null);
         file.save();
         player.getInventory().addItem(item);
         plugin.msg(player, "&aAchat HDV effectué pour &e" + plugin.economy().format(price) + "&a.");
+        ActionLogs.append(plugin, "hdv-logs.yml", "hdv",
+                player.getName() + " a acheté " + label + " à " + sellerName + " pour " + plugin.economy().format(price));
+        ActionLogs.notifyStaff(plugin, "&7[HDV] &e" + player.getName() + " &7a acheté &f" + label
+                + " &7à &e" + sellerName + " &7pour &a" + plugin.economy().format(price));
         Player sellerPlayer = Bukkit.getPlayer(seller);
         if (sellerPlayer != null) {
             plugin.msg(sellerPlayer, "&aUn item HDV a été vendu pour &e" + plugin.economy().format(price) + "&a.");
@@ -216,6 +236,9 @@ public class AuctionManager implements CommandExecutor, Listener {
             player.getInventory().addItem(item);
         }
         plugin.msg(player, "&eVente retirée, item rendu.");
+        String label = ActionLogs.itemLabel(item);
+        ActionLogs.append(plugin, "hdv-logs.yml", "hdv", player.getName() + " a retiré " + label);
+        ActionLogs.notifyStaff(plugin, "&7[HDV] &e" + player.getName() + " &7a retiré &f" + label);
     }
 
     private int countListings(UUID uuid) {

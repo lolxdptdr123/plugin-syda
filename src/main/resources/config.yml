@@ -3,7 +3,7 @@
 prefix: "&8[&6Draftmc&8] &7"
 
 # Connexion : le message vanilla ("a rejoint la partie") est masqué.
-# welcome = messages perso envoyés au joueur (vide = aucun). %player%
+# welcome = uniquement à la PREMIÈRE connexion. %player%
 join-quit:
   hide-join-message: true
   hide-quit-message: false
@@ -89,6 +89,11 @@ combat-tag:
     - "f fly"
     - "repair all"
     - "sell all"
+
+# Durabilité des armures.
+combat:
+  # 1.0 = vanilla, 0.5 = armures cassent 2x moins vite, 0 = pas d'usure.
+  armor-durability-multiplier: 0.5
 
 tpa:
   expire-seconds: 60
@@ -650,11 +655,9 @@ boutique:
     atouts:
       name: "&c&lAtouts"
       material: BLAZE_POWDER
-      min-grade: empereur
       lore:
         - "&7Atouts permanents (combat et confort)."
         - "&7Paiement en tokens."
-        - "&cGrade Empereur requis."
       items:
         - INCREASE_DAMAGE
         - FIRE_RESISTANCE
@@ -1327,8 +1330,8 @@ shop:
         POT_STRENGTH:
           type: ITEM
           material: POTION
-          data: 8233
-          name: "&4Potion de Force II"
+          data: 8265
+          name: "&4Potion de Force I (8:00)"
           amount: 1
           price: 900.0
         POT_FIRE_RES:
@@ -1420,11 +1423,9 @@ shop:
     atouts:
       name: "&c&lAtouts"
       material: BLAZE_POWDER
-      min-grade: empereur
       lore:
         - "&7Atouts permanents (combat et confort)."
         - "&7Paiement avec ton argent."
-        - "&cGrade Empereur requis."
       items:
         SHOP_ATOUT_FORCE:
           type: ATOUT
@@ -1912,6 +1913,10 @@ factions:
   chat-format: "&8[&6{faction}&8] &e{player}&7: &f{message}"
   ally-chat-format: "&8[&aA&8][&6{faction}&8] &e{player}&7: &f{message}"
   fly-upgrade-cost: 2500
+  fly:
+    enemy-radius: 15
+    enemy-message: "&cFly coupé : ennemi à proximité."
+    claim-message: "&cLe fly faction fonctionne uniquement dans tes claims."
   chest-upgrade-cost: 1500
   power:
     max: 10
@@ -2009,6 +2014,7 @@ help-gui:
         - "/vip | Alias boutique | boutique"
         - "/shop | Shop argent | shop"
         - "/money | Ton argent"
+        - "/bal [joueur] | Argent (toi ou un joueur)"
         - "/tokens | Tes tokens"
         - "/baltop [page] | Plus riches"
         - "/hdv | Hôtel des ventes | hdv"
@@ -2058,6 +2064,18 @@ help-gui:
         - "/yt | Créateurs | yt"
         - "/teamfight | TeamFight 8v8"
         - "/totemstats | Stats totem"
+    reglement:
+      name: "&4&lRèglement"
+      material: BOOK_AND_QUILL
+      action: chat
+      lore:
+        - "&7Clique pour recevoir le lien"
+        - "&7du règlement dans le chat."
+      link: "https://discord.gg/draftmc"
+      messages:
+        - "&6Règlement Draftmc"
+        - "&7Lis le règlement ici :"
+        - "&e{link}"
 
 playtime-rewards:
   tiers:
@@ -2066,6 +2084,7 @@ playtime-rewards:
       seconds: 3600
       money: 500
       tokens: 10
+      material: GOLD_INGOT
       lore:
         - "&a500$ &7+ &610 tokens"
     t2:
@@ -2073,6 +2092,7 @@ playtime-rewards:
       seconds: 18000
       money: 2500
       tokens: 40
+      material: GOLD_BLOCK
       lore:
         - "&a2 500$ &7+ &640 tokens"
     t3:
@@ -2080,6 +2100,7 @@ playtime-rewards:
       seconds: 43200
       money: 6000
       tokens: 80
+      material: DIAMOND
       lore:
         - "&a6 000$ &7+ &680 tokens"
     t4:
@@ -2087,6 +2108,7 @@ playtime-rewards:
       seconds: 86400
       money: 15000
       tokens: 150
+      material: EMERALD
       lore:
         - "&a15 000$ &7+ &6150 tokens"
     t5:
@@ -2094,47 +2116,56 @@ playtime-rewards:
       seconds: 180000
       money: 40000
       tokens: 300
+      material: NETHER_STAR
       lore:
         - "&a40 000$ &7+ &6300 tokens"
 
 quests:
   list:
-    skeletons:
-      name: "&eChasseur de squelettes"
-      description: "Tue 25 squelettes."
-      type: KILL
-      target: SKELETON
-      amount: 25
-      money: 1500
-      tokens: 5
-      material: BONE
-    zombies:
-      name: "&2Chasseur de zombies"
-      description: "Tue 25 zombies."
-      type: KILL
-      target: ZOMBIE
-      amount: 25
-      money: 1500
-      tokens: 5
-      material: ROTTEN_FLESH
-    creepers:
-      name: "&aChasseur de creepers"
-      description: "Tue 15 creepers."
-      type: KILL
-      target: CREEPER
-      amount: 15
-      money: 2000
-      tokens: 8
-      material: SULPHUR
-    cobble:
+    pvp:
+      name: "&cDuelliste"
+      description: "Tue 10 joueurs."
+      type: PVP
+      target: PLAYER
+      amount: 10
+      money: 5000
+      tokens: 15
+      material: DIAMOND_SWORD
+      reward-lore:
+        - "&a5 000$ &7+ &615 tokens"
+    stone:
       name: "&7Mineur"
-      description: "Casse 200 cobblestone."
+      description: "Casse 500 stone."
       type: BREAK
-      target: COBBLESTONE
+      target: STONE
+      amount: 500
+      money: 2500
+      tokens: 8
+      material: STONE
+      reward-lore:
+        - "&a2 500$ &7+ &68 tokens"
+    iron:
+      name: "&fFer"
+      description: "Mine 100 minerais de fer."
+      type: BREAK
+      target: IRON_ORE
+      amount: 100
+      money: 4000
+      tokens: 12
+      material: IRON_INGOT
+      reward-lore:
+        - "&a4 000$ &7+ &612 tokens"
+    logs:
+      name: "&6Bûcheron"
+      description: "Casse 200 bûches."
+      type: BREAK
+      target: LOG
       amount: 200
-      money: 1000
+      money: 2000
       tokens: 5
-      material: COBBLESTONE
+      material: LOG
+      reward-lore:
+        - "&a2 000$ &7+ &65 tokens"
 
 collections:
   crates:
@@ -2275,9 +2306,12 @@ faction-prestige:
       extra-members: 5
       extra-warps: 1
       missions: [kill_mobs]
+      money: 25000
+      tokens: 50
       lore:
         - "&7+5 membres"
         - "&7+1 warp faction"
+        - "&a25 000$ &7+ &650 tokens"
     "2":
       members: 8
       claims: 16
@@ -2286,9 +2320,12 @@ faction-prestige:
       extra-members: 10
       extra-warps: 2
       missions: [kill_mobs, mine_blocks]
+      money: 75000
+      tokens: 150
       lore:
         - "&7+10 membres"
         - "&7+2 warps faction"
+        - "&a75 000$ &7+ &6150 tokens"
     "3":
       members: 12
       claims: 30
@@ -2297,26 +2334,29 @@ faction-prestige:
       extra-members: 20
       extra-warps: 3
       missions: [kill_mobs, mine_blocks, pvp_kills]
+      money: 150000
+      tokens: 300
       lore:
         - "&7+20 membres"
         - "&7+3 warps faction"
+        - "&a150 000$ &7+ &6300 tokens"
 
 faction-missions:
   list:
     kill_mobs:
-      name: "&6Tuer des mobs"
-      description: "La faction tue 250 monstres."
-      amount: 250
+      name: "&6Chasse"
+      description: "La faction tue 100 monstres."
+      amount: 100
       material: ROTTEN_FLESH
     mine_blocks:
-      name: "&7Miner des blocs"
-      description: "La faction casse 2000 blocs."
-      amount: 2000
+      name: "&7Miner"
+      description: "La faction casse 5000 blocs."
+      amount: 5000
       material: DIAMOND_PICKAXE
     pvp_kills:
       name: "&cKills PvP"
-      description: "La faction fait 50 kills joueurs."
-      amount: 50
+      description: "La faction fait 25 kills joueurs."
+      amount: 25
       material: DIAMOND_SWORD
 
 discord:
@@ -2382,6 +2422,7 @@ grade-perks:
 # 6. Ici : discord-link.enabled true, api-secret = PLUGIN_SECRET du .env
 # 7. discord-bot/ : copy .env.example .env  puis  npm install && node index.js
 # 8. Joueur : /discord en jeu, coller DMC-XXXXXX dans le salon lien
+# 9. Discord : /stats  — classements events du mois (totem, koth, teamfight, conquest, domination)
 discord-link:
   enabled: true
   api-bind: "0.0.0.0"

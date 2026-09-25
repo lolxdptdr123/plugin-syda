@@ -4,6 +4,7 @@ import fr.draftmc.Draftmc;
 import fr.draftmc.util.CC;
 import fr.draftmc.util.ItemBuilder;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -112,6 +113,7 @@ public class EventCommand implements CommandExecutor, TabCompleter, Listener {
                 lore.add("");
                 lore.add("&aAujourd'hui");
             }
+            lore.add("&eClic pour voir les events");
             ItemBuilder item = new ItemBuilder(i == today ? Material.GOLD_BLOCK : Material.IRON_BLOCK)
                     .name((i == today ? "&6" : "&f") + DAY_LABELS[i]);
             item.lore(lore);
@@ -127,10 +129,123 @@ public class EventCommand implements CommandExecutor, TabCompleter, Listener {
 
     @EventHandler
     public void onClick(InventoryClickEvent event) {
-        if (!(event.getInventory().getHolder() instanceof ScheduleHolder)) {
+        if (!(event.getWhoClicked() instanceof Player)) {
+            return;
+        }
+        InventoryHolder holder = event.getInventory().getHolder();
+        if (!(holder instanceof ScheduleHolder) && !(holder instanceof DayHolder)) {
             return;
         }
         event.setCancelled(true);
+        Player player = (Player) event.getWhoClicked();
+        int slot = event.getRawSlot();
+        if (holder instanceof ScheduleHolder) {
+            for (int i = 0; i < DAY_SLOTS.length; i++) {
+                if (DAY_SLOTS[i] == slot) {
+                    openDay(player, plugin.events(), i);
+                    return;
+                }
+            }
+            return;
+        }
+        DayHolder day = (DayHolder) holder;
+        if (slot == 22) {
+            openSchedule(player, plugin.events());
+            return;
+        }
+        if (slot < 0 || slot >= day.types.length) {
+            return;
+        }
+        EventType type = day.types[slot];
+        if (type != null) {
+            teleportTo(player, type, day.maps[slot]);
+        }
+    }
+
+    private void openDay(Player player, EventHub hub, int dayIndex) {
+        if (hub == null) {
+            return;
+        }
+        DayHolder holder = new DayHolder();
+        Inventory inv = Bukkit.createInventory(holder, 27, CC.color("&8" + DAY_LABELS[dayIndex]));
+        List<EventHub.Slot> slots = hub.scheduleSlots(DAYS[dayIndex]);
+        if (slots.isEmpty()) {
+            inv.setItem(13, new ItemBuilder(Material.BARRIER).name("&cAucun event").lore("&7Rien de prévu ce jour.").build());
+        } else {
+            int shown = Math.min(slots.size(), 7);
+            int start = 10 + (7 - shown) / 2;
+            for (int i = 0; i < shown; i++) {
+                EventHub.Slot slot = slots.get(i);
+                EventType type = EventType.from(slot.event);
+                int guiSlot = start + i;
+                List<String> lore = new ArrayList<String>();
+                lore.add("&7" + String.format(Locale.ROOT, "%02d:%02d", slot.hour, slot.minute));
+                if (slot.map != null && !slot.map.isEmpty()) {
+                    lore.add("&7Map: &f" + (type == null ? slot.map : hub.mapDisplay(type, slot.map)));
+                }
+                lore.add("");
+                lore.add("&eClic pour te téléporter");
+                lore.add("&8Délai : 5s");
+                inv.setItem(guiSlot, new ItemBuilder(blockFor(type))
+                        .name("&6" + slot.displayName())
+                        .lore(lore)
+                        .build());
+                holder.types[guiSlot] = type;
+                holder.maps[guiSlot] = slot.map;
+            }
+        }
+        inv.setItem(22, new ItemBuilder(Material.ARROW).name("&eRetour").build());
+        player.openInventory(inv);
+    }
+
+    private void teleportTo(Player player, EventType type, String map) {
+        EventHub hub = plugin.events();
+        if (hub == null || type == null) {
+            return;
+        }
+        String warp = hub.warpName(type, map);
+        Location loc = plugin.warps() == null ? null : plugin.warps().location(warp);
+        if (loc == null || loc.getWorld() == null) {
+            loc = hub.joinLocation(type, map);
+        }
+        if (loc == null || loc.getWorld() == null) {
+            String mapLabel = hub.mapDisplay(type, map);
+            msg(player, "&cAucun warp pour &e" + type.display() + " &7(" + mapLabel
+                    + "&7)&c. &7Crée-le avec &e/setwarp " + warp + " events");
+            return;
+        }
+        player.closeInventory();
+        String mapLabel = hub.mapDisplay(type, map);
+        plugin.teleports().request(player, loc,
+                "&aTéléporté vers &e" + type.display() + " &7(" + mapLabel + "&7)&a.");
+    }
+
+    private Material blockFor(EventType type) {
+        if (type == null) {
+            return Material.STONE;
+        }
+        switch (type) {
+            case TOTEM:
+                return Material.EMERALD_BLOCK;
+            case TOTEM_GEANT:
+                return Material.DIAMOND_BLOCK;
+            case KOTH:
+                return Material.GOLD_BLOCK;
+            case CONQUEST:
+                return Material.IRON_BLOCK;
+            case DOMINATION:
+                return Material.REDSTONE_BLOCK;
+            case TEAMFIGHT:
+                return Material.LAPIS_BLOCK;
+            case BATTLEROYAL:
+                return Material.TNT;
+            case MASTERKILL:
+                return Material.NETHERRACK;
+            case LARGAGE:
+                return Material.CHEST;
+            default:
+                return Material.STONE;
+        }
     }
 
     private boolean handleStart(CommandSender sender, EventHub hub, String[] args) {
@@ -294,6 +409,16 @@ public class EventCommand implements CommandExecutor, TabCompleter, Listener {
     }
 
     private static class ScheduleHolder implements InventoryHolder {
+        @Override
+        public Inventory getInventory() {
+            return null;
+        }
+    }
+
+    private static class DayHolder implements InventoryHolder {
+        private final EventType[] types = new EventType[27];
+        private final String[] maps = new String[27];
+
         @Override
         public Inventory getInventory() {
             return null;

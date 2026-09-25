@@ -1,9 +1,11 @@
 package fr.draftmc.core;
 
 import fr.draftmc.Draftmc;
+import fr.draftmc.util.ActionLogs;
 import fr.draftmc.util.CC;
 import fr.draftmc.util.Cooldowns;
 import fr.draftmc.util.ItemBuilder;
+import fr.draftmc.util.Items;
 import fr.draftmc.util.Locations;
 import fr.draftmc.util.NMS;
 import org.bukkit.Bukkit;
@@ -92,6 +94,14 @@ public class CoreCommands implements CommandExecutor, Listener {
             return true;
         }
         if (name.equals("poubelle")) {
+            if (args.length >= 1 && (args[0].equalsIgnoreCase("logs") || args[0].equalsIgnoreCase("log"))) {
+                if (plugin.grades() == null || !plugin.grades().isOwnerOrAdmin(player)) {
+                    plugin.msg(player, "&cSeuls les Owner et les Admin peuvent voir les logs poubelle.");
+                    return true;
+                }
+                ActionLogs.show(plugin, player, "bin-logs.yml", "Logs poubelle");
+                return true;
+            }
             player.openInventory(Bukkit.createInventory(player, 36, TRASH_TITLE));
             return true;
         }
@@ -275,7 +285,11 @@ public class CoreCommands implements CommandExecutor, Listener {
         if (plugin.getConfig().getBoolean("join-quit.hide-join-message", true)) {
             event.setJoinMessage(null);
         }
+        Items.resyncClient(plugin, event.getPlayer());
         Player player = event.getPlayer();
+        if (player.hasPlayedBefore()) {
+            return;
+        }
         java.util.List<String> lines = plugin.getConfig().getStringList("join-quit.welcome");
         if (lines == null || lines.isEmpty()) {
             return;
@@ -315,11 +329,13 @@ public class CoreCommands implements CommandExecutor, Listener {
                 if (plugin.staff() != null && plugin.staff().isStaff(player)) {
                     player.setGameMode(GameMode.CREATIVE);
                     player.setAllowFlight(true);
+                    player.updateInventory();
                     return;
                 }
                 if (player.getGameMode() != mode) {
                     player.setGameMode(mode);
                 }
+                player.updateInventory();
             }
         });
     }
@@ -351,6 +367,23 @@ public class CoreCommands implements CommandExecutor, Listener {
     public void onTrashClose(InventoryCloseEvent event) {
         if (!TRASH_TITLE.equals(event.getView().getTitle())) {
             return;
+        }
+        if (event.getPlayer() instanceof Player) {
+            Player player = (Player) event.getPlayer();
+            StringBuilder parts = new StringBuilder();
+            for (ItemStack stack : event.getInventory().getContents()) {
+                if (stack == null || stack.getType() == Material.AIR) {
+                    continue;
+                }
+                if (parts.length() > 0) {
+                    parts.append(", ");
+                }
+                parts.append(ActionLogs.itemLabel(stack));
+            }
+            if (parts.length() > 0) {
+                ActionLogs.append(plugin, "bin-logs.yml", "bin", player.getName() + " a jeté " + parts);
+                ActionLogs.notifyStaff(plugin, "&7[Bin] &e" + player.getName() + " &7a jeté &f" + parts);
+            }
         }
         event.getInventory().clear();
     }

@@ -215,21 +215,30 @@ public class FactionExtras implements Listener {
                 .lore("&7Prestige : &e" + prestige(fac),
                         "&7Membres : &e" + factions.members(fac).size() + "&7/&e" + factions.maxMembers(fac))
                 .build());
-        inv.setItem(20, new ItemBuilder(Material.DIAMOND_SWORD)
+        inv.setItem(19, new ItemBuilder(Material.DIAMOND_SWORD)
                 .name("&cClassement PvP")
                 .lore("&7Points : &e" + pvpPoints(fac), "&7Kills de la faction.").build());
-        inv.setItem(24, new ItemBuilder(Material.DIAMOND_HOE)
+        inv.setItem(21, new ItemBuilder(Material.DIAMOND_HOE)
                 .name("&aClassement Farm")
                 .lore("&7Points : &e" + farmPoints(fac), "&7Farm de la faction.").build());
-        inv.setItem(29, new ItemBuilder(Material.NETHER_STAR)
+        inv.setItem(23, new ItemBuilder(Material.CHEST)
+                .name("&6Coffre faction")
+                .lore("&eClique pour ouvrir.").build());
+        inv.setItem(28, new ItemBuilder(Material.NETHER_STAR)
                 .name("&6Prestige")
                 .lore("&7Voir tes prestiges", "&7et les prochains.", "&eClique pour ouvrir.").build());
-        inv.setItem(31, new ItemBuilder(Material.REDSTONE_TORCH_ON)
+        inv.setItem(30, new ItemBuilder(Material.REDSTONE_TORCH_ON)
                 .name("&ePermissions")
                 .lore("&7Changer les perms des ranks.", "&eClique pour ouvrir.").build());
-        inv.setItem(33, new ItemBuilder(Material.BOOK)
-                .name("&bMissions de faction")
+        inv.setItem(32, new ItemBuilder(Material.BOOK)
+                .name("&bMissions")
                 .lore("&7Avancer dans le prestige.", "&eClique pour ouvrir.").build());
+        inv.setItem(37, new ItemBuilder(Material.ENDER_PEARL)
+                .name("&bWarps")
+                .lore("&eClique pour ouvrir.").build());
+        inv.setItem(39, new ItemBuilder(Material.PAPER)
+                .name("&7Logs")
+                .lore("&eClique pour ouvrir.").build());
         inv.setItem(40, Menus.close());
         player.openInventory(inv);
     }
@@ -272,8 +281,9 @@ public class FactionExtras implements Listener {
                 } else {
                     lore.add("&7Prestige &e" + (current + 1) + " &7requis d'abord.");
                 }
-                short data = (short) (current >= level ? 5 : (current + 1 == level ? 4 : 14));
-                inv.setItem(slot, new ItemBuilder(Material.STAINED_GLASS_PANE, 1, data)
+                Material icon = current >= level ? Material.EMERALD_BLOCK
+                        : (current + 1 == level ? Material.NETHER_STAR : Material.COAL_BLOCK);
+                inv.setItem(slot, new ItemBuilder(icon)
                         .name("&6Prestige " + level)
                         .lore(lore)
                         .build());
@@ -497,6 +507,17 @@ public class FactionExtras implements Listener {
         }
         factions.store().get().set("factions." + fac + ".prestige", next);
         factions.store().save();
+        double money = lvl.getDouble("money", 0);
+        long tokens = lvl.getLong("tokens", 0);
+        if (money > 0) {
+            plugin.economy().deposit(player, money);
+        }
+        if (tokens > 0) {
+            plugin.tokens().add(player.getUniqueId(), tokens);
+        }
+        for (String cmd : lvl.getStringList("commands")) {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd.replace("%player%", player.getName()));
+        }
         Bukkit.broadcastMessage(CC.color(plugin.prefix() + "&6" + factions.displayName(fac)
                 + " &7passe prestige &e" + next + "&7 !"));
         return true;
@@ -545,7 +566,9 @@ public class FactionExtras implements Listener {
             return;
         }
         if ("f-prestige".equals(gui.menu()) && event.getCurrentItem() != null
-                && event.getCurrentItem().getType() == Material.STAINED_GLASS_PANE) {
+                && event.getCurrentItem().hasItemMeta()
+                && event.getCurrentItem().getItemMeta().hasDisplayName()
+                && CC.strip(event.getCurrentItem().getItemMeta().getDisplayName()).startsWith("Prestige")) {
             tryPrestige(player);
             openPrestige(player);
             return;
@@ -619,9 +642,12 @@ public class FactionExtras implements Listener {
     }
 
     private void handleMenuClick(Player player, int slot) {
-        if (slot == 29) openPrestige(player);
-        else if (slot == 31) factions.menus().openPerm(player);
-        else if (slot == 33) openMissions(player);
+        if (slot == 23) factions.openChest(player);
+        else if (slot == 28) openPrestige(player);
+        else if (slot == 30) factions.menus().openPerm(player);
+        else if (slot == 32) openMissions(player);
+        else if (slot == 37) openWarps(player);
+        else if (slot == 39) openLogs(player);
     }
 
     private void logChest(Player player, FactionManager.ChestHolder holder, ItemStack current, ItemStack cursor) {

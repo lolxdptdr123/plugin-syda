@@ -1,5 +1,6 @@
 package fr.draftmc.events.domination.listeners;
 
+import fr.draftmc.events.EventMonthStats;
 import fr.draftmc.events.domination.DominationPlugin;
 import fr.draftmc.events.domination.model.DominationState;
 import org.bukkit.entity.Player;
@@ -23,5 +24,6 @@ public class DeathListener implements Listener {
         Player player = event.getEntity();
         plugin.getScoringManager().onPlayerRemoved(player);
         plugin.getDominationManager().applyDeathPenalty(player);
+        EventMonthStats.add(player, EventMonthStats.DOM_DEATHS, 1);
     }
 }

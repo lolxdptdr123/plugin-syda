@@ -45,8 +45,19 @@ giant:
 
 defaults:
   size: 5
-  material: QUARTZ_BLOCK
+  material: IRON_BLOCK
   item-interact: DIAMOND_SWORD
+
+# Un bloc toutes les 18s. Distance max 3D (X/Y/Z) par etage.
+# T1 = base, T5 = sommet.
+break-cooldown-seconds: 18
+break-max-distance: 6
+break-max-distance-tiers:
+  1: 6
+  2: 5.5
+  3: 6
+  4: 6.5
+  5: 6.5
 
 scoreboard:
   enabled: true
@@ -63,6 +74,8 @@ messages:
   reset: "&eLe totem &6{totem} &ea été reset."
   set: "&aTotem &e{totem} &aposé à ta position."
   break: "&eLe joueur &f{player} &7({faction}) &ea cassé un bloc du totem !"
+  break-too-fast: "&cTu ne peux pas casser : tu as cassé le totem trop vite."
+  break-too-far: "&cTu es trop loin du totem, tu ne peux pas casser."
   break-giant: '&eLe joueur &f"{player}" &7de la &b"{faction}" &ea cassé un bloc du totem ! &a+{gained} points'
   break-cancel: "&cLa faction &e{faction} &ca reset le totem !"
   break-cancel-giant: '&eLe joueur &f"{player}" &7de la &b"{faction}" &ea bloqué la faction &c"{blocked}" &e! &a+{gained} points'
@@ -86,5 +99,5 @@ maps:
     y: 64
     z: 0
     size: 5
-    material: QUARTZ_BLOCK
+    material: IRON_BLOCK
     item-interact: DIAMOND_SWORD

@@ -4,6 +4,7 @@ import fr.draftmc.Draftmc;
 import fr.draftmc.util.CC;
 import net.milkbowl.vault.permission.Permission;
 import org.bukkit.Bukkit;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.RegisteredServiceProvider;
 
@@ -220,6 +221,26 @@ public class GradeManager {
             }
         }
         return groups;
+    }
+
+    public boolean isOwnerOrAdmin(CommandSender sender) {
+        if (!(sender instanceof Player)) {
+            return true;
+        }
+        return isOwnerOrAdmin((Player) sender);
+    }
+
+    public boolean isOwnerOrAdmin(Player player) {
+        for (String group : allGroups(player)) {
+            if (group == null) {
+                continue;
+            }
+            String name = group.toLowerCase(Locale.ROOT);
+            if ("owner".equals(name) || "admin".equals(name)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** True si le joueur a atteint le grade minimum (ou supérieur). */

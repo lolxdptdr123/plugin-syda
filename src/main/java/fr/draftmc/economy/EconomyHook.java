@@ -6,9 +6,13 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.RegisteredServiceProvider;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -16,7 +20,7 @@ import java.util.UUID;
  * Argent (money) : uniquement pour /shop.
  * Les tokens restent un solde séparé, uniquement pour /boutique.
  */
-public class EconomyHook implements CommandExecutor {
+public class EconomyHook implements CommandExecutor, TabCompleter {
     private Economy vault;
 
     public EconomyHook() {
@@ -121,8 +125,7 @@ public class EconomyHook implements CommandExecutor {
                 return true;
             }
             Player player = (Player) sender;
-            plugin.msg(player, "&aTon argent &7(shop) &7» &f" + format(player));
-            plugin.msg(player, "&7Utilise &e/shop &7pour acheter. Les tokens (&e/tokens&7) servent à &e/boutique&7.");
+            plugin.msg(player, "&aArgent &7» &f" + format(player));
             return true;
         }
         if (args[0].equalsIgnoreCase("give") && args.length >= 3 && sender.hasPermission("draftmc.money.give")) {
@@ -169,7 +172,58 @@ public class EconomyHook implements CommandExecutor {
             plugin.msg(sender, "&aArgent de &e" + to.getName() + " &adéfini à &f" + format(amount));
             return true;
         }
-        plugin.msg(sender, "&e/money &7| &e/money give <joueur> <montant> &8- &7argent du /shop");
+        UUID uuid = resolveUuid(args[0]);
+        if (uuid == null) {
+            plugin.msg(sender, "&cJoueur introuvable.");
+            return true;
+        }
+        String name = plugin.data().nameOf(uuid);
+        Player online = Bukkit.getPlayer(uuid);
+        if (online != null) {
+            name = online.getName();
+        }
+        plugin.msg(sender, "&aArgent de &e" + name + " &7» &f" + format(getMoney(uuid)));
         return true;
+    }
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        if (args.length != 1) {
+            return Collections.emptyList();
+        }
+        String prefix = args[0].toLowerCase(Locale.ROOT);
+        List<String> out = new ArrayList<String>();
+        if (sender.hasPermission("draftmc.money.give")) {
+            if ("give".startsWith(prefix)) {
+                out.add("give");
+            }
+            if ("set".startsWith(prefix)) {
+                out.add("set");
+            }
+        }
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (online.getName().toLowerCase(Locale.ROOT).startsWith(prefix)) {
+                out.add(online.getName());
+            }
+        }
+        return out;
+    }
+
+    private UUID resolveUuid(String raw) {
+        Player online = Bukkit.getPlayer(raw);
+        if (online != null) {
+            return online.getUniqueId();
+        }
+        UUID stored = Draftmc.get().data().findUuidByString("name", raw);
+        if (stored != null) {
+            return stored;
+        }
+        org.bukkit.OfflinePlayer[] offline = Bukkit.getOfflinePlayers();
+        for (int i = 0; i < offline.length; i++) {
+            if (offline[i].getName() != null && offline[i].getName().equalsIgnoreCase(raw)) {
+                return offline[i].getUniqueId();
+            }
+        }
+        return null;
     }
 }

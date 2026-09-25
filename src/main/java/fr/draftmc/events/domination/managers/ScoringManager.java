@@ -1,6 +1,7 @@
 package fr.draftmc.events.domination.managers;
 import fr.draftmc.util.NmsTitles;
 
+import fr.draftmc.events.EventMonthStats;
 import fr.draftmc.events.domination.DominationPlugin;
 import fr.draftmc.events.domination.model.DominationState;
 import fr.draftmc.events.domination.model.Zone;
@@ -73,6 +74,12 @@ public class ScoringManager {
             for (String factionId : factionsPresent) {
                 boolean firstPoint = zone.getPoints(factionId) == 0;
                 zone.addPoints(factionId, 1);
+                for (UUID uuid : zone.getPlayersInside()) {
+                    Player member = Bukkit.getPlayer(uuid);
+                    if (member != null && factionId.equals(plugin.getEventFactionHook().getFactionId(member))) {
+                        EventMonthStats.add(member, EventMonthStats.DOM_CAPS, 1);
+                    }
+                }
 
                 if (firstPoint) {
                     announceFirstControl(zone, factionId);

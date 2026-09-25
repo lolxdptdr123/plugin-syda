@@ -11,6 +11,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -349,14 +350,25 @@ public class KitManager implements Listener, CommandExecutor {
 
     private List<KitEntry> buildKitEntries(ConfigurationSection kitSection) {
         List<KitEntry> out = new ArrayList<KitEntry>();
-        List<?> entries = kitSection.getList("items");
-        if (entries == null) {
+        Object raw = kitSection.get("items");
+        if (raw instanceof List) {
+            List<?> entries = (List<?>) raw;
+            for (int i = 0; i < entries.size(); i++) {
+                ConfigurationSection indexed = kitSection.getConfigurationSection("items." + i);
+                KitEntry kitEntry = indexed != null ? entryFromSection(indexed) : entryFromConfig(entries.get(i));
+                if (kitEntry != null) {
+                    out.add(kitEntry);
+                }
+            }
             return out;
         }
-        for (Object entry : entries) {
-            KitEntry kitEntry = entryFromConfig(entry);
-            if (kitEntry != null) {
-                out.add(kitEntry);
+        ConfigurationSection itemsSec = kitSection.getConfigurationSection("items");
+        if (itemsSec != null) {
+            for (String key : itemsSec.getKeys(false)) {
+                KitEntry kitEntry = entryFromSection(itemsSec.getConfigurationSection(key));
+                if (kitEntry != null) {
+                    out.add(kitEntry);
+                }
             }
         }
         return out;
@@ -364,24 +376,44 @@ public class KitManager implements Listener, CommandExecutor {
 
     @SuppressWarnings("unchecked")
     private KitEntry entryFromConfig(Object entry) {
-        Map<String, Object> map;
         if (entry instanceof ConfigurationSection) {
-            map = sectionToMap((ConfigurationSection) entry);
-        } else if (entry instanceof Map) {
-            map = (Map<String, Object>) entry;
-        } else {
+            return entryFromSection((ConfigurationSection) entry);
+        }
+        if (!(entry instanceof Map)) {
             return null;
+        }
+        Map<String, Object> converted = new HashMap<String, Object>();
+        for (Map.Entry<?, ?> e : ((Map<?, ?>) entry).entrySet()) {
+            if (e.getKey() != null) {
+                converted.put(String.valueOf(e.getKey()), e.getValue());
+            }
+        }
+        YamlConfiguration yaml = new YamlConfiguration();
+        return entryFromSection(yaml.createSection("item", converted), converted);
+    }
+
+    private KitEntry entryFromSection(ConfigurationSection section) {
+        return entryFromSection(section, section == null ? null : sectionToMap(section));
+    }
+
+    private KitEntry entryFromSection(ConfigurationSection section, Map<String, Object> map) {
+        if (section == null) {
+            return null;
+        }
+        if (map == null) {
+            map = sectionToMap(section);
         }
         ItemStack template = itemTemplateFromMap(map);
         if (template == null) {
             return null;
         }
         applyEnchants(map, template);
+        applyNameAndLore(section, map, template);
         template.setAmount(1);
         KitEntry kitEntry = new KitEntry();
         kitEntry.template = template;
-        kitEntry.count = Math.max(1, parseInt(map.get("amount"), 1));
-        kitEntry.keepStack = Boolean.TRUE.equals(map.get("stack"));
+        kitEntry.count = Math.max(1, section.getInt("amount", parseInt(mapGet(map, "amount"), 1)));
+        kitEntry.keepStack = section.getBoolean("stack", Boolean.TRUE.equals(mapGet(map, "stack")));
         return kitEntry;
     }
 
@@ -395,11 +427,15 @@ public class KitManager implements Listener, CommandExecutor {
 
     @SuppressWarnings("unchecked")
     private ItemStack itemTemplateFromMap(Map<String, Object> map) {
-        if (map.containsKey("item")) {
-            return plugin.items().create(String.valueOf(map.get("item")));
+        Object customId = mapGet(map, "item");
+        if (customId != null) {
+            ItemStack custom = plugin.items().create(String.valueOf(customId));
+            if (custom != null) {
+                return custom;
+            }
         }
 
-        Object potionObj = map.get("potion");
+        Object potionObj = mapGet(map, "potion");
         if (potionObj instanceof Map) {
             Map<String, Object> potionMap = (Map<String, Object>) potionObj;
             return createPotion(
@@ -408,31 +444,101 @@ public class KitManager implements Listener, CommandExecutor {
                     Boolean.TRUE.equals(potionMap.get("splash"))
             );
         }
-        if (map.containsKey("potion-type")) {
+        Object potionType = mapGet(map, "potion-type");
+        if (potionType != null) {
             return createPotion(
-                    String.valueOf(map.get("potion-type")),
-                    parseInt(map.get("level"), 1),
-                    Boolean.TRUE.equals(map.get("splash"))
+                    String.valueOf(potionType),
+                    parseInt(mapGet(map, "level"), 1),
+                    Boolean.TRUE.equals(mapGet(map, "splash"))
             );
         }
-        if (map.containsKey("type") && "potion".equalsIgnoreCase(String.valueOf(map.get("type")))) {
-            Object potionField = map.get("potion");
+        Object typeObj = mapGet(map, "type");
+        if (typeObj != null && "potion".equalsIgnoreCase(String.valueOf(typeObj))) {
+            Object potionField = mapGet(map, "potion");
             String typeName = potionField != null ? String.valueOf(potionField) : "INSTANT_HEAL";
-            return createPotion(typeName, parseInt(map.get("level"), 1), Boolean.TRUE.equals(map.get("splash")));
+            return createPotion(typeName, parseInt(mapGet(map, "level"), 1), Boolean.TRUE.equals(mapGet(map, "splash")));
         }
 
-        Material material = Material.matchMaterial(String.valueOf(map.get("material")));
+        Object materialObj = mapGet(map, "material", "type");
+        if (materialObj == null) {
+            return null;
+        }
+        Material material = Material.matchMaterial(String.valueOf(materialObj));
         if (material == null) {
             return null;
         }
-        return new ItemStack(material, 1);
+        short data = (short) parseInt(mapGet(map, "data", "durability"), 0);
+        return new ItemStack(material, 1, data);
+    }
+
+    private void applyNameAndLore(ConfigurationSection section, Map<String, Object> map, ItemStack stack) {
+        Object rawName = mapGet(map, "item-name", "display-name", "displayname", "nom", "name");
+        String itemName = rawName != null ? String.valueOf(rawName) : firstString(section,
+                "item-name", "display-name", "displayname", "nom", "name");
+        List<String> lore = loreFrom(section, map);
+        if ((itemName == null || itemName.isEmpty() || "null".equalsIgnoreCase(itemName))
+                && lore.isEmpty()) {
+            return;
+        }
+        ItemMeta meta = stack.getItemMeta();
+        if (meta == null) {
+            return;
+        }
+        if (itemName != null && !itemName.isEmpty() && !"null".equalsIgnoreCase(itemName)) {
+            meta.setDisplayName(CC.color(itemName));
+        }
+        if (!lore.isEmpty()) {
+            meta.setLore(CC.color(lore));
+        }
+        stack.setItemMeta(meta);
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> loreFrom(ConfigurationSection section, Map<String, Object> map) {
+        List<String> lore = section.getStringList("lore");
+        if (lore != null && !lore.isEmpty()) {
+            return lore;
+        }
+        Object loreObj = mapGet(map, "lore");
+        List<String> lines = new ArrayList<String>();
+        if (loreObj instanceof List) {
+            for (Object line : (List<?>) loreObj) {
+                if (line != null) {
+                    lines.add(String.valueOf(line));
+                }
+            }
+        } else if (loreObj != null) {
+            lines.add(String.valueOf(loreObj));
+        }
+        return lines;
+    }
+
+    private String firstString(ConfigurationSection section, String... keys) {
+        for (int i = 0; i < keys.length; i++) {
+            String value = section.getString(keys[i]);
+            if (value != null && !value.isEmpty()) {
+                return value;
+            }
+        }
+        return null;
+    }
+
+    private Object mapGet(Map<String, Object> map, String... keys) {
+        if (map == null) {
+            return null;
+        }
+        for (int i = 0; i < keys.length; i++) {
+            for (Map.Entry<String, Object> entry : map.entrySet()) {
+                if (entry.getKey() != null && entry.getKey().equalsIgnoreCase(keys[i])) {
+                    return entry.getValue();
+                }
+            }
+        }
+        return null;
     }
 
     private void applyEnchants(Map<String, Object> map, ItemStack stack) {
-        Object enchantsObj = map.get("enchants");
-        if (enchantsObj == null) {
-            enchantsObj = map.get("enchantments");
-        }
+        Object enchantsObj = mapGet(map, "enchants", "enchantments");
         applyEnchantsObject(enchantsObj, stack);
         if (stack.getType() == Material.BOW && hasInfinityRequest(enchantsObj)) {
             applyEnchant(stack, "ARROW_INFINITE", 1);

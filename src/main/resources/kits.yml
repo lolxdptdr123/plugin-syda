@@ -16,6 +16,12 @@
 #   - item vanilla    : material: GOLDEN_APPLE
 #   - potion          : potion-type + level + splash
 #
+# NOM / LORE SUR UN ITEM :
+#   Mets item-name (pas le "name" du kit) ET des quotes simples, sinon YAML casse le & :
+#   item-name: '&c&lEpee PvP'
+#   lore:
+#     - '&7Kit PvP'
+#
 # ENCHANTEMENTS (sur armes/armures/arcs) :
 #   enchants:
 #     PROTECTION: 4
@@ -101,6 +107,9 @@ kits:
           UNBREAKING: 3
       - material: DIAMOND_SWORD
         amount: 1
+        item-name: '&c&lEpee PvP'
+        lore:
+          - '&7Kit PvP'
         enchants:
           SHARPNESS: 5
           UNBREAKING: 3

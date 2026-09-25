@@ -8,6 +8,7 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
@@ -247,7 +248,11 @@ public class AtoutManager implements Listener, CommandExecutor {
         final Player player = event.getPlayer();
         Bukkit.getScheduler().runTask(plugin, new Runnable() {
             @Override public void run() {
+                if (!player.isOnline()) {
+                    return;
+                }
                 syncPermanentEffects(player, plugin.data().getList(player.getUniqueId(), "atouts"));
+                player.updateInventory();
             }
         });
     }
@@ -256,11 +261,21 @@ public class AtoutManager implements Listener, CommandExecutor {
         if (!(event.getEntity() instanceof Player) || event.getCause()!=EntityDamageEvent.DamageCause.FALL) return;
         if (plugin.data().getList(((Player)event.getEntity()).getUniqueId(),"atouts").contains("ANTI_CHUTE")) event.setCancelled(true);
     }
-    @EventHandler public void onFood(FoodLevelChangeEvent event) {
-        if (!(event.getEntity() instanceof Player)) return;
-        Player player=(Player)event.getEntity();
-        if (plugin.data().getList(player.getUniqueId(),"atouts").contains("NO_HUNGER")) {
-            event.setCancelled(true); player.setFoodLevel(20);
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onFood(FoodLevelChangeEvent event) {
+        if (!(event.getEntity() instanceof Player)) {
+            return;
+        }
+        Player player = (Player) event.getEntity();
+        // Uniquement si l'atout est actif (pas seulement possédé).
+        if (!plugin.data().getList(player.getUniqueId(), "atouts").contains("NO_HUNGER")) {
+            return;
+        }
+        // Bloque seulement la baisse ; laisse manger / remonter la barre.
+        if (event.getFoodLevel() < player.getFoodLevel()) {
+            event.setCancelled(true);
+            player.setFoodLevel(20);
+            player.setSaturation(20f);
         }
     }
     @EventHandler public void onDeath(PlayerDeathEvent event) {

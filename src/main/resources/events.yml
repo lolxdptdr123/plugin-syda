@@ -85,6 +85,27 @@ types:
 # Planning affiche dans /event (blocs de fer, un par jour).
 # auto-start: lance l'event tout seul a l'heure indiquee.
 # auto: false sur une ligne pour ne pas la lancer automatiquement.
+# warps: un warp par map d'event (clic /event = TP 5s vers ce warp).
+# Cle = id de map (comme dans types.<event>.maps), valeur = nom du /setwarp.
+warps:
+  totem:
+    default: totem-default
+  totemgeant:
+    default: totemgeant-default
+  koth:
+    default: koth-default
+  conquest:
+    default: conquest-default
+  domination:
+    default: domination-default
+  teamfight:
+    default: teamfight-default
+  battleroyal:
+    default: battleroyal-default
+  masterkill:
+    default: masterkill-default
+  largage:
+    default: largage-default
 schedule:
   auto-start: true
   gui-title: "&8Events de la semaine"

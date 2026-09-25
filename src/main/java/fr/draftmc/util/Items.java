@@ -11,8 +11,10 @@ import java.util.Base64;
 import java.util.logging.Level;
 
 import org.bukkit.Material;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.plugin.Plugin;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +37,28 @@ public final class Items {
             stack.setItemMeta(meta);
         }
         return stack;
+    }
+
+    /**
+     * 1.8 : le client survival peut afficher un inventaire vide alors que le
+     * serveur a encore les items (déco/reco, TP join, effets de potion).
+     * updateInventory plusieurs ticks plus tard renvoie les packets WindowItems.
+     */
+    public static void resyncClient(Plugin plugin, final Player player) {
+        if (plugin == null || player == null) {
+            return;
+        }
+        long[] delays = { 2L, 10L, 25L };
+        for (int i = 0; i < delays.length; i++) {
+            Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
+                @Override
+                public void run() {
+                    if (player.isOnline()) {
+                        player.updateInventory();
+                    }
+                }
+            }, delays[i]);
+        }
     }
 
     public static boolean namedIs(ItemStack stack, String colorName) {

@@ -19,6 +19,8 @@ import fr.draftmc.events.totem.TotemPlugin;
 import fr.draftmc.events.totem.TotemStatus;
 import fr.draftmc.util.CC;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -61,6 +63,7 @@ public class EventHub {
     private final KothPlugin koth;
     private final TeamFightPlugin teamfight;
     private final LargagePlugin largage;
+    private final EventMonthStats monthStats;
     private FileConfiguration catalog;
     private final Map<EventType, String> activeMaps = new EnumMap<EventType, String>(EventType.class);
     private EventScheduler scheduler;
@@ -77,6 +80,7 @@ public class EventHub {
         this.teamfight = new TeamFightPlugin(plugin);
         this.largage = new LargagePlugin(plugin);
         this.scheduler = new EventScheduler(plugin);
+        this.monthStats = new EventMonthStats(plugin);
     }
 
     public FileConfiguration catalog() {
@@ -196,6 +200,173 @@ public class EventHub {
 
     public String scheduleTitle() {
         return catalog.getString("schedule.gui-title", "&8Events de la semaine");
+    }
+
+    public Location joinLocation(EventType type) {
+        return joinLocation(type, null);
+    }
+
+    public Location joinLocation(EventType type, String mapId) {
+        if (type == null) {
+            return null;
+        }
+        if (plugin.warps() != null) {
+            Location warp = plugin.warps().location(warpName(type, mapId));
+            if (warp != null && warp.getWorld() != null) {
+                return warp;
+            }
+        }
+        switch (type) {
+            case TOTEM:
+            case TOTEM_GEANT:
+                return totemJoin(mapId);
+            case KOTH:
+                return kothJoin(mapId);
+            case CONQUEST:
+                return conquestJoin();
+            case DOMINATION:
+                return dominationJoin();
+            case TEAMFIGHT:
+                return teamfight == null || teamfight.getManager() == null
+                        ? null : teamfight.getManager().joinPoint();
+            case BATTLEROYAL:
+                return battleroyal == null || battleroyal.getGameManager() == null
+                        ? null : battleroyal.getGameManager().getCenter();
+            case MASTERKILL:
+                return masterkill == null || masterkill.getArenaManager() == null
+                        ? null : masterkill.getArenaManager().getCenter();
+            case LARGAGE:
+                return largage == null || largage.getManager() == null
+                        ? null : largage.getManager().firstSpot();
+            default:
+                return null;
+        }
+    }
+
+    public String warpName(EventType type) {
+        return warpName(type, null);
+    }
+
+    public String warpName(EventType type, String mapId) {
+        if (type == null) {
+            return "";
+        }
+        String map = resolveMap(type, mapId);
+        if (map == null || map.isEmpty()) {
+            map = "default";
+        }
+        map = map.toLowerCase(Locale.ROOT);
+        if (catalog != null) {
+            String path = "warps." + type.id() + "." + map;
+            String configured = catalog.getString(path);
+            if (configured != null && !configured.trim().isEmpty()) {
+                return configured.trim().toLowerCase(Locale.ROOT);
+            }
+            String single = catalog.getString("warps." + type.id());
+            if (single != null && !single.trim().isEmpty() && !catalog.isConfigurationSection("warps." + type.id())) {
+                return single.trim().toLowerCase(Locale.ROOT);
+            }
+        }
+        return type.id() + "-" + map;
+    }
+
+    private Location totemJoin() {
+        return totemJoin(null);
+    }
+
+    private Location totemJoin(String mapId) {
+        if (totem == null || totem.getTotemManager() == null) {
+            return null;
+        }
+        String map = resolveMap(EventType.TOTEM, mapId);
+        if (map == null) {
+            map = resolveMap(EventType.TOTEM_GEANT, mapId);
+        }
+        if (map != null) {
+            Totem named = totem.getTotemManager().get(map);
+            Location loc = standing(named == null ? null : named.getLocation());
+            if (loc != null) {
+                return loc;
+            }
+        }
+        Totem active = totem.getTotemManager().getActive();
+        Location activeLoc = standing(active == null ? null : active.getLocation());
+        if (activeLoc != null) {
+            return activeLoc;
+        }
+        for (Totem entry : totem.getTotemManager().all()) {
+            Location loc = standing(entry.getLocation());
+            if (loc != null) {
+                return loc;
+            }
+        }
+        return null;
+    }
+
+    private Location kothJoin() {
+        return kothJoin(null);
+    }
+
+    private Location kothJoin(String mapId) {
+        if (koth == null || koth.getKothManager() == null) {
+            return null;
+        }
+        String map = resolveMap(EventType.KOTH, mapId);
+        if (map != null) {
+            KothZone named = koth.getKothManager().get(map);
+            if (named != null && named.getCenter() != null) {
+                return named.getCenter();
+            }
+        }
+        KothZone active = koth.getKothManager().getActive();
+        if (active != null && active.getCenter() != null) {
+            return active.getCenter();
+        }
+        for (KothZone zone : koth.getKothManager().all()) {
+            if (zone.getCenter() != null) {
+                return zone.getCenter();
+            }
+        }
+        return null;
+    }
+
+    private Location conquestJoin() {
+        if (conquest == null || conquest.getZoneManager() == null) {
+            return null;
+        }
+        for (fr.draftmc.events.conquest.model.Zone zone : conquest.getZoneManager().getZones().values()) {
+            World world = zone.getWorldName() == null ? null : Bukkit.getWorld(zone.getWorldName());
+            if (world != null) {
+                Location center = zone.getCenter(world);
+                center.setY(center.getY() + 1);
+                return center;
+            }
+        }
+        return null;
+    }
+
+    private Location dominationJoin() {
+        if (domination == null || domination.getZoneManager() == null) {
+            return null;
+        }
+        for (fr.draftmc.events.domination.model.Zone zone : domination.getZoneManager().getZones().values()) {
+            World world = zone.getWorldName() == null ? null : Bukkit.getWorld(zone.getWorldName());
+            if (world != null) {
+                Location center = zone.getCenter(world);
+                center.setY(center.getY() + 1);
+                return center;
+            }
+        }
+        return null;
+    }
+
+    private Location standing(Location location) {
+        if (location == null || location.getWorld() == null) {
+            return null;
+        }
+        Location loc = location.clone();
+        loc.add(0.5, 1, 0.5);
+        return loc;
     }
 
     public List<String> scheduleLore(String day) {
@@ -836,6 +1007,10 @@ public class EventHub {
 
     public TeamFightPlugin teamfight() {
         return teamfight;
+    }
+
+    public EventMonthStats monthStats() {
+        return monthStats;
     }
 
     public LargagePlugin largage() {

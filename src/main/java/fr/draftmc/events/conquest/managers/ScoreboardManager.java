@@ -87,20 +87,21 @@ public class ScoreboardManager {
         int max = plugin.getConfig().getInt("general.zone-max-points", 25);
         List<Zone> zones = new ArrayList<Zone>(plugin.getZoneManager().getZones().values());
         if (zones.size() == 4) {
-            lines.add(cell(zones.get(0), factionId, max) + ChatColor.DARK_GRAY + " | "
-                    + cell(zones.get(2), factionId, max));
-            lines.add(cell(zones.get(1), factionId, max) + ChatColor.DARK_GRAY + " | "
-                    + cell(zones.get(3), factionId, max));
+            lines.add(pair(zones.get(0), zones.get(2), factionId, max));
+            lines.add(pair(zones.get(1), zones.get(3), factionId, max));
             return;
         }
         for (int i = 0; i < zones.size(); i += 2) {
-            String left = cell(zones.get(i), factionId, max);
             if (i + 1 < zones.size()) {
-                lines.add(left + ChatColor.DARK_GRAY + " | " + cell(zones.get(i + 1), factionId, max));
+                lines.add(pair(zones.get(i), zones.get(i + 1), factionId, max));
             } else {
-                lines.add(left);
+                lines.add(cell(zones.get(i), factionId, max));
             }
         }
+    }
+
+    private String pair(Zone left, Zone right, String factionId, int max) {
+        return cell(left, factionId, max) + " " + cell(right, factionId, max);
     }
 
     private String cell(Zone zone, String factionId, int max) {

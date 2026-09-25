@@ -118,8 +118,10 @@ commands:
     description: Tokens - utilisés uniquement dans /boutique
     aliases: [token]
   money:
-    description: Argent - utilisé uniquement dans /shop
-    aliases: [argent]
+    description: Affiche ton argent, ou celui d'un joueur
+    aliases: [argent, balance]
+  bal:
+    description: Affiche ton argent, ou celui d'un joueur
   f:
     description: Commandes faction Draftmc
   voteparty:
@@ -130,9 +132,9 @@ commands:
     aliases: [portails]
     permission: draftmc.admin
   itemdraft:
-    description: Donne un item Draftmc
+    description: Donne un item Draftmc (Owner / Admin)
     aliases: [ditem, giveitem]
-    permission: draftmc.items.give
+    permission: draftmc.admin
   boutique:
     description: Boutique Draftmc - achats avec des tokens
     aliases: [vip]
@@ -314,6 +316,7 @@ permissions:
       deathban.bypass.commands: true
       draftmc.event: true
       draftmc.faction.top: true
+      draftmc.faction.bypass: true
       draftmc.staff: true
       draftmc.staff.chat: true
       draftmc.staff.mute: true
@@ -352,6 +355,9 @@ permissions:
   draftmc.banitem.bypass:
     default: op
     description: Peut utiliser les items interdits (le craft reste bloqué pour tous)
+  draftmc.anticleanup.bypass:
+    default: false
+    description: Peut ramasser le stuff protégé par l'anti-cleanup
   draftmc.doublexp:
     default: false
   draftmc.repair:
@@ -362,6 +368,7 @@ permissions:
     default: false
   draftmc.faction.bypass:
     default: op
+    description: Bypass factions (join/leave/disband, claims, membres)
   draftmc.gradecommands.bypass:
     default: false
     description: Ignore les restrictions de grade pour /feed, /pv, etc.
@@ -430,7 +437,7 @@ permissions:
     default: false
     description: Ignore le blocage des commandes du combat tag (le tag s'applique quand meme)
   draftmc.enderpearl.bypass:
-    default: op
+    default: false
     description: Ignore le cooldown des enderpearls
   draftmc.tpa:
     default: true

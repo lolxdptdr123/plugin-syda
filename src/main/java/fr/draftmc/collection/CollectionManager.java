@@ -95,13 +95,8 @@ public class CollectionManager implements CommandExecutor, Listener {
                 List<String> lore = new ArrayList<String>(item.getStringList("lore"));
                 lore.add("");
                 lore.add(owned ? "&aObtenu" : "&cPas encore obtenu");
-                Material mat = owned ? material(item.getString("material", "CHEST")) : Material.STAINED_GLASS_PANE;
-                short data = (short) (owned ? 0 : 15);
-                ItemBuilder builder = owned
-                        ? new ItemBuilder(mat)
-                        : new ItemBuilder(mat, 1, data);
-                inv.setItem(slot, builder
-                        .name(owned ? item.getString("name", itemId) : "&8???")
+                inv.setItem(slot, new ItemBuilder(material(item.getString("material", "CHEST")))
+                        .name(item.getString("name", itemId))
                         .lore(lore)
                         .build());
                 slot++;
