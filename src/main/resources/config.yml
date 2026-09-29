@@ -83,11 +83,13 @@ combat-tag:
     - sellall
     - repair
     - repairall
+    - fix
   blocked-subcommands:
     - "f home"
     - "f sethome"
     - "f fly"
     - "repair all"
+    - "fix all"
     - "sell all"
 
 # Durabilité des armures.
@@ -363,7 +365,7 @@ grade-commands:
     repair:
       enabled: true
       min-grade: empereur
-      description: Repare tes items
+      description: "Repare l'item en main (/repair all = inventaire)"
     invsee:
       enabled: true
       min-grade: supreme
@@ -1697,6 +1699,7 @@ core:
     max-per-item: 3
   bottle-xp:
     xp-per-bottle: 20
+    max-per-bottle: 10000
   welcome:
     reward: 50.0
     cooldown-seconds: 60
@@ -1800,6 +1803,14 @@ scoreboard:
     - "&fFly Claim: &a%flyclaim%"
     - "&fVotes: &b%votes%"
     - "&f&m--------------------"
+  # Remplace la section « Infos » quand le joueur est en combat
+  # (sauf si un événement type Domination/Conquest injecte déjà son SB).
+  # Placeholders : %combat_seconds% %enderpearl% %ping% (+ tous les autres du SB)
+  combat-lines:
+    - "&6Infos"
+    - "&fCombat: &c%combat_seconds% secondes"
+    - "&fenderpearl: &e%enderpearl% secondes"
+    - "&fPing: %ping%"
 
 voteparty:
   goal: 500
@@ -1849,8 +1860,11 @@ banned-items:
 
 staff:
   vanish-on-enable: true
+  clear-inventory-on-enable: true
   # Fenêtre (secondes) utilisée pour la moyenne du /cps.
   cps-window-seconds: 5
+  items:
+    enabled: true
   report:
     # Cooldown entre deux /report d'un même joueur (secondes).
     cooldown-seconds: 60
@@ -1903,7 +1917,8 @@ factions:
   chest-size: 27
   friendly-fire: false
   public-prefix: true
-  public-format: "&8[&6{faction}&8] "
+  # {color} = vert (&a) alliés / rouge (&c) ennemis / or (&6) par défaut
+  public-format: "&8[{color}{faction}&8] "
   top:
     page-size: 10
     header: "&8&m-----&r &6F Top &8&m-----"

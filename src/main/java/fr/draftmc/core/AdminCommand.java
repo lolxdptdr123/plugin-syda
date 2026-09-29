@@ -2,6 +2,7 @@ package fr.draftmc.core;
 
 import fr.draftmc.Draftmc;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -15,7 +16,7 @@ import java.util.List;
 import java.util.Locale;
 
 public class AdminCommand implements CommandExecutor, TabCompleter {
-    private static final List<String> SUBS = Arrays.asList("help", "reload", "questadd", "setupranks");
+    private static final List<String> SUBS = Arrays.asList("help", "reload", "questadd", "setupranks", "explosion");
     private final Draftmc plugin;
     private final AdminGui gui;
 
@@ -62,6 +63,40 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         if (args[0].equalsIgnoreCase("setupranks")) {
             new fr.draftmc.grades.StaffRankSetup(plugin).apply();
             plugin.msg(sender, "&aGroupes LuckPerms helper/modo/admin/owner appliqués.");
+            return true;
+        }
+        if (args[0].equalsIgnoreCase("explosion")) {
+            if (args.length < 2) {
+                plugin.msg(sender, "&e/dmc explosion <MATERIAL> [hits]");
+                plugin.msg(sender, "&7Ex: &e/dmc explosion OBSIDIAN 8");
+                plugin.msg(sender, "&7Hits = nombre d'explosions avant destruction (1 = vanilla).");
+                return true;
+            }
+            Material mat = Material.matchMaterial(args[1].toUpperCase(Locale.ROOT));
+            if (mat == null || !mat.isBlock()) {
+                plugin.msg(sender, "&cMatériau invalide.");
+                return true;
+            }
+            if (args.length < 3) {
+                int current = plugin.getConfig().getInt("core.explosion-durability.blocks." + mat.name(),
+                        plugin.getConfig().getInt("core.explosion-durability.default-hits", 1));
+                plugin.msg(sender, "&7" + mat.name() + " &8» &e" + current + " hit(s)");
+                return true;
+            }
+            int hits;
+            try {
+                hits = Integer.parseInt(args[2]);
+            } catch (NumberFormatException e) {
+                plugin.msg(sender, "&cNombre invalide.");
+                return true;
+            }
+            if (hits < 1) {
+                hits = 1;
+            }
+            plugin.getConfig().set("core.explosion-durability.enabled", true);
+            plugin.getConfig().set("core.explosion-durability.blocks." + mat.name(), hits);
+            plugin.saveConfig();
+            plugin.msg(sender, "&aDurabilité explosion &e" + mat.name() + " &a» &e" + hits + " hit(s)");
             return true;
         }
         gui.sendTextHelp(sender);

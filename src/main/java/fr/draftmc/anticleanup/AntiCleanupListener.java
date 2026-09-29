@@ -40,6 +40,12 @@ public class AntiCleanupListener implements Listener {
 
     public AntiCleanupListener(Draftmc plugin) {
         this.plugin = plugin;
+        Bukkit.getScheduler().runTask(plugin, new Runnable() {
+            @Override
+            public void run() {
+                cleanupOrphanHolograms();
+            }
+        });
         Bukkit.getScheduler().runTaskTimer(plugin, new Runnable() {
             @Override
             public void run() {
@@ -48,6 +54,52 @@ public class AntiCleanupListener implements Listener {
                 prune();
             }
         }, 20L, 20L);
+    }
+
+    /**
+     * Après un restart, les ArmorStand hologrammes restent dans le monde
+     * (métadata perdue) : on les retire au démarrage.
+     */
+    private void cleanupOrphanHolograms() {
+        int removed = 0;
+        for (org.bukkit.World world : Bukkit.getWorlds()) {
+            for (Entity entity : world.getEntitiesByClass(ArmorStand.class)) {
+                ArmorStand stand = (ArmorStand) entity;
+                if (!isAntiCleanupHologram(stand)) {
+                    continue;
+                }
+                stand.remove();
+                removed++;
+            }
+        }
+        if (removed > 0) {
+            plugin.getLogger().info("[AntiCleanup] " + removed
+                    + " hologramme(s) orphelin(s) supprimé(s) après restart.");
+        }
+    }
+
+    private boolean isAntiCleanupHologram(ArmorStand stand) {
+        if (stand == null) {
+            return false;
+        }
+        if (stand.hasMetadata(META)) {
+            try {
+                String raw = stand.getMetadata(META).get(0).asString();
+                if ("hologram".equals(raw)) {
+                    return true;
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+        if (!stand.isCustomNameVisible() || stand.getCustomName() == null) {
+            return false;
+        }
+        // Hologrammes persistés sans metadata après restart
+        if (stand.isVisible() || stand.hasGravity()) {
+            return false;
+        }
+        String plain = org.bukkit.ChatColor.stripColor(stand.getCustomName()).toLowerCase();
+        return plain.contains("anti-clean") || plain.contains("anticlean") || plain.contains("anti clean");
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)

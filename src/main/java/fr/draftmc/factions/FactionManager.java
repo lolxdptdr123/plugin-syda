@@ -584,15 +584,40 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
     }
 
     /**
-     * Préfixe de faction pour le chat public, ex: "&8[&6MaFaction&8] ", ou "" si le
+     * Préfixe de faction pour le chat public, ex: "&8[&aMaFaction&8] ", ou "" si le
      * joueur n'a pas de faction ou si factions.public-prefix est désactivé.
+     * Sans viewer : couleur par défaut (&6).
      */
     public String publicPrefix(Player player) {
-        String fac = factionOf(player);
+        return publicPrefix(player, null);
+    }
+
+    /**
+     * Préfixe de faction coloré selon la relation viewer → sender :
+     * vert pour même faction, rouge pour ennemi, gris/or pour neutre.
+     */
+    public String publicPrefix(Player sender, Player viewer) {
+        String fac = factionOf(sender);
         if (!plugin.getConfig().getBoolean("factions.public-prefix", true) || fac.isEmpty()) {
             return "";
         }
-        return CC.color(plugin.getConfig().getString("factions.public-format", "&8[&6{faction}&8] ")
+        String color = "&6";
+        if (viewer != null) {
+            FactionRelation rel = relationOf(factionOf(viewer), fac);
+            color = rel.color();
+        }
+        String format = plugin.getConfig().getString("factions.public-format", "&8[{color}{faction}&8] ");
+        if (!format.contains("{color}")) {
+            format = format.replace("&6{faction}", "{color}{faction}")
+                    .replace("&a{faction}", "{color}{faction}")
+                    .replace("&c{faction}", "{color}{faction}")
+                    .replace("&7{faction}", "{color}{faction}");
+            if (!format.contains("{color}")) {
+                format = format.replace("{faction}", "{color}{faction}");
+            }
+        }
+        return CC.color(format
+                .replace("{color}", color)
                 .replace("{faction}", displayName(fac)));
     }
 
@@ -1570,6 +1595,9 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
             disableFactionFly(player, "&cFly désactivé.");
             return;
         }
+        if (plugin.combat() != null && plugin.combat().denyIfTagged(player)) {
+            return;
+        }
         String blocked = factionFlyBlockReason(player, player.getLocation());
         if (blocked != null) {
             plugin.msg(player, blocked);
@@ -1579,6 +1607,14 @@ public class FactionManager implements CommandExecutor, TabCompleter, Listener {
         player.setAllowFlight(true);
         player.setFlying(true);
         plugin.msg(player, "&aFly activé. &7Uniquement dans tes claims.");
+    }
+
+    /** Coupe le fly faction (utilisé au combat tag). */
+    public void disableFlyForCombat(Player player) {
+        if (player == null || !factionFlying.contains(player.getUniqueId())) {
+            return;
+        }
+        disableFactionFly(player, "&cFly désactivé : tu es en combat.");
     }
 
     private void home(Player player) {

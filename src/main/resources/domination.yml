@@ -51,8 +51,10 @@ sounds:
   on-victory: WITHER_SPAWN
 
 scoreboard:
-  enabled: true
-  title: "&6&lDOMINATION"
+  # Sidebar séparée désactivée : les infos Domination sont injectées
+  # dans le scoreboard Draftmc (comme Conquest).
+  enabled: false
+  title: "&c✺ &6Draftmc.fr &c✺"
 
 bossbar:
   enabled: true

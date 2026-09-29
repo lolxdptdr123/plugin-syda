@@ -64,12 +64,57 @@ public class StaffManager implements CommandExecutor, Listener {
     /** Joueurs pour qui /sc a été activé : tout leur chat normal part en chat staff
      *  jusqu'à ce qu'ils fassent /sc à nouveau. Indépendant du mode staff lui-même. */
     private final Set<UUID> staffChatMode = new HashSet<UUID>();
+    /** Même principe pour /scadmin (admins uniquement). */
+    private final Set<UUID> adminChatMode = new HashSet<UUID>();
 
     private final Map<UUID, List<Long>> clicks = new HashMap<UUID, List<Long>>();
+    private final StaffItems items;
+    private int rankCheckTask = -1;
 
     public StaffManager(Draftmc plugin) {
         this.plugin = plugin;
         this.store = new StaffStateStore(plugin);
+        this.items = new StaffItems(plugin);
+        Bukkit.getPluginManager().registerEvents(items, plugin);
+        this.rankCheckTask = Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, new Runnable() {
+            @Override
+            public void run() {
+                checkStaffRanks();
+            }
+        }, 40L, 40L);
+    }
+
+    public StaffItems items() {
+        return items;
+    }
+
+    /** Coupe le mode staff si le joueur n'a plus le grade / la permission. */
+    private void checkStaffRanks() {
+        if (staff.isEmpty()) {
+            return;
+        }
+        for (UUID uuid : new HashSet<UUID>(staff)) {
+            Player player = Bukkit.getPlayer(uuid);
+            if (player == null || !player.isOnline()) {
+                continue;
+            }
+            if (!stillHasStaffAccess(player)) {
+                disable(player);
+                adminChatMode.remove(uuid);
+                staffChatMode.remove(uuid);
+                plugin.msg(player, "&cMode staff retiré : tu n'as plus le rank staff.");
+            }
+        }
+    }
+
+    private boolean stillHasStaffAccess(Player player) {
+        if (player.isOp()) {
+            return true;
+        }
+        if (plugin.grades() != null && plugin.grades().isStaffMember(player)) {
+            return true;
+        }
+        return player.hasPermission("draftmc.staff") || player.hasPermission("draftmc.admin");
     }
 
     public boolean isStaff(Player player) {
@@ -92,22 +137,39 @@ public class StaffManager implements CommandExecutor, Listener {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         String cmd = command.getName().toLowerCase();
-        if (cmd.equals("sc")) {
-            if (!sender.hasPermission("draftmc.staff.chat") && !sender.hasPermission("draftmc.staff")) {
+        if (cmd.equals("sc") || cmd.equals("scadmin")) {
+            boolean adminChat = cmd.equals("scadmin");
+            if (adminChat) {
+                if (!sender.hasPermission("draftmc.admin") && !sender.hasPermission("draftmc.staff.adminchat")) {
+                    plugin.msg(sender, "&cPas la permission.");
+                    return true;
+                }
+            } else if (!sender.hasPermission("draftmc.staff.chat") && !sender.hasPermission("draftmc.staff")) {
                 plugin.msg(sender, "&cPas la permission.");
                 return true;
             }
             if (args.length == 0) {
                 if (!(sender instanceof Player)) {
-                    plugin.msg(sender, "&e/sc <message>");
+                    plugin.msg(sender, adminChat ? "&e/scadmin <message>" : "&e/sc <message>");
                     return true;
                 }
                 Player player = (Player) sender;
-                if (staffChatMode.remove(player.getUniqueId())) {
-                    plugin.msg(player, "&cChat staff désactivé. &7Tes messages repartent dans le chat normal.");
+                Set<UUID> mode = adminChat ? adminChatMode : staffChatMode;
+                if (mode.remove(player.getUniqueId())) {
+                    plugin.msg(player, adminChat
+                            ? "&cChat admin désactivé."
+                            : "&cChat staff désactivé. &7Tes messages repartent dans le chat normal.");
                 } else {
-                    staffChatMode.add(player.getUniqueId());
-                    plugin.msg(player, "&aChat staff activé. &7Tout ce que tu écris va au chat staff. &e/sc &7pour désactiver.");
+                    // Un seul mode chat à la fois
+                    if (adminChat) {
+                        staffChatMode.remove(player.getUniqueId());
+                    } else {
+                        adminChatMode.remove(player.getUniqueId());
+                    }
+                    mode.add(player.getUniqueId());
+                    plugin.msg(player, adminChat
+                            ? "&aChat admin activé. &e/scadmin &7pour désactiver."
+                            : "&aChat staff activé. &7Tout ce que tu écris va au chat staff. &e/sc &7pour désactiver.");
                 }
                 return true;
             }
@@ -118,7 +180,11 @@ public class StaffManager implements CommandExecutor, Listener {
                 }
                 sb.append(args[i]);
             }
-            broadcastStaffChat(sender.getName(), sb.toString());
+            if (adminChat) {
+                broadcastAdminChat(sender.getName(), sb.toString());
+            } else {
+                broadcastStaffChat(sender.getName(), sb.toString());
+            }
             return true;
         }
         if (cmd.equals("cps")) {
@@ -143,7 +209,7 @@ public class StaffManager implements CommandExecutor, Listener {
             return true;
         }
         Player player = (Player) sender;
-        if (!player.hasPermission("draftmc.staff")) {
+        if (!stillHasStaffAccess(player)) {
             plugin.msg(player, "&cPas la permission.");
             return true;
         }
@@ -152,7 +218,7 @@ public class StaffManager implements CommandExecutor, Listener {
             plugin.msg(player, "&cMode staff off.");
         } else {
             enable(player);
-            plugin.msg(player, "&aMode staff on. &7Chat: &e/sc &7Freeze: &e/freeze <joueur>");
+            plugin.msg(player, "&aMode staff on. &7Chat: &e/sc &7Admin: &e/scadmin &7Freeze: &e/freeze <joueur>");
         }
         return true;
     }
@@ -172,6 +238,7 @@ public class StaffManager implements CommandExecutor, Listener {
             inv.setContents(new ItemStack[inv.getContents().length]);
             inv.setArmorContents(new ItemStack[inv.getArmorContents().length]);
         }
+        items.give(player);
 
         double maxHealth = player.getMaxHealth();
         player.setHealth(maxHealth);
@@ -290,6 +357,16 @@ public class StaffManager implements CommandExecutor, Listener {
         Bukkit.getConsoleSender().sendMessage(line);
     }
 
+    private void broadcastAdminChat(String from, String message) {
+        String line = CC.color("&8[&4Admin&8] &c" + from + " &7» &f" + message);
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            if (p.hasPermission("draftmc.admin") || p.hasPermission("draftmc.staff.adminchat")) {
+                p.sendMessage(line);
+            }
+        }
+        Bukkit.getConsoleSender().sendMessage(line);
+    }
+
     /**
      * Intercepte le chat normal des joueurs en mode /sc : leur message part au chat
      * staff au lieu du chat public. AsyncPlayerChatEvent est asynchrone, donc on ne
@@ -299,10 +376,17 @@ public class StaffManager implements CommandExecutor, Listener {
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onChat(AsyncPlayerChatEvent event) {
         final Player player = event.getPlayer();
-        if (!staffChatMode.contains(player.getUniqueId())) {
+        final boolean admin = adminChatMode.contains(player.getUniqueId());
+        final boolean staffMode = staffChatMode.contains(player.getUniqueId());
+        if (!admin && !staffMode) {
             return;
         }
-        if (!player.hasPermission("draftmc.staff.chat") && !player.hasPermission("draftmc.staff")) {
+        if (admin) {
+            if (!player.hasPermission("draftmc.admin") && !player.hasPermission("draftmc.staff.adminchat")) {
+                adminChatMode.remove(player.getUniqueId());
+                return;
+            }
+        } else if (!player.hasPermission("draftmc.staff.chat") && !player.hasPermission("draftmc.staff")) {
             staffChatMode.remove(player.getUniqueId());
             return;
         }
@@ -311,7 +395,11 @@ public class StaffManager implements CommandExecutor, Listener {
         Bukkit.getScheduler().runTask(plugin, new Runnable() {
             @Override
             public void run() {
-                broadcastStaffChat(player.getName(), message);
+                if (admin) {
+                    broadcastAdminChat(player.getName(), message);
+                } else {
+                    broadcastStaffChat(player.getName(), message);
+                }
             }
         });
     }
@@ -378,6 +466,7 @@ public class StaffManager implements CommandExecutor, Listener {
         Player player = event.getPlayer();
         clicks.remove(player.getUniqueId());
         staffChatMode.remove(player.getUniqueId());
+        adminChatMode.remove(player.getUniqueId());
         // Ne jamais laisser un joueur se déconnecter avec son inventaire de
         // survie "en banque" dans savedStates : on restaure avant que le
         // .dat ne soit écrit, sinon son vrai kit resterait piégé en mémoire

@@ -98,11 +98,12 @@ public class AdminGui implements Listener {
         plugin.msg(sender, "&8&m-----&r &cSysadmin Draftmc &8&m-----");
         plugin.msg(sender, "&e/admin &8- &7Menu GUI (en jeu)");
         plugin.msg(sender, "&e/draftmc reload");
-        plugin.msg(sender, "&7Staff: &e/staff /sc /freeze /cps /reports /mute /tempban /ban /unban");
+        plugin.msg(sender, "&7Staff: &e/staff /sc /scadmin /freeze /cps /reports /mute /tempban /ban /unban");
         plugin.msg(sender, "&7Monde: &e/hub set /portal /setwarp /outpost set /clearlag now");
-        plugin.msg(sender, "&7Modo: &e/banitem /tags create /deathban");
+        plugin.msg(sender, "&7Modo: &e/banitem /tags create|give /deathban");
         plugin.msg(sender, "&7Eco: &e/tokens give /money give /voteparty");
         plugin.msg(sender, "&7Fac: &e/f top add|remove|reset");
+        plugin.msg(sender, "&7Explosions: &e/dmc explosion <bloc> <hits>");
         plugin.msg(sender, "&7Events: &e/event help /totem /koth /teamfight /br ...");
         plugin.msg(sender, "&7Tournoi: &e/tournament help");
     }

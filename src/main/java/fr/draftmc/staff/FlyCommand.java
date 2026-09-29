@@ -24,8 +24,7 @@ public class FlyCommand implements CommandExecutor {
             return true;
         }
         Player player = (Player) sender;
-        if (plugin.combat() != null && plugin.combat().isTagged(player)) {
-            plugin.msg(player, "&cTu ne peux pas fly en combat.");
+        if (plugin.combat() != null && plugin.combat().denyIfTagged(player)) {
             return true;
         }
         boolean enable = !player.getAllowFlight();

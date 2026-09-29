@@ -489,18 +489,31 @@ public class CoreCommands implements CommandExecutor, Listener {
 
     @EventHandler
     public void onSplash(PotionSplashEvent event) {
+        // Autorise toujours les splash potions, y compris sur les blocs noheal.
+        event.setCancelled(false);
         List<String> noheal = plugin.getConfig().getStringList("core.noheal-blocks");
+        if (noheal == null || noheal.isEmpty()) {
+            return;
+        }
         Block hit = event.getPotion().getLocation().getBlock();
         boolean onNoheal = false;
         for (String n : noheal) {
-            if (hit.getType().name().equalsIgnoreCase(n) || hit.getRelative(0, -1, 0).getType().name().equalsIgnoreCase(n)) {
+            if (n == null || n.isEmpty()) {
+                continue;
+            }
+            if (hit.getType().name().equalsIgnoreCase(n)
+                    || hit.getRelative(0, -1, 0).getType().name().equalsIgnoreCase(n)
+                    || hit.getRelative(0, 1, 0).getType().name().equalsIgnoreCase(n)) {
                 onNoheal = true;
                 break;
             }
         }
-        event.setCancelled(false);
-        if (onNoheal) {
+        if (!onNoheal) {
             return;
+        }
+        // Force l'intensité max pour que les pots appliquent bien sur noheal.
+        for (org.bukkit.entity.LivingEntity entity : event.getAffectedEntities()) {
+            event.setIntensity(entity, 1.0);
         }
     }
 
@@ -513,18 +526,27 @@ public class CoreCommands implements CommandExecutor, Listener {
         if (item == null || item.getType() != Material.EXP_BOTTLE) {
             return;
         }
-        if (item.hasItemMeta() && item.getItemMeta().hasDisplayName()
-                && ChatColor.stripColor(item.getItemMeta().getDisplayName()).contains("Bouteille d'XP")) {
-            event.setCancelled(true);
-            int per = plugin.getConfig().getInt("core.bottle-xp.xp-per-bottle", 20);
-            if (item.getAmount() > 1) {
-                item.setAmount(item.getAmount() - 1);
-            } else {
-                event.getPlayer().setItemInHand(null);
-            }
-            event.getPlayer().giveExp(per);
-            plugin.msg(event.getPlayer(), "&a+" + per + " XP");
+        String sid = Cooldowns.sid(item);
+        boolean isBottle = item.hasItemMeta() && item.getItemMeta().hasDisplayName()
+                && ChatColor.stripColor(item.getItemMeta().getDisplayName()).contains("Bouteille d'XP");
+        if (!isBottle && (sid == null || !sid.startsWith("BOTTLE_XP_"))) {
+            return;
         }
+        event.setCancelled(true);
+        int per = plugin.getConfig().getInt("core.bottle-xp.xp-per-bottle", 20);
+        if (sid != null && sid.startsWith("BOTTLE_XP_")) {
+            try {
+                per = Integer.parseInt(sid.substring("BOTTLE_XP_".length()));
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        if (item.getAmount() > 1) {
+            item.setAmount(item.getAmount() - 1);
+        } else {
+            event.getPlayer().setItemInHand(null);
+        }
+        event.getPlayer().giveExp(Math.max(1, per));
+        plugin.msg(event.getPlayer(), "&a+" + per + " XP");
     }
 
     private String join(String[] args, int start) {

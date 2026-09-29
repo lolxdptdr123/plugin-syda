@@ -123,6 +123,16 @@ public class FreezeManager implements CommandExecutor, Listener {
         return true;
     }
 
+    /** Toggle freeze (bâton staff). @return true si gelé après l'appel. */
+    public boolean toggleFreeze(Player target, String staffName) {
+        if (isFrozen(target)) {
+            unfreeze(target);
+            return false;
+        }
+        freeze(target, staffName);
+        return true;
+    }
+
     private void freeze(Player target, String staffName) {
         UUID uuid = target.getUniqueId();
         frozen.add(uuid);

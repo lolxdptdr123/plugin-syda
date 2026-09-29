@@ -3,6 +3,7 @@ package fr.draftmc.core;
 import fr.draftmc.Draftmc;
 import fr.draftmc.events.EventHub;
 import fr.draftmc.util.CC;
+import fr.draftmc.util.Cooldowns;
 import fr.draftmc.util.NMS;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -55,8 +56,7 @@ public class ScoreboardManager {
     }
 
     private boolean isEventScoreboard(Scoreboard board) {
-        return board.getObjective("domination") != null
-                || board.getObjective("masterkill") != null
+        return board.getObjective("masterkill") != null
                 || board.getObjective("br_sidebar") != null
                 || board.getObjective("totem") != null
                 || board.getObjective("koth") != null
@@ -91,7 +91,7 @@ public class ScoreboardManager {
         obj.setDisplayName(CC.color(plugin.getConfig().getString("scoreboard.title", "&c✺ &6Draftmc.fr &c✺")));
 
         List<String> lines = plugin.getConfig().getStringList("scoreboard.lines");
-        lines = mergeConquest(player, lines);
+        lines = mergeDynamicSidebar(player, lines);
         if (lines.size() > MAX_LINES) {
             lines = lines.subList(0, MAX_LINES);
         }
@@ -125,18 +125,32 @@ public class ScoreboardManager {
         applyGradeTeams(board, player);
     }
 
-    private List<String> mergeConquest(Player player, List<String> base) {
-        if (plugin.events() == null || plugin.events().conquest() == null) {
-            return base;
-        }
-        fr.draftmc.events.conquest.managers.ScoreboardManager conquestBoard = plugin.events().conquest().getScoreboardManager();
-        if (conquestBoard == null || !conquestBoard.active()) {
-            return base;
-        }
-        List<String> extra = conquestBoard.linesFor(player);
+    private List<String> mergeDynamicSidebar(Player player, List<String> base) {
+        List<String> extra = eventSidebarLines(player);
         if (extra == null || extra.isEmpty()) {
-            return base;
+            if (plugin.combat() != null && plugin.combat().isTagged(player)) {
+                extra = combatSidebarLines(player);
+            } else {
+                return base;
+            }
         }
+        return mergeAtInfos(base, extra);
+    }
+
+    private List<String> combatSidebarLines(Player player) {
+        List<String> configured = plugin.getConfig().getStringList("scoreboard.combat-lines");
+        if (configured != null && !configured.isEmpty()) {
+            return new ArrayList<String>(configured);
+        }
+        List<String> lines = new ArrayList<String>();
+        lines.add("&6Infos");
+        lines.add("&fCombat: &c%combat_seconds% secondes");
+        lines.add("&fenderpearl: &e%enderpearl% secondes");
+        lines.add("&fPing: %ping%");
+        return lines;
+    }
+
+    private List<String> mergeAtInfos(List<String> base, List<String> extra) {
         List<String> out = new ArrayList<String>();
         int cut = -1;
         for (int i = 0; i < base.size(); i++) {
@@ -158,6 +172,27 @@ public class ScoreboardManager {
             }
         }
         return out;
+    }
+
+    private List<String> eventSidebarLines(Player player) {
+        if (plugin.events() == null) {
+            return null;
+        }
+        if (plugin.events().domination() != null) {
+            fr.draftmc.events.domination.managers.ScoreboardManager dominationBoard =
+                    plugin.events().domination().getScoreboardManager();
+            if (dominationBoard != null && dominationBoard.active()) {
+                return dominationBoard.linesFor(player);
+            }
+        }
+        if (plugin.events().conquest() != null) {
+            fr.draftmc.events.conquest.managers.ScoreboardManager conquestBoard =
+                    plugin.events().conquest().getScoreboardManager();
+            if (conquestBoard != null && conquestBoard.active()) {
+                return conquestBoard.linesFor(player);
+            }
+        }
+        return null;
     }
 
     /**
@@ -364,6 +399,8 @@ public class ScoreboardManager {
                 .replace("%money%", compact(plugin.economy().getMoney(player)))
                 .replace("%online%", String.valueOf(Bukkit.getOnlinePlayers().size()))
                 .replace("%combat%", combatValue(player))
+                .replace("%combat_seconds%", combatSecondsValue(player))
+                .replace("%enderpearl%", enderpearlValue(player))
                 .replace("%ping%", pingValue(player))
                 .replace("%nextevent%", nextEventName())
                 .replace("%nextevent_time%", nextEventTime());
@@ -383,6 +420,17 @@ public class ScoreboardManager {
         return plugin.combat().remainingSeconds(player) + "s";
     }
 
+    private String combatSecondsValue(Player player) {
+        if (plugin.combat() == null) {
+            return "0";
+        }
+        return String.valueOf(plugin.combat().remainingSeconds(player));
+    }
+
+    private String enderpearlValue(Player player) {
+        return String.valueOf(Cooldowns.remaining(player, "enderpearl"));
+    }
+
     private String pingValue(Player player) {
         int ping = PingCommand.pingOf(player);
         if (ping < 0) {
@@ -398,7 +446,7 @@ public class ScoreboardManager {
         } else {
             color = "&c";
         }
-        return color + ping + "ms";
+        return color + ping + " ms";
     }
 
     private void sendTabList(Player player) {

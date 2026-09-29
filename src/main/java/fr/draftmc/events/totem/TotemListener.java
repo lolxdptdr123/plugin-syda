@@ -3,7 +3,6 @@ package fr.draftmc.events.totem;
 import fr.draftmc.util.CC;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.LivingEntity;
@@ -54,13 +53,6 @@ public class TotemListener implements Listener {
             denyBreak(event, totem, player, ChatColor.RED + "Casse le totem avec : " + totem.getItemInteract().name() + ".");
             return;
         }
-        double maxDist = breakMaxDistance(totem, block);
-        Location center = block.getLocation().add(0.5, 0.5, 0.5);
-        if (player.getWorld() != center.getWorld() || player.getLocation().distance(center) > maxDist) {
-            denyBreak(event, totem, player, plugin.getConfig().getString("messages.break-too-far",
-                    "&cTu es trop loin du totem, tu ne peux pas casser."));
-            return;
-        }
         int wait = plugin.getTotemManager().breakCooldownRemaining(player);
         if (wait > 0) {
             denyBreak(event, totem, player, plugin.getConfig().getString("messages.break-too-fast",
@@ -69,31 +61,6 @@ public class TotemListener implements Listener {
             return;
         }
         totem.playerBreak(plugin, player, block);
-    }
-
-    /**
-     * T1 = base (index 0), T5 = sommet. Distance 3D (X/Y/Z).
-     */
-    private double breakMaxDistance(Totem totem, Block block) {
-        double fallback = plugin.getConfig().getDouble("break-max-distance", 4.5);
-        int index = totem.getBlocks().indexOf(block);
-        if (index < 0) {
-            return fallback;
-        }
-        int tier = index + 1;
-        org.bukkit.configuration.ConfigurationSection section =
-                plugin.getConfig().getConfigurationSection("break-max-distance-tiers");
-        if (section != null) {
-            String key = String.valueOf(tier);
-            if (section.contains(key)) {
-                return section.getDouble(key, fallback);
-            }
-            String named = "T" + tier;
-            if (section.contains(named)) {
-                return section.getDouble(named, fallback);
-            }
-        }
-        return fallback;
     }
 
     private void denyBreak(BlockBreakEvent event, final Totem totem, Player player, String raw) {

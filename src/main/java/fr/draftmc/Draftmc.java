@@ -234,6 +234,7 @@ public class Draftmc extends JavaPlugin {
         cmd("randomtp", new RandomTpCommand(this));
         cmd("staff", staff);
         cmd("sc", staff);
+        cmd("scadmin", staff);
         cmd("cps", staff);
         cmd("report", reports);
         cmd("reports", reports);

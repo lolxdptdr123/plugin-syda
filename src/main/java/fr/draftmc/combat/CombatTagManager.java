@@ -48,10 +48,10 @@ public class CombatTagManager implements Listener, CommandExecutor {
             "refill", "shop", "boutique", "magasin", "kit", "kits",
             "bin", "poubelle", "trash", "ec", "pv", "invsee",
             "hat", "hdv", "ah", "auction", "rankup", "grade", "grades", "gradecmds",
-            "sell", "sellall", "repair", "repairall"
+            "sell", "sellall", "repair", "repairall", "fix"
     );
     private static final List<String> ALWAYS_BLOCKED_SUB = Arrays.asList(
-            "f home", "f sethome", "f fly", "repair all", "sell all"
+            "f home", "f sethome", "f fly", "repair all", "fix all", "sell all"
     );
 
     private final Draftmc plugin;
@@ -150,6 +150,22 @@ public class CombatTagManager implements Listener, CommandExecutor {
             if (plugin.tpa() != null) {
                 plugin.tpa().cancelFor(player, true);
             }
+            disableFlightOnCombat(player);
+        }
+    }
+
+    /** Coupe /fly et /f fly dès l'entrée en combat (sauf staff / bypass). */
+    private void disableFlightOnCombat(Player player) {
+        if (player == null || commandBypass(player)) {
+            return;
+        }
+        if (plugin.factions() != null) {
+            plugin.factions().disableFlyForCombat(player);
+        }
+        if (player.getAllowFlight() || player.isFlying()) {
+            player.setFlying(false);
+            player.setAllowFlight(false);
+            plugin.msg(player, "&cFly désactivé : tu es en combat.");
         }
     }
 

@@ -61,6 +61,7 @@ public class StaffRankSetup {
         console("lp group admin permission set draftmc.admin true");
         console("lp group admin permission set draftmc.staff true");
         console("lp group admin permission set draftmc.staff.chat true");
+        console("lp group admin permission set draftmc.staff.adminchat true");
         console("lp group admin permission set draftmc.faction.bypass true");
         console("lp group admin permission set draftmc.fly true");
         console("lp group admin permission set draftmc.gradecommands.bypass true");

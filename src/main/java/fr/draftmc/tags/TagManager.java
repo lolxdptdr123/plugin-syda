@@ -104,7 +104,8 @@ public class TagManager implements CommandExecutor, TabCompleter, Listener {
         if (args.length > 0) {
             String sub = args[0].toLowerCase(Locale.ROOT);
             if (sub.equals("create") || sub.equals("delete") || sub.equals("remove")
-                    || sub.equals("list") || sub.equals("set") || sub.equals("give")) {
+                    || sub.equals("list") || sub.equals("set") || sub.equals("give")
+                    || sub.equals("grant") || sub.equals("revoke") || sub.equals("ungive")) {
                 if (!isStaff(sender)) {
                     plugin.msg(sender, "&cCommande staff uniquement.");
                     return true;
@@ -115,6 +116,10 @@ public class TagManager implements CommandExecutor, TabCompleter, Listener {
                     delete(sender, args);
                 } else if (sub.equals("list")) {
                     list(sender);
+                } else if (sub.equals("give") || sub.equals("grant")) {
+                    giveTag(sender, args);
+                } else if (sub.equals("revoke") || sub.equals("ungive")) {
+                    revokeTag(sender, args);
                 } else {
                     setTag(sender, args);
                 }
@@ -146,9 +151,79 @@ public class TagManager implements CommandExecutor, TabCompleter, Listener {
         }
         String display = join(args, 2);
         file.get().set("custom." + id + ".display", display);
+        // Tags custom sans objectif : verrouillés jusqu'à /tags give
+        file.get().set("custom." + id + ".permission", "draftmc.tag." + id);
         file.save();
-        tags.add(new Tag(id, display, 0, null, true));
+        tags.add(new Tag(id, display, 0, "perm:draftmc.tag." + id, true));
         plugin.msg(sender, "&aTag créé : " + display + " &8(" + id + ")");
+        plugin.msg(sender, "&7Donne l'accès avec &e/tags give <joueur> " + id);
+    }
+
+    private void giveTag(CommandSender sender, String[] args) {
+        if (args.length < 3) {
+            plugin.msg(sender, "&e/tags give <joueur> <id>");
+            return;
+        }
+        Player target = Bukkit.getPlayer(args[1]);
+        if (target == null || !target.isOnline()) {
+            plugin.msg(sender, "&cJoueur introuvable.");
+            return;
+        }
+        Tag tag = byId(args[2]);
+        if (tag == null) {
+            plugin.msg(sender, "&cTag introuvable.");
+            return;
+        }
+        List<String> owned = plugin.data().getList(target.getUniqueId(), "tags_unlocked");
+        if (!owned.contains(tag.id)) {
+            owned.add(tag.id);
+            plugin.data().setList(target.getUniqueId(), "tags_unlocked", owned);
+        }
+        // Permission LP si le tag est basé sur perm
+        if (tag.stat != null && tag.stat.startsWith("perm:")) {
+            String perm = tag.stat.substring(5);
+            try {
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(),
+                        "lp user " + target.getName() + " permission set " + perm + " true");
+            } catch (Throwable ignored) {
+            }
+        }
+        plugin.msg(sender, "&aAccès tag &e" + tag.id + " &adonné à &e" + target.getName() + "&a.");
+        plugin.msg(target, "&aTu as débloqué le tag : " + tag.display);
+    }
+
+    private void revokeTag(CommandSender sender, String[] args) {
+        if (args.length < 3) {
+            plugin.msg(sender, "&e/tags revoke <joueur> <id>");
+            return;
+        }
+        Player target = Bukkit.getPlayer(args[1]);
+        if (target == null || !target.isOnline()) {
+            plugin.msg(sender, "&cJoueur introuvable.");
+            return;
+        }
+        Tag tag = byId(args[2]);
+        if (tag == null) {
+            plugin.msg(sender, "&cTag introuvable.");
+            return;
+        }
+        List<String> owned = plugin.data().getList(target.getUniqueId(), "tags_unlocked");
+        if (owned.remove(tag.id)) {
+            plugin.data().setList(target.getUniqueId(), "tags_unlocked", owned);
+        }
+        if (tag.stat != null && tag.stat.startsWith("perm:")) {
+            String perm = tag.stat.substring(5);
+            try {
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(),
+                        "lp user " + target.getName() + " permission unset " + perm);
+            } catch (Throwable ignored) {
+            }
+        }
+        String selected = plugin.data().getString(target.getUniqueId(), "tag");
+        if (tag.id.equalsIgnoreCase(selected)) {
+            plugin.data().setString(target.getUniqueId(), "tag", "");
+        }
+        plugin.msg(sender, "&cAccès tag &e" + tag.id + " &cretiré à &e" + target.getName() + "&c.");
     }
 
     private void delete(CommandSender sender, String[] args) {
@@ -225,6 +300,8 @@ public class TagManager implements CommandExecutor, TabCompleter, Listener {
             if (tag.stat != null && !tag.stat.startsWith("perm:")) {
                 lore.add("&7Objectif: &e" + tag.need + " " + tag.stat);
                 lore.add("&7Progression: &f" + plugin.data().getInt(player.getUniqueId(), tag.stat));
+            } else if (tag.custom && (tag.stat == null || tag.stat.startsWith("perm:"))) {
+                lore.add("&7Tag custom &8(accès staff)");
             }
             b.lore(lore);
             inv.setItem(slot, b.build());
@@ -234,6 +311,14 @@ public class TagManager implements CommandExecutor, TabCompleter, Listener {
     }
 
     private boolean unlocked(Player player, Tag tag) {
+        List<String> granted = plugin.data().getList(player.getUniqueId(), "tags_unlocked");
+        if (granted.contains(tag.id)) {
+            return true;
+        }
+        // Tags custom sans objectif / par permission : verrouillés sauf grant ou perm
+        if (tag.custom && (tag.stat == null || tag.stat.isEmpty())) {
+            return false;
+        }
         if (tag.stat == null) {
             return true;
         }
@@ -277,13 +362,36 @@ public class TagManager implements CommandExecutor, TabCompleter, Listener {
         player.closeInventory();
     }
 
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onChat(AsyncPlayerChatEvent event) {
-        Player player = event.getPlayer();
-        String factionPrefix = plugin.factions().publicPrefix(player);
-        String gradePrefix = plugin.grades().chatPrefix(player);
-        String tagSuffix = display(player);
-        event.setFormat(CC.color("&7" + factionPrefix + gradePrefix + "%1$s " + tagSuffix + "&8» &f%2$s"));
+        final Player player = event.getPlayer();
+        final String message = event.getMessage();
+        final String gradePrefix = plugin.grades().chatPrefix(player);
+        final String tagSuffix = display(player);
+        final String displayName = player.getDisplayName();
+        final java.util.Set<Player> recipients = new java.util.HashSet<Player>(event.getRecipients());
+        event.setCancelled(true);
+        event.getRecipients().clear();
+
+        Bukkit.getScheduler().runTask(plugin, new Runnable() {
+            @Override
+            public void run() {
+                for (Player viewer : recipients) {
+                    if (viewer == null || !viewer.isOnline()) {
+                        continue;
+                    }
+                    String factionPrefix = plugin.factions().publicPrefix(player, viewer);
+                    String line = CC.color("&7" + factionPrefix + gradePrefix)
+                            + displayName
+                            + CC.color(" " + tagSuffix + "&8» &f")
+                            + message;
+                    viewer.sendMessage(line);
+                }
+                String consolePrefix = plugin.factions().publicPrefix(player);
+                Bukkit.getConsoleSender().sendMessage(ChatColor.stripColor(
+                        CC.color(consolePrefix + gradePrefix) + displayName + " » " + message));
+            }
+        });
     }
 
     @Override
@@ -292,10 +400,12 @@ public class TagManager implements CommandExecutor, TabCompleter, Listener {
             return Collections.emptyList();
         }
         if (args.length == 1) {
-            return filter(Arrays.asList("create", "delete", "list", "set"), args[0]);
+            return filter(Arrays.asList("create", "delete", "list", "set", "give", "revoke"), args[0]);
         }
-        if (args.length == 2 && (args[0].equalsIgnoreCase("delete") || args[0].equalsIgnoreCase("set"))) {
-            if (args[0].equalsIgnoreCase("set")) {
+        if (args.length == 2 && (args[0].equalsIgnoreCase("delete") || args[0].equalsIgnoreCase("set")
+                || args[0].equalsIgnoreCase("give") || args[0].equalsIgnoreCase("revoke"))) {
+            if (args[0].equalsIgnoreCase("set") || args[0].equalsIgnoreCase("give")
+                    || args[0].equalsIgnoreCase("revoke")) {
                 return null;
             }
             List<String> ids = new ArrayList<String>();
@@ -306,7 +416,8 @@ public class TagManager implements CommandExecutor, TabCompleter, Listener {
             }
             return filter(ids, args[1]);
         }
-        if (args.length == 3 && args[0].equalsIgnoreCase("set")) {
+        if (args.length == 3 && (args[0].equalsIgnoreCase("set") || args[0].equalsIgnoreCase("give")
+                || args[0].equalsIgnoreCase("revoke"))) {
             List<String> ids = new ArrayList<String>();
             for (Tag tag : tags) {
                 ids.add(tag.id);

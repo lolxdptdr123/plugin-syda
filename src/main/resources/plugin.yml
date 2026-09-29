@@ -41,7 +41,7 @@ commands:
     aliases: [rkey]
     permission: draftmc.randomkey
   repair:
-    description: Répare l'item en main
+    description: Répare l'item en main (/repair all pour tout l'inventaire)
     aliases: [fix]
   title:
     description: Envoie un title
@@ -69,6 +69,10 @@ commands:
     description: Chat staff
     aliases: [staffchat]
     permission: draftmc.staff.chat
+  scadmin:
+    description: Chat admin uniquement
+    aliases: [adminchat, sca]
+    permission: draftmc.staff.adminchat
   cps:
     description: Voir les CPS d'un joueur
     permission: draftmc.staff
@@ -319,6 +323,7 @@ permissions:
       draftmc.faction.bypass: true
       draftmc.staff: true
       draftmc.staff.chat: true
+      draftmc.staff.adminchat: true
       draftmc.staff.mute: true
       draftmc.staff.freeze: true
       draftmc.staff.ban: true
@@ -333,6 +338,9 @@ permissions:
   draftmc.staff.chat:
     default: op
     description: /sc chat staff
+  draftmc.staff.adminchat:
+    default: op
+    description: /scadmin chat admin
   draftmc.staff.freeze:
     default: op
   draftmc.staff.mute:

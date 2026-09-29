@@ -57,6 +57,9 @@ public class GradeCommandManager implements CommandExecutor, Listener {
         }
         Player player = (Player) sender;
         String key = command.getName().toLowerCase(Locale.ROOT);
+        if ("fix".equals(key)) {
+            key = "repair";
+        }
         if ("sell".equals(key)) {
             if (args.length == 0 || !"all".equalsIgnoreCase(args[0])) {
                 plugin.msg(player, "&e/sell all");
@@ -81,6 +84,11 @@ public class GradeCommandManager implements CommandExecutor, Listener {
             return true;
         }
 
+        // Bloquer /repair et /fix en combat avant d'appliquer le cooldown.
+        if ("repair".equals(key) && plugin.combat() != null && plugin.combat().denyIfTagged(player)) {
+            return true;
+        }
+
         if (!checkAccess(player, key, section, args)) {
             return true;
         }
@@ -102,7 +110,7 @@ public class GradeCommandManager implements CommandExecutor, Listener {
         } else if ("near".equals(key)) {
             near(player, section);
         } else if ("bottlexp".equals(key) || "bottle".equals(key)) {
-            bottleXp(player);
+            bottleXp(player, args);
         } else if ("compact".equals(key)) {
             compact(player);
         } else if ("hat".equals(key)) {
@@ -435,28 +443,44 @@ public class GradeCommandManager implements CommandExecutor, Listener {
         plugin.data().setString(player.getUniqueId(), "back_location", Locations.serialize(player.getLocation()));
     }
 
-    private void bottleXp(Player player) {
+    private void bottleXp(Player player, String[] args) {
         int per = plugin.getConfig().getInt("core.bottle-xp.xp-per-bottle", 20);
-        int total = player.getTotalExperience();
-        if (total < per) {
-            plugin.msg(player, "&cPas assez d'XP. &7(" + per + " requis)");
+        if (args.length >= 1) {
+            try {
+                per = Integer.parseInt(args[0]);
+            } catch (NumberFormatException e) {
+                plugin.msg(player, "&e/bottlexp [quantité d'XP]");
+                return;
+            }
+        }
+        if (per < 1) {
+            plugin.msg(player, "&cLa quantité d'XP doit être au moins 1.");
             return;
         }
-        int bottles = Math.min(64, total / per);
-        int take = bottles * per;
+        int max = plugin.getConfig().getInt("core.bottle-xp.max-per-bottle", 10000);
+        if (per > max) {
+            plugin.msg(player, "&cMaximum &e" + max + " XP &cpar bouteille.");
+            return;
+        }
+        int total = player.getTotalExperience();
+        if (total < per) {
+            plugin.msg(player, "&cPas assez d'XP. &7(tu as &e" + total + "&7, besoin de &e" + per + "&7)");
+            return;
+        }
         player.setTotalExperience(0);
         player.setLevel(0);
         player.setExp(0f);
-        player.giveExp(total - take);
-        ItemStack item = new org.bukkit.inventory.ItemStack(Material.EXP_BOTTLE, bottles);
+        player.giveExp(total - per);
+        ItemStack item = new org.bukkit.inventory.ItemStack(Material.EXP_BOTTLE, 1);
         org.bukkit.inventory.meta.ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(CC.color("&aBouteille d'XP"));
-                    java.util.List<String> lore = new ArrayList<String>();
-                    lore.add(CC.color("&7Contient &e" + per + " XP &7chacune."));
+        java.util.List<String> lore = new ArrayList<String>();
+        lore.add(CC.color("&7Contient &e" + per + " XP&7."));
         meta.setLore(lore);
         item.setItemMeta(meta);
+        item = fr.draftmc.util.Cooldowns.tagSid(item, "BOTTLE_XP_" + per);
         player.getInventory().addItem(item);
-        plugin.msg(player, "&a+" + bottles + " bouteilles d'XP.");
+        plugin.msg(player, "&aBouteille créée avec &e" + per + " XP&a.");
     }
 
     private void compact(Player player) {
@@ -546,13 +570,17 @@ public class GradeCommandManager implements CommandExecutor, Listener {
 
     private void repairHand(Player player) {
         ItemStack item = player.getItemInHand();
-        if (item == null || item.getType() == Material.AIR || !Locations.isTool(item)) {
+        if (!isRepairable(item)) {
             plugin.msg(player, "&cPrends un item réparable en main.");
+            return;
+        }
+        if (item.getDurability() == 0) {
+            plugin.msg(player, "&cCet item n'est pas endommagé.");
             return;
         }
         item.setDurability((short) 0);
         player.setItemInHand(item);
-        plugin.msg(player, "&aItem réparé.");
+        plugin.msg(player, "&aItem en main réparé.");
     }
 
     private void repairAll(Player player) {
@@ -571,18 +599,26 @@ public class GradeCommandManager implements CommandExecutor, Listener {
             }
         }
         player.getInventory().setArmorContents(armor);
+        if (repaired == 0) {
+            plugin.msg(player, "&cAucun item à réparer.");
+            return;
+        }
         plugin.msg(player, "&a" + repaired + " item(s) réparé(s).");
     }
 
     private boolean repairItem(ItemStack item) {
-        if (item == null || item.getType() == Material.AIR || !Locations.isTool(item)) {
-            return false;
-        }
-        if (item.getDurability() == 0) {
+        if (!isRepairable(item) || item.getDurability() == 0) {
             return false;
         }
         item.setDurability((short) 0);
         return true;
+    }
+
+    /** Tout item avec une durabilité (armes, tools, armures...). */
+    private boolean isRepairable(ItemStack item) {
+        return item != null
+                && item.getType() != Material.AIR
+                && item.getType().getMaxDurability() > 0;
     }
 
     private void viewEnderchest(Player player, String name) {
